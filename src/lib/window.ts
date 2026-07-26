@@ -6,23 +6,84 @@
  * iterable without a Rust toolchain or a full rebuild.
  */
 
+type WindowModule = typeof import("@tauri-apps/api/window");
+
+let cached: WindowModule | null = null;
+
 export const inTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+async function api(): Promise<WindowModule | null> {
+  if (!inTauri()) return null;
+  cached ??= await import("@tauri-apps/api/window");
+  return cached;
+}
+
 export async function closeWindow(): Promise<void> {
-  if (!inTauri()) return;
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().close();
+  const m = await api();
+  await m?.getCurrentWindow().close();
 }
 
 export async function minimizeWindow(): Promise<void> {
-  if (!inTauri()) return;
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().minimize();
+  const m = await api();
+  await m?.getCurrentWindow().minimize();
 }
 
 export async function setAlwaysOnTop(value: boolean): Promise<void> {
-  if (!inTauri()) return;
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().setAlwaysOnTop(value);
+  const m = await api();
+  await m?.getCurrentWindow().setAlwaysOnTop(value);
+}
+
+/** When true, clicks fall through to whatever sits behind the widget. */
+export async function setClickThrough(value: boolean): Promise<void> {
+  const m = await api();
+  await m?.getCurrentWindow().setIgnoreCursorEvents(value);
+}
+
+export async function setWindowSize(
+  width: number,
+  height: number
+): Promise<void> {
+  const m = await api();
+  if (!m) return;
+  await m.getCurrentWindow().setSize(new m.LogicalSize(width, height));
+}
+
+export interface Geometry {
+  /** Window top-left in physical desktop pixels. */
+  x: number;
+  y: number;
+  /** Ratio of physical pixels to CSS pixels. */
+  scale: number;
+}
+
+export async function readGeometry(): Promise<Geometry | null> {
+  const m = await api();
+  if (!m) return null;
+
+  const win = m.getCurrentWindow();
+  const [position, scale] = await Promise.all([
+    win.outerPosition(),
+    win.scaleFactor(),
+  ]);
+  return { x: position.x, y: position.y, scale };
+}
+
+/** Cursor position in physical desktop pixels, independent of window focus. */
+export async function readCursor(): Promise<{ x: number; y: number } | null> {
+  const m = await api();
+  if (!m) return null;
+
+  const position = await m.cursorPosition();
+  return { x: position.x, y: position.y };
+}
+
+/** Subscribes to an event emitted from Rust. Returns an unlisten function. */
+export async function onBackendEvent(
+  name: string,
+  handler: () => void
+): Promise<() => void> {
+  if (!inTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen(name, handler);
 }
