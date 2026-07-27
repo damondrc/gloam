@@ -20,6 +20,11 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Desktop-only: the shortcut is the escape hatch out of lock mode, so it has no
+# meaning on mobile targets.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2"
+
 # The widget sits idle for long stretches, so favour a small, fast binary over
 # compile time in release builds.
 [profile.release]
