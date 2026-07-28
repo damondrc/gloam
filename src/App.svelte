@@ -1,13 +1,22 @@
 <script lang="ts">
   import { Timer } from "./lib/timer.svelte";
+  import { LockController } from "./lib/lock.svelte";
   import { skyFor, skyVars } from "./lib/sky";
   import { chime, unlockAudio } from "./lib/chime";
-  import { closeWindow } from "./lib/window";
+  import { closeWindow, onBackendEvent, setWindowSize } from "./lib/window";
+  import { loadPrefs, savePrefs } from "./lib/prefs";
   import Stars from "./lib/Stars.svelte";
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
+  import Padlock from "./lib/Padlock.svelte";
+
+  const NORMAL_SIZE = { width: 336, height: 148 };
+  // Wide enough that the readout and the two surviving buttons sit on one row
+  // without crowding each other.
+  const COMPACT_SIZE = { width: 196, height: 74 };
 
   const timer = new Timer();
+  const lock = new LockController();
 
   timer.onSegmentEnd = (done, next) => {
     if (!next) chime("done");
@@ -15,16 +24,55 @@
     else chime("break-end");
   };
 
+  const stored = loadPrefs();
+  let compact = $state(stored.compact);
+  let hovering = $state(false);
+
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const vars = $derived(skyVars(sky));
 
-  let hovering = $state(false);
+  // Restore the saved window size before anything is visible, then keep the
+  // window in step with the mode.
+  $effect(() => {
+    const size = compact ? COMPACT_SIZE : NORMAL_SIZE;
+    void setWindowSize(size.width, size.height);
+  });
 
-  function toggle(): void {
+  $effect(() => {
+    savePrefs({ locked: lock.locked, compact });
+  });
+
+  $effect(() => {
+    if (stored.locked) lock.lock();
+    return () => lock.destroy();
+  });
+
+  // The global shortcut is the way back in if hit-testing ever fails.
+  $effect(() => {
+    let dispose: (() => void) | null = null;
+    let cancelled = false;
+
+    void onBackendEvent("gloam://toggle-lock", () => lock.toggle()).then((fn) => {
+      if (cancelled) fn();
+      else dispose = fn;
+    });
+
+    return () => {
+      cancelled = true;
+      dispose?.();
+    };
+  });
+
+  function toggleTimer(): void {
     // The first click doubles as the user gesture that unlocks WebAudio, so the
     // end-of-segment chime is guaranteed to be audible later.
     unlockAudio();
     timer.toggle();
+  }
+
+  function onDoubleClick(): void {
+    if (lock.locked) return;
+    compact = !compact;
   }
 
   function onKeydown(event: KeyboardEvent): void {
@@ -33,7 +81,7 @@
     switch (event.key) {
       case " ":
         event.preventDefault();
-        toggle();
+        toggleTimer();
         break;
       case "r":
       case "R":
@@ -43,6 +91,10 @@
       case "S":
         timer.skip();
         break;
+      case "l":
+      case "L":
+        lock.toggle();
+        break;
     }
   }
 </script>
@@ -51,23 +103,34 @@
 
 <main
   class="frame"
+  class:locked={lock.locked}
+  class:compact
   style={vars}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
+  ondblclick={onDoubleClick}
 >
   <div class="widget">
-    <div class="sky"></div>
+    <!-- Everything that should recede when the widget is locked lives in here,
+         so the padlock can stay at full strength outside it. -->
+    <div class="canvas">
+      <div class="sky"></div>
 
-    <Stars visible={sky.stars} />
+      <Stars visible={sky.stars} />
 
-    <div class="celestial"></div>
+      <div class="celestial"></div>
 
-    <div class="haze haze-a"></div>
-    <div class="haze haze-b"></div>
+      <div class="haze haze-a"></div>
+      <div class="haze haze-b"></div>
 
-    <div class="ground"></div>
+      <div class="ground"></div>
 
-    <Grain />
+      <Grain />
+
+      <div class="progress">
+        <i style="transform: scaleX({timer.progress})"></i>
+      </div>
+    </div>
 
     <div class="content">
       <span class="label">{timer.label}</span>
@@ -86,9 +149,11 @@
     <!-- Transparent layer that makes the whole widget a window drag handle.
          Tauri only starts a drag when the event target itself carries the
          attribute, so interactive elements must sit above this. -->
-    <div class="drag" data-tauri-drag-region></div>
+    {#if !lock.locked}
+      <div class="drag" data-tauri-drag-region></div>
+    {/if}
 
-    <div class="ui" class:show={hovering}>
+    <div class="ui" class:show={hovering && !lock.locked}>
       <button class="close" onclick={closeWindow} title="Close" aria-label="Close">
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path
@@ -105,15 +170,24 @@
         <Controls
           running={timer.running}
           finished={timer.finished}
-          onToggle={toggle}
+          onToggle={toggleTimer}
           onReset={() => timer.reset()}
           onSkip={() => timer.skip()}
+          {compact}
         />
       </div>
     </div>
 
-    <div class="progress">
-      <i style="transform: scaleX({timer.progress})"></i>
+    <!-- Outside .ui: the padlock has to stay reachable when everything else
+         has faded out and stopped accepting clicks. -->
+    <div class="lock-slot" class:show={hovering || lock.locked}>
+      <Padlock
+        locked={lock.locked}
+        hot={lock.hot}
+        onToggle={() => lock.toggle()}
+        register={(el) => lock.attach(el)}
+        small={compact}
+      />
     </div>
   </div>
 </main>
@@ -136,6 +210,30 @@
       0 6px 22px rgb(0 0 0 / 0.42),
       0 1px 3px rgb(0 0 0 / 0.3);
     isolation: isolate;
+    transition:
+      border-color 0.45s ease,
+      box-shadow 0.45s ease;
+  }
+
+  .canvas {
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.45s ease;
+  }
+
+  /* Locked: recede so the document underneath stays readable through it. */
+  .frame.locked .canvas {
+    opacity: 0.44;
+  }
+
+  .frame.locked .widget {
+    border-color: rgb(255 255 255 / 0.05);
+    box-shadow: none;
+  }
+
+  .frame.locked .content {
+    opacity: 0.44;
+    transition: opacity 0.45s ease;
   }
 
   /* --- backdrop layers ------------------------------------------------ */
@@ -248,11 +346,15 @@
   }
 
   .label {
+    /* Clears the close button's corner so the two never sit on top of
+       each other, hovered or not. */
+    margin-left: 21px;
     font-size: 9.5px;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: rgb(var(--accent));
     text-shadow: 0 1px 6px rgb(0 0 0 / 0.4);
+    transition: opacity 0.25s ease;
   }
 
   .time {
@@ -265,7 +367,9 @@
     font-feature-settings: "tnum" 1;
     color: rgb(var(--ink));
     text-shadow: 0 2px 14px rgb(0 0 0 / 0.45);
-    transition: opacity 0.3s ease;
+    transition:
+      opacity 0.3s ease,
+      font-size 0.25s ease;
   }
 
   .time.idle {
@@ -276,6 +380,7 @@
     display: flex;
     gap: 5px;
     margin-top: 8px;
+    transition: opacity 0.25s ease;
   }
 
   .dots i {
@@ -290,6 +395,36 @@
   .dots i.filled {
     background: rgb(var(--accent));
     box-shadow: 0 0 6px rgb(var(--accent) / 0.7);
+  }
+
+  /* Compact mode is a single row: readout on the left, the play control and
+     the padlock on the right. Anything that would not fit at a size worth
+     aiming at is dropped rather than shrunk — skip, reset and close stay
+     available on the keyboard, and double-clicking restores the full widget. */
+  .frame.compact .content {
+    padding: 0 0 0 14px;
+    justify-content: center;
+  }
+
+  .frame.compact .label,
+  .frame.compact .dots {
+    display: none;
+  }
+
+  .frame.compact .time {
+    margin-top: 0;
+    font-size: 28px;
+  }
+
+  .frame.compact .ground {
+    height: 26%;
+  }
+
+  /* Pull the sun off the right edge so it is not sitting directly behind the
+     buttons. */
+  .frame.compact .celestial {
+    left: 58%;
+    transform: scale(0.72);
   }
 
   /* --- interaction ----------------------------------------------------- */
@@ -326,10 +461,26 @@
     bottom: 11px;
   }
 
+  /* One row, vertically centred, with the padlock outermost so it keeps the
+     corner position it needs to stay easy to hit while locked. */
+  .frame.compact .dock {
+    top: 50%;
+    right: 44px;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+
+  .frame.compact .close {
+    display: none;
+  }
+
+  /* Close sits in the opposite corner from the padlock on purpose. They are
+     the two highest-consequence buttons in the widget, and putting them
+     side by side would mean a mis-aimed click on lock could quit the app. */
   .close {
     position: absolute;
     top: 8px;
-    right: 8px;
+    left: 8px;
     display: grid;
     place-items: center;
     width: 20px;
@@ -353,6 +504,28 @@
   .close svg {
     width: 11px;
     height: 11px;
+  }
+
+  /* The padlock lives in the corner — the easiest target to hit — and stays
+     at full strength while the rest of the widget fades. */
+  .lock-slot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .lock-slot.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .frame.compact .lock-slot {
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
   }
 
   .progress {
