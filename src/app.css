@@ -3,9 +3,25 @@
    to fall, since a frameless window clips anything painted outside its bounds. */
 
 :root {
-  --radius: 14px;
-  --font: "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui,
-    -apple-system, "Helvetica Neue", sans-serif;
+  /* The single number the whole widget scales from. */
+  --scale: 1;
+  --radius: 14rem;
+  --font:
+    "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, -apple-system,
+    "Helvetica Neue", sans-serif;
+}
+
+/* One rem is one design pixel, scaled.
+ *
+ * Sizes throughout the app are written in rem rather than px, so `28rem` means
+ * "the 28px this was designed at, at whatever scale the user picked". rem is
+ * deliberate over em: it always resolves against the root, so it does not
+ * compound through the nested font-size declarations the layout uses.
+ *
+ * Everything that must stay crisp regardless of scale — hairline borders,
+ * focus outlines — stays in px on purpose. */
+html {
+  font-size: calc(var(--scale) * 1px);
 }
 
 * {

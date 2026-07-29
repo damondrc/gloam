@@ -156,7 +156,8 @@ export function skyVars(s: SkyState): string {
     `--ground: ${css(s.ground)}`,
     `--body: ${css(s.body)}`,
     `--body-y: ${(s.bodyY * 100).toFixed(2)}%`,
-    `--body-r: ${s.bodyR.toFixed(1)}px`,
+    // rem so the sun scales with the rest of the widget; see app.css.
+    `--body-r: ${s.bodyR.toFixed(1)}rem`,
     `--glow: ${s.glow.toFixed(3)}`,
     `--stars: ${s.stars.toFixed(3)}`,
     `--accent: ${css(s.accent)}`,

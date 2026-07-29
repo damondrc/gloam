@@ -66,14 +66,14 @@
   .controls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 6rem;
   }
 
   button {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 26rem;
+    height: 26rem;
     padding: 0;
     border: 1px solid rgb(255 255 255 / 0.14);
     border-radius: 50%;
@@ -109,8 +109,8 @@
   }
 
   .primary {
-    width: 30px;
-    height: 30px;
+    width: 30rem;
+    height: 30rem;
     background: rgb(var(--accent) / 0.22);
     border-color: rgb(var(--accent) / 0.45);
   }
@@ -121,13 +121,13 @@
   }
 
   svg {
-    width: 12px;
-    height: 12px;
+    width: 12rem;
+    height: 12rem;
     fill: currentColor;
   }
 
   .primary svg {
-    width: 13px;
-    height: 13px;
+    width: 13rem;
+    height: 13rem;
   }
 </style>

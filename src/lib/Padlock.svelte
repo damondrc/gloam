@@ -56,8 +56,8 @@
   .padlock {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 28rem;
+    height: 28rem;
     padding: 0;
     border: 1px solid rgb(255 255 255 / 0.14);
     border-radius: 50%;
@@ -98,23 +98,23 @@
   .padlock.locked.hot {
     background: rgb(var(--accent) / 0.42);
     border-color: rgb(var(--accent) / 0.85);
-    box-shadow: 0 0 12px rgb(var(--accent) / 0.5);
+    box-shadow: 0 0 12rem rgb(var(--accent) / 0.5);
     transform: scale(1.08);
   }
 
   .padlock.small {
-    width: 24px;
-    height: 24px;
+    width: 24rem;
+    height: 24rem;
   }
 
   svg {
-    width: 17px;
-    height: 17px;
+    width: 17rem;
+    height: 17rem;
   }
 
   .padlock.small svg {
-    width: 15px;
-    height: 15px;
+    width: 15rem;
+    height: 15rem;
   }
 
   .body,
