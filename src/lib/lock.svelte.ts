@@ -33,6 +33,26 @@ const GEOMETRY_TTL_MS = 1000;
 /** Grows the padlock's clickable rectangle so it is forgiving to hit. */
 const HOTSPOT_PADDING_PX = 6;
 
+/**
+ * Re-apply the click-through state every this many ticks even when nothing
+ * changed. Click-through is write-only — the platform gives us no way to read
+ * back whether it actually took — so periodically restating our intent is the
+ * only way to recover if a call is ever dropped or overridden.
+ */
+const REASSERT_EVERY = 10;
+
+/**
+ * The controller currently allowed to drive the window.
+ *
+ * Only one thing may own a window-wide property like click-through. If a
+ * second controller ever exists — a hot-reload leaving the previous component
+ * instance alive is the realistic way — its polling loop would keep asserting
+ * a lock state the user already dismissed, and the window would refuse to
+ * unlock for reasons invisible from the UI. Claiming ownership on lock lets
+ * any stale instance notice it has been superseded and stand down.
+ */
+let owner: LockController | null = null;
+
 export class LockController {
   locked = $state(false);
   /** True while the cursor sits over the padlock and clicks are being let in. */
@@ -44,6 +64,7 @@ export class LockController {
   #geometryAt = 0;
   #passingThrough = false;
   #stopped = false;
+  #ticks = 0;
 
   /** Registers the element whose bounds stay clickable while locked. */
   attach(element: HTMLElement | null): void {
@@ -56,9 +77,12 @@ export class LockController {
 
   lock(): void {
     if (this.locked) return;
+    owner = this;
     this.locked = true;
+    this.hot = false;
     this.#stopped = false;
     this.#geometry = null;
+    this.#ticks = 0;
     void this.#enterPassThrough();
     this.#schedule();
   }
@@ -70,12 +94,14 @@ export class LockController {
     this.#stopped = true;
     this.#clear();
     void this.#exitPassThrough();
+    if (owner === this) owner = null;
   }
 
   destroy(): void {
     this.#stopped = true;
     this.#clear();
     if (this.#passingThrough) void this.#exitPassThrough();
+    if (owner === this) owner = null;
   }
 
   #schedule(): void {
@@ -85,18 +111,37 @@ export class LockController {
   }
 
   async #poll(): Promise<void> {
-    if (this.#stopped || !this.locked) return;
+    if (!this.#alive()) return;
 
     const inside = await this.#cursorOverHotspot();
 
-    if (inside !== this.hot) {
+    // Re-check after the await. The user can unlock mid-poll, and a stale
+    // result resolving afterwards would switch click-through back on with no
+    // lock state to justify it, stranding the window.
+    if (!this.#alive()) return;
+
+    this.#ticks++;
+    const changed = inside !== this.hot;
+    const shouldReassert = this.#ticks % REASSERT_EVERY === 0;
+
+    if (changed || shouldReassert) {
       this.hot = inside;
       // Let clicks in only while the cursor is actually over the padlock.
-      await setClickThrough(!inside);
       this.#passingThrough = !inside;
+      await setClickThrough(!inside);
     }
 
     this.#schedule();
+  }
+
+  /** False once this controller has been stopped, unlocked, or superseded. */
+  #alive(): boolean {
+    if (this.#stopped || !this.locked) return false;
+    if (owner !== this) {
+      this.#stopped = true;
+      return false;
+    }
+    return true;
   }
 
   async #cursorOverHotspot(): Promise<boolean> {
@@ -142,14 +187,17 @@ export class LockController {
     return geometry;
   }
 
+  // The flag records intent, so it is set before awaiting rather than after:
+  // destroy() may run while one of these is still in flight, and it needs to
+  // know whether the window is meant to be passing clicks through.
   async #enterPassThrough(): Promise<void> {
-    await setClickThrough(true);
     this.#passingThrough = true;
+    await setClickThrough(true);
   }
 
   async #exitPassThrough(): Promise<void> {
-    await setClickThrough(false);
     this.#passingThrough = false;
+    await setClickThrough(false);
   }
 
   #clear(): void {
