@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Timer } from "./lib/timer.svelte";
   import { LockController } from "./lib/lock.svelte";
+  import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
   import { skyFor, skyVars } from "./lib/sky";
   import { chime, unlockAudio } from "./lib/chime";
   import { closeWindow, onBackendEvent, setWindowSize } from "./lib/window";
@@ -9,14 +10,15 @@
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
+  import Grip from "./lib/Grip.svelte";
 
+  /** Layout sizes at scale 1. The window is these multiplied by the scale. */
   const NORMAL_SIZE = { width: 336, height: 148 };
-  // Wide enough that the readout and the two surviving buttons sit on one row
-  // without crowding each other.
   const COMPACT_SIZE = { width: 196, height: 74 };
 
   const timer = new Timer();
   const lock = new LockController();
+  const scale = new ScaleController();
 
   timer.onSegmentEnd = (done, next) => {
     if (!next) chime("done");
@@ -28,24 +30,49 @@
   let compact = $state(stored.compact);
   let hovering = $state(false);
 
+  /** How long the escape-hatch hint stays up after locking. */
+  const HINT_MS = 4500;
+  let showHint = $state(false);
+
+  // Locking hides the close button and stops the window accepting clicks
+  // anywhere but the padlock, so the way out has to be stated rather than
+  // discovered. Shown on every lock, not just the first: it costs nothing to
+  // repeat and being stranded costs a lot.
+  $effect(() => {
+    if (!lock.locked) {
+      showHint = false;
+      return;
+    }
+    showHint = true;
+    const timer = setTimeout(() => (showHint = false), HINT_MS);
+    return () => clearTimeout(timer);
+  });
+
+  scale.set(stored.scale);
+
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const vars = $derived(skyVars(sky));
+  const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
 
-  // Restore the saved window size before anything is visible, then keep the
-  // window in step with the mode.
+  // One number drives every size in the stylesheet; see app.css.
   $effect(() => {
-    const size = compact ? COMPACT_SIZE : NORMAL_SIZE;
-    void setWindowSize(size.width, size.height);
+    document.documentElement.style.setProperty("--scale", String(scale.value));
   });
 
   $effect(() => {
-    savePrefs({ locked: lock.locked, compact });
+    const factor = scale.value;
+    void setWindowSize(
+      Math.round(baseSize.width * factor),
+      Math.round(baseSize.height * factor)
+    );
   });
 
   $effect(() => {
-    if (stored.locked) lock.lock();
-    return () => lock.destroy();
+    savePrefs({ compact, scale: scale.value });
   });
+
+  // No reactive reads, so this registers cleanup once and never re-runs.
+  $effect(() => () => lock.destroy());
 
   // The global shortcut is the way back in if hit-testing ever fails.
   $effect(() => {
@@ -95,6 +122,21 @@
       case "L":
         lock.toggle();
         break;
+      case "c":
+      case "C":
+        onDoubleClick();
+        break;
+      case "+":
+      case "=":
+        scale.nudge(SCALE_STEP);
+        break;
+      case "-":
+      case "_":
+        scale.nudge(-SCALE_STEP);
+        break;
+      case "0":
+        scale.reset();
+        break;
     }
   }
 </script>
@@ -108,7 +150,6 @@
   style={vars}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
-  ondblclick={onDoubleClick}
 >
   <div class="widget">
     <!-- Everything that should recede when the widget is locked lives in here,
@@ -149,8 +190,19 @@
     <!-- Transparent layer that makes the whole widget a window drag handle.
          Tauri only starts a drag when the event target itself carries the
          attribute, so interactive elements must sit above this. -->
+    <!-- Double-click lives here rather than on the frame so it only fires on
+         the widget's background. Buttons and the grip sit in layers above
+         this one, so double-clicking them no longer toggles compact mode as a
+         side effect. -->
     {#if !lock.locked}
-      <div class="drag" data-tauri-drag-region></div>
+      <div
+        class="drag"
+        data-tauri-drag-region
+        role="button"
+        tabindex="-1"
+        aria-label="Widget background. Drag to move, double-click to toggle compact mode."
+        ondblclick={onDoubleClick}
+      ></div>
     {/if}
 
     <div class="ui" class:show={hovering && !lock.locked}>
@@ -176,7 +228,25 @@
           {compact}
         />
       </div>
+
+      {#if !compact}
+        <Grip
+          value={scale.value}
+          min={MIN_SCALE}
+          max={MAX_SCALE}
+          dragging={scale.dragging}
+          onBegin={(event) => scale.begin(event, baseSize.width)}
+          onMove={(event) => scale.move(event)}
+          onEnd={(event) => scale.end(event)}
+          onNudge={(delta) => scale.nudge(delta)}
+          onReset={() => scale.reset()}
+        />
+      {/if}
     </div>
+
+    {#if showHint}
+      <div class="hint">Ctrl<span>+</span>Alt<span>+</span>G to unlock</div>
+    {/if}
 
     <!-- Outside .ui: the padlock has to stay reachable when everything else
          has faded out and stopped accepting clicks. -->
@@ -193,10 +263,13 @@
 </main>
 
 <style>
+  /* Sizes are in rem, where 1rem is one design pixel at the current scale.
+     See the note in app.css. */
+
   .frame {
     position: absolute;
     inset: 0;
-    padding: 8px;
+    padding: 8rem;
   }
 
   .widget {
@@ -207,8 +280,8 @@
     overflow: hidden;
     border: 1px solid rgb(255 255 255 / 0.1);
     box-shadow:
-      0 6px 22px rgb(0 0 0 / 0.42),
-      0 1px 3px rgb(0 0 0 / 0.3);
+      0 6rem 22rem rgb(0 0 0 / 0.42),
+      0 1rem 3rem rgb(0 0 0 / 0.3);
     isolation: isolate;
     transition:
       border-color 0.45s ease,
@@ -338,7 +411,7 @@
   .content {
     position: absolute;
     inset: 0;
-    padding: 11px 15px 13px;
+    padding: 11rem 15rem 13rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -348,25 +421,25 @@
   .label {
     /* Clears the close button's corner so the two never sit on top of
        each other, hovered or not. */
-    margin-left: 21px;
-    font-size: 9.5px;
+    margin-left: 21rem;
+    font-size: 9.5rem;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: rgb(var(--accent));
-    text-shadow: 0 1px 6px rgb(0 0 0 / 0.4);
+    text-shadow: 0 1rem 6rem rgb(0 0 0 / 0.4);
     transition: opacity 0.25s ease;
   }
 
   .time {
     margin-top: auto;
-    font-size: 40px;
+    font-size: 40rem;
     line-height: 1;
     font-weight: 200;
     letter-spacing: -0.015em;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
     color: rgb(var(--ink));
-    text-shadow: 0 2px 14px rgb(0 0 0 / 0.45);
+    text-shadow: 0 2rem 14rem rgb(0 0 0 / 0.45);
     transition:
       opacity 0.3s ease,
       font-size 0.25s ease;
@@ -378,14 +451,14 @@
 
   .dots {
     display: flex;
-    gap: 5px;
-    margin-top: 8px;
+    gap: 5rem;
+    margin-top: 8rem;
     transition: opacity 0.25s ease;
   }
 
   .dots i {
-    width: 5px;
-    height: 5px;
+    width: 5rem;
+    height: 5rem;
     border-radius: 50%;
     background: rgb(var(--ink) / 0.22);
     box-shadow: inset 0 0 0 1px rgb(var(--ink) / 0.18);
@@ -394,7 +467,7 @@
 
   .dots i.filled {
     background: rgb(var(--accent));
-    box-shadow: 0 0 6px rgb(var(--accent) / 0.7);
+    box-shadow: 0 0 6rem rgb(var(--accent) / 0.7);
   }
 
   /* Compact mode is a single row: readout on the left, the play control and
@@ -402,7 +475,7 @@
      aiming at is dropped rather than shrunk — skip, reset and close stay
      available on the keyboard, and double-clicking restores the full widget. */
   .frame.compact .content {
-    padding: 0 0 0 14px;
+    padding: 0 0 0 14rem;
     justify-content: center;
   }
 
@@ -413,7 +486,7 @@
 
   .frame.compact .time {
     margin-top: 0;
-    font-size: 28px;
+    font-size: 28rem;
   }
 
   .frame.compact .ground {
@@ -451,21 +524,23 @@
     opacity: 1;
   }
 
-  .ui.show :global(button) {
+  .ui.show :global(button),
+  .ui.show :global(.grip) {
     pointer-events: auto;
   }
 
+  /* Offset from the right edge to leave the corner to the resize grip. */
   .dock {
     position: absolute;
-    right: 12px;
-    bottom: 11px;
+    right: 26rem;
+    bottom: 11rem;
   }
 
   /* One row, vertically centred, with the padlock outermost so it keeps the
      corner position it needs to stay easy to hit while locked. */
   .frame.compact .dock {
     top: 50%;
-    right: 44px;
+    right: 44rem;
     bottom: auto;
     transform: translateY(-50%);
   }
@@ -479,12 +554,12 @@
      side by side would mean a mis-aimed click on lock could quit the app. */
   .close {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 8rem;
+    left: 8rem;
     display: grid;
     place-items: center;
-    width: 20px;
-    height: 20px;
+    width: 20rem;
+    height: 20rem;
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -502,16 +577,16 @@
   }
 
   .close svg {
-    width: 11px;
-    height: 11px;
+    width: 11rem;
+    height: 11rem;
   }
 
   /* The padlock lives in the corner — the easiest target to hit — and stays
      at full strength while the rest of the widget fades. */
   .lock-slot {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 8rem;
+    right: 8rem;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -524,8 +599,41 @@
 
   .frame.compact .lock-slot {
     top: 50%;
-    right: 12px;
+    right: 12rem;
     transform: translateY(-50%);
+  }
+
+  /* Sits above the dimmed canvas rather than inside it, so it stays legible
+     while everything behind it recedes. */
+  .hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 9rem;
+    text-align: center;
+    font-size: 9rem;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: rgb(var(--ink) / 0.66);
+    text-shadow: 0 1rem 5rem rgb(0 0 0 / 0.65);
+    pointer-events: none;
+    animation: hint-in 0.3s ease both;
+  }
+
+  .hint span {
+    opacity: 0.45;
+    margin: 0 1rem;
+  }
+
+  @keyframes hint-in {
+    from {
+      opacity: 0;
+      transform: translateY(3rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .progress {
@@ -533,7 +641,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 2px;
+    height: 2rem;
     background: rgb(0 0 0 / 0.28);
     pointer-events: none;
   }
@@ -542,7 +650,7 @@
     display: block;
     height: 100%;
     background: rgb(var(--accent));
-    box-shadow: 0 0 8px rgb(var(--accent) / 0.8);
+    box-shadow: 0 0 8rem rgb(var(--accent) / 0.8);
     transform-origin: left center;
     transition: transform 0.2s linear;
   }

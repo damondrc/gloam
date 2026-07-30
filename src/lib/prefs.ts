@@ -6,17 +6,33 @@
  * swap for a JSON file managed by Rust.
  */
 
+import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
+
 const KEY = "gloam.prefs.v1";
 
+/**
+ * Lock is deliberately absent.
+ *
+ * It is a mode, not a preference, and it is the one mode in which the widget
+ * accepts almost no input. Booting into it means that any failure in the
+ * click-through path leaves the user with a window they cannot interact with
+ * and no obvious way out. Compact and scale are safe to restore because a
+ * wrong value there is merely ugly; a wrong value here is a trap.
+ */
 export interface Prefs {
-  locked: boolean;
   compact: boolean;
+  scale: number;
 }
 
 export const DEFAULT_PREFS: Prefs = {
-  locked: false,
   compact: false,
+  scale: 1,
 };
+
+function readScale(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+}
 
 export function loadPrefs(): Prefs {
   try {
@@ -30,8 +46,8 @@ export function loadPrefs(): Prefs {
 
     const value = parsed as Partial<Prefs>;
     return {
-      locked: typeof value.locked === "boolean" ? value.locked : false,
       compact: typeof value.compact === "boolean" ? value.compact : false,
+      scale: readScale(value.scale),
     };
   } catch {
     // Corrupt or unavailable storage should never keep the widget from opening.
