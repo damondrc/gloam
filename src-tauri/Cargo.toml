@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "A floating, ambient focus timer that lives in the corner of your screen."
 authors = ["Damond"]
 license = "MIT"
-repository = "https://github.com/damondrc99/gloam"
+repository = "https://github.com/damondrc/gloam"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -24,6 +24,7 @@ serde_json = "1"
 # meaning on mobile targets.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
 
 # The widget sits idle for long stretches, so favour a small, fast binary over
 # compile time in release builds.

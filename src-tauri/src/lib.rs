@@ -9,6 +9,11 @@ const TOGGLE_LOCK_EVENT: &str = "gloam://toggle-lock";
 pub fn run() {
     let builder = tauri::Builder::default();
 
+    // Must be registered before anything else, so a duplicate launch is turned
+    // away before it has a chance to create a window or claim a shortcut.
+    #[cfg(desktop)]
+    let builder = builder.plugin(single_instance_plugin());
+
     #[cfg(desktop)]
     let builder = builder.plugin(global_shortcut_plugin());
 
@@ -29,6 +34,27 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Gloam");
+}
+
+/// Refuses to start a second copy.
+///
+/// Two Gloams are worse than they sound. The window opens at a fixed position,
+/// so a duplicate lands exactly on top of the original and reads as one widget
+/// behaving strangely. Worse, only one process can hold a global shortcut, so
+/// the second copy silently loses Ctrl+Alt+G — and if the first copy is locked
+/// and therefore click-through, the user is left with a stack of windows, no
+/// visible close button and no working escape hatch.
+#[cfg(desktop)]
+fn single_instance_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        // Surface the copy that is already running instead of doing nothing,
+        // so launching again reads as "here it is" rather than a failure.
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+    })
 }
 
 #[cfg(desktop)]
