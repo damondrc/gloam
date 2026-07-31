@@ -35,6 +35,7 @@ trailing break has nothing to resume into, so it is dead time.
 - An ambient sky whose state encodes progress
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
+- Resizable from 80% to 180% by dragging the corner grip
 - Soft synthesised chimes at every transition — no audio assets, no jump scares
 - Controls stay hidden until you hover, so the widget reads as scenery
 
@@ -46,6 +47,9 @@ trailing break has nothing to resume into, so it is dead time.
 | `S` | Skip to next segment |
 | `R` | Reset the run |
 | `L` | Toggle lock |
+| `C` | Toggle compact mode |
+| `+` / `-` | Scale the widget up or down |
+| `0` | Reset the scale |
 | `Ctrl+Alt+G` | Toggle lock, from anywhere |
 
 ## Lock mode
@@ -75,6 +79,49 @@ Two known consequences:
 on an unusual window manager, the widget is still recoverable. If another
 application already owns that shortcut, registration fails quietly and the
 padlock keeps working.
+
+Locking hides the close button, so the widget cannot be quit until it is
+unlocked. That makes the escape hatch load-bearing, and Gloam states it rather
+than leaving it to be discovered: a hint naming the shortcut appears for a few
+seconds every time you lock.
+
+For the same reason only one copy may run at a time. Two would be worse than it
+sounds — the window opens at a fixed position, so a duplicate lands exactly on
+top of the original and reads as one widget misbehaving, and since only one
+process can hold a global shortcut, the second copy silently loses its way out.
+Launching again surfaces the running instance instead of starting another.
+
+Lock is not remembered between runs, unlike scale and compact mode. It is a
+mode rather than a preference, and it is the one mode in which the widget
+accepts almost no input — booting into it means any failure in the
+click-through path hands the user a window they cannot interact with. A wrong
+saved scale is merely ugly; a wrong saved lock is a trap. Gloam always starts
+interactive.
+
+Because click-through is write-only — nothing reports back whether the call
+took effect — the controller restates its intent every ten polls rather than
+only on transitions, so a dropped call heals itself within a second.
+
+## Scale
+
+Dragging the grip in the bottom-right corner resizes the widget between 80% and
+180%. Everything scales together — type, buttons, the sun, the spacing — because
+sizes throughout the stylesheet are written in `rem`, and the root font size is
+one design pixel multiplied by the current scale. Changing one custom property
+therefore relays out the entire widget, and because it is a real relayout rather
+than a transform, text stays crisp at every size.
+
+Scale is kept independent of the other two size-ish concepts on purpose:
+
+| Axis | Question it answers | Control |
+| --- | --- | --- |
+| Scale | How big is everything drawn? | Corner grip, `+` / `-` |
+| Layout | Which elements exist? | Double-click for compact |
+| Panels | How much content is there? | Planned: disclosure arrow |
+
+Folding these into a single "size" control is tempting and wrong: dragging to
+enlarge the clock would also unfold the music player, and collapsing the player
+would shrink your type.
 
 ## Compact mode
 
@@ -117,6 +164,18 @@ The Wayland limitation is [upstream](https://github.com/tauri-apps/tao/issues/11
 the protocol gives clients no way to request that a surface stay above others.
 The planned workaround is a `gtk-layer-shell` overlay surface — see the roadmap.
 
+### Linux binaries
+
+Released Linux builds are produced on **Linux Mint 22 (Ubuntu 24.04 base)** and
+therefore require **glibc 2.39 or newer** — Mint 22+, Ubuntu 24.04+, Debian 13+,
+Fedora 40+. glibc is not backward compatible, so a binary built on a newer base
+will not start on an older one.
+
+Older distributions are not unsupported so much as un-built-for: the source
+compiles on anything providing `libwebkit2gtk-4.1-dev`, which reaches back to
+Ubuntu 22.04 and Debian 12. Widening the released binaries means building on
+that older base, which is what the planned CI workflow is for.
+
 ## Roadmap
 
 Everything below is built on one rule: **the default state never gets busier.**
@@ -126,7 +185,7 @@ it for more. Growth goes into disclosure, not into the resting state.
 
 - [x] **Phase 1** — Floating widget, fixed 30/10 cycles, ambient sky, chimes
 - [x] **Phase 2** — Lock mode with cursor hit-testing, compact mode, persistence
-- [ ] **Phase 3** — A scale factor and a corner resize handle, so later panels are
+- [x] **Phase 3** — A scale factor and a corner resize handle, so later panels are
       built inside a container that already knows how to grow
 - [ ] **Phase 4** — Settings panel: durations, session count, volume, alarm timbre
 - [ ] **Phase 5** — Ambient life on the backdrop: slow drifting clouds, and a
@@ -135,6 +194,9 @@ it for more. Growth goes into disclosure, not into the resting state.
       windows light up as the sun goes down, or a mountain ridge
 - [ ] **Phase 7** — System tray, launch on startup, session history
 - [ ] **Phase 8** — `gtk-layer-shell` path so always-on-top works under Wayland
+- [ ] **Infrastructure** — CI that builds Windows and Ubuntu 22.04 artifacts on
+      tag, so releases reach older distributions without needing a second
+      machine to build on
 
 Phases 1–8 make a complete v1.0.
 
@@ -162,6 +224,7 @@ src/
   lib/
     timer.svelte.ts   the state machine and countdown
     lock.svelte.ts    click-through and cursor hit-testing
+    scale.svelte.ts   the scale factor and its drag interaction
     sky.ts            the palette, keyframes and interpolation
     chime.ts          WebAudio alarm synthesis
     prefs.ts          persisted preferences
@@ -170,6 +233,7 @@ src/
     Grain.svelte      generated film grain
     Controls.svelte   transport buttons
     Padlock.svelte    the animated lock
+    Grip.svelte       the corner resize handle
 src-tauri/            Rust shell, window configuration, global shortcut
 ```
 
