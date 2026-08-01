@@ -21,20 +21,24 @@ export class ScaleController {
   dragging = $state(false);
 
   #startX = 0;
+  #startY = 0;
   #startValue = 1;
   #baseWidth = 1;
+  #baseHeight = 1;
 
   /**
-   * @param baseWidth width of the current layout at scale 1, so that dragging
-   *   one screen pixel changes the widget by one pixel — the most predictable
-   *   mapping available.
+   * @param baseWidth  width of the current layout at scale 1
+   * @param baseHeight height of the current layout at scale 1
    */
-  begin(event: PointerEvent, baseWidth: number): void {
-    // screenX rather than clientX: the window resizes underneath the cursor as
-    // we drag, which would make any window-relative coordinate drift.
+  begin(event: PointerEvent, baseWidth: number, baseHeight: number): void {
+    // Screen coordinates rather than client ones: the window resizes
+    // underneath the cursor as we drag, which would make any window-relative
+    // coordinate drift.
     this.#startX = event.screenX;
+    this.#startY = event.screenY;
     this.#startValue = this.value;
     this.#baseWidth = Math.max(1, baseWidth);
+    this.#baseHeight = Math.max(1, baseHeight);
     this.dragging = true;
 
     const target = event.currentTarget as HTMLElement | null;
@@ -43,9 +47,21 @@ export class ScaleController {
 
   move(event: PointerEvent): void {
     if (!this.dragging) return;
-    const delta = event.screenX - this.#startX;
-    const width = this.#baseWidth * this.#startValue + delta;
-    this.set(width / this.#baseWidth);
+
+    const dx = event.screenX - this.#startX;
+    const dy = event.screenY - this.#startY;
+    const w = this.#baseWidth;
+    const h = this.#baseHeight;
+
+    // The widget's proportions are fixed, so the corner can only travel along
+    // one line: as the scale grows by ds the grip moves by (w·ds, h·ds).
+    // Projecting the pointer's travel onto that line is the closest the corner
+    // can stay to the cursor, and it means both axes contribute — dragging
+    // down enlarges as naturally as dragging right, and a diagonal drag reads
+    // as one gesture rather than only its horizontal half.
+    const delta = (dx * w + dy * h) / (w * w + h * h);
+
+    this.set(this.#startValue + delta);
   }
 
   end(event: PointerEvent): void {

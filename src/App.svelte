@@ -271,7 +271,7 @@
           min={MIN_SCALE}
           max={MAX_SCALE}
           dragging={scale.dragging}
-          onBegin={(event) => scale.begin(event, baseSize.width)}
+          onBegin={(event) => scale.begin(event, baseSize.width, baseSize.height)}
           onMove={(event) => scale.move(event)}
           onEnd={(event) => scale.end(event)}
           onNudge={(delta) => scale.nudge(delta)}
