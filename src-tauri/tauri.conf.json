@@ -17,7 +17,7 @@
         "title": "Gloam",
         "width": 336,
         "height": 148,
-        "resizable": false,
+        "resizable": true,
         "maximizable": false,
         "minimizable": true,
         "decorations": false,

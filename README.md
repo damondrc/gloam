@@ -123,6 +123,14 @@ Folding these into a single "size" control is tempting and wrong: dragging to
 enlarge the clock would also unfold the music player, and collapsing the player
 would shrink your type.
 
+The window is declared `resizable: true` even though it has no visible resize
+border, and that is load-bearing rather than leftover. Windows reads the flag
+as "the user may not drag the edges" and still honours programmatic resizing;
+GTK reads it as "this window has a fixed size", pins its size hints and ignores
+every later resize request, including the app's own. With it set to false the
+Linux build kept one size forever: enlarging clipped the content against a
+window that would not grow, and compact mode stayed as tall as the full layout.
+
 ## Compact mode
 
 Double-clicking collapses the widget to a single row: the readout, the play
