@@ -34,6 +34,19 @@ export async function setAlwaysOnTop(value: boolean): Promise<void> {
   await m?.getCurrentWindow().setAlwaysOnTop(value);
 }
 
+/**
+ * Begins a window drag.
+ *
+ * Called by hand rather than through `data-tauri-drag-region`, because that
+ * attribute also opts into the desktop convention that a double-click on a
+ * title bar maximises the window — and the widget uses a double-click on the
+ * same surface to toggle compact mode.
+ */
+export async function startDragging(): Promise<void> {
+  const m = await api();
+  await m?.getCurrentWindow().startDragging();
+}
+
 /** When true, clicks fall through to whatever sits behind the widget. */
 export async function setClickThrough(value: boolean): Promise<void> {
   const m = await api();

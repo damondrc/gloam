@@ -4,7 +4,12 @@
   import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
   import { skyFor, skyVars } from "./lib/sky";
   import { chime, unlockAudio } from "./lib/chime";
-  import { closeWindow, onBackendEvent, setWindowSize } from "./lib/window";
+  import {
+    closeWindow,
+    onBackendEvent,
+    setWindowSize,
+    startDragging,
+  } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
   import Stars from "./lib/Stars.svelte";
   import Grain from "./lib/Grain.svelte";
@@ -102,6 +107,14 @@
     compact = !compact;
   }
 
+  function onDragStart(event: MouseEvent): void {
+    // Only a plain first press with the primary button starts a drag. Bailing
+    // out on detail >= 2 leaves the second press of a double-click alone, so
+    // the compact toggle is not competing with a drag.
+    if (event.button !== 0 || event.detail >= 2) return;
+    void startDragging();
+  }
+
   function onKeydown(event: KeyboardEvent): void {
     if (event.repeat) return;
 
@@ -191,17 +204,20 @@
     <!-- Transparent layer that makes the whole widget a window drag handle.
          Tauri only starts a drag when the event target itself carries the
          attribute, so interactive elements must sit above this. -->
-    <!-- Double-click lives here rather than on the frame so it only fires on
-         the widget's background. Buttons and the grip sit in layers above
-         this one, so double-clicking them no longer toggles compact mode as a
-         side effect. -->
+    <!-- Dragging and the compact toggle both live here rather than on the
+         frame, so they only fire on the widget's background: buttons and the
+         grip sit in layers above this one.
+
+         The drag is started by hand instead of with data-tauri-drag-region,
+         which additionally implements "double-click a title bar to maximise"
+         and would fight the compact toggle for the same gesture. -->
     {#if !lock.locked}
       <div
         class="drag"
-        data-tauri-drag-region
         role="button"
         tabindex="-1"
         aria-label="Widget background. Drag to move, double-click to toggle compact mode."
+        onmousedown={onDragStart}
         ondblclick={onDoubleClick}
       ></div>
     {/if}
@@ -283,7 +299,6 @@
     box-shadow:
       0 6rem 22rem rgb(0 0 0 / 0.42),
       0 1rem 3rem rgb(0 0 0 / 0.3);
-    isolation: isolate;
     transition:
       border-color 0.45s ease,
       box-shadow 0.45s ease;
@@ -292,6 +307,19 @@
   .canvas {
     position: absolute;
     inset: 0;
+    /* The horizon band and the progress bar sit flush against the bottom edge,
+       and the haze layers overflow the frame by design. All of them get their
+       own compositing layer because of the blend modes above, and WebKitGTK
+       does not reliably clip composited layers to a rounded overflow
+       container — which left the bottom corners square on Linux while Windows
+       looked correct. An explicit clip-path is honoured by both.
+
+       It lives here rather than on .widget so it cannot clip the drop shadow,
+       which is painted outside the border box. */
+    border-radius: var(--radius);
+    overflow: hidden;
+    clip-path: inset(0 round var(--radius));
+    isolation: isolate;
     transition: opacity 0.45s ease;
   }
 
