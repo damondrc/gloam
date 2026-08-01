@@ -56,16 +56,35 @@
   scale.set(stored.scale);
 
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
-  const vars = $derived(skyVars(sky));
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
+
+  // The layout's own dimensions travel to CSS as custom properties so the
+  // numbers live in one place. Because 1rem is one scaled design pixel, the
+  // frame written as `calc(var(--frame-w) * 1rem)` is exactly the size the
+  // window is being asked for — without CSS having to know the constants.
+  const vars = $derived(
+    `${skyVars(sky)}; --frame-w: ${baseSize.width}; --frame-h: ${baseSize.height}`
+  );
 
   // One number drives every size in the stylesheet; see app.css.
   $effect(() => {
     document.documentElement.style.setProperty("--scale", String(scale.value));
   });
 
+  // While the grip is being dragged the window is parked at the largest size
+  // the drag could reach and then left alone. Resizing an undecorated,
+  // transparent window at pointer-move rate makes its edges shimmer: the
+  // compositor resizes the surface on a different beat from the WebView's
+  // repaint, so for a frame the surface is already its new size while the
+  // content is still the old one. No amount of CSS fixes that, because it
+  // happens underneath CSS.
+  //
+  // The widget is sized in CSS, so it still follows the drag exactly. Only its
+  // container stops moving, and the surplus is transparent. Reading dragging
+  // first also means scale.value is not a dependency mid-drag, so the effect
+  // fires twice per resize instead of once per pointer event.
   $effect(() => {
-    const factor = scale.value;
+    const factor = scale.dragging ? MAX_SCALE : scale.value;
     void setWindowSize(
       Math.round(baseSize.width * factor),
       Math.round(baseSize.height * factor)
@@ -283,9 +302,17 @@
   /* Sizes are in rem, where 1rem is one design pixel at the current scale.
      See the note in app.css. */
 
+  /* The frame carries its own dimensions rather than stretching to fill the
+     window. That decouples the two: the widget is always drawn at exactly the
+     size it means to be, whether the window around it is momentarily larger
+     because a drag is in progress, or a few pixels off because the window
+     manager rounded the request its own way. */
   .frame {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: calc(var(--frame-w) * 1rem);
+    height: calc(var(--frame-h) * 1rem);
     padding: 8rem;
   }
 
