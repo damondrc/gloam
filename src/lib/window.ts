@@ -50,20 +50,30 @@ export async function setWindowSize(
 }
 
 export interface Geometry {
-  /** Window top-left in physical desktop pixels. */
+  /** Top-left of the *client area* in physical desktop pixels. */
   x: number;
   y: number;
   /** Ratio of physical pixels to CSS pixels. */
   scale: number;
 }
 
+/**
+ * Reads the client area origin, deliberately not the window origin.
+ *
+ * getBoundingClientRect() is measured from the client area, so anything
+ * converting a DOM rect to screen coordinates has to start from the same
+ * place. outerPosition() includes whatever frame the window manager reserves:
+ * on Windows with decorations disabled the two coincide and the distinction is
+ * invisible, but GTK keeps a frame band above the content, which offsets every
+ * derived coordinate upward by that amount.
+ */
 export async function readGeometry(): Promise<Geometry | null> {
   const m = await api();
   if (!m) return null;
 
   const win = m.getCurrentWindow();
   const [position, scale] = await Promise.all([
-    win.outerPosition(),
+    win.innerPosition(),
     win.scaleFactor(),
   ]);
   return { x: position.x, y: position.y, scale };

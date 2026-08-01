@@ -147,6 +147,7 @@
   class="frame"
   class:locked={lock.locked}
   class:compact
+  class:hovering
   style={vars}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
@@ -342,7 +343,8 @@
     transition:
       top 0.2s linear,
       width 0.4s linear,
-      height 0.4s linear;
+      height 0.4s linear,
+      opacity 0.22s ease;
   }
 
   /* Slow drifting atmosphere. Long, mismatched durations keep the two layers
@@ -493,11 +495,20 @@
     height: 26%;
   }
 
-  /* Pull the sun off the right edge so it is not sitting directly behind the
-     buttons. */
+  /* Pull the sun off the right edge so it clears the readout without sitting
+     centred under the controls. */
   .frame.compact .celestial {
     left: 58%;
     transform: scale(0.72);
+  }
+
+  /* Compact is too narrow for the sun and the controls to coexist legibly —
+     but the controls only exist while the pointer is on the widget, so the
+     conflict is a moment rather than a state. The sun steps back for that
+     moment and returns when you withdraw, which keeps the piece that gives the
+     widget its character instead of deleting it to satisfy a hover. */
+  .frame.compact.hovering .celestial {
+    opacity: 0.3;
   }
 
   /* --- interaction ----------------------------------------------------- */

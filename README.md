@@ -187,7 +187,9 @@ it for more. Growth goes into disclosure, not into the resting state.
 - [x] **Phase 2** — Lock mode with cursor hit-testing, compact mode, persistence
 - [x] **Phase 3** — A scale factor and a corner resize handle, so later panels are
       built inside a container that already knows how to grow
-- [ ] **Phase 4** — Settings panel: durations, session count, volume, alarm timbre
+- [ ] **Phase 4** — Settings panel: durations, session count, alarm timbre, and
+      quiet interface sounds on start, pause and reset — grouped here because
+      this is where the volume control that mutes them lives
 - [ ] **Phase 5** — Ambient life on the backdrop: slow drifting clouds, and a
       distant flock of birds as a rare event
 - [ ] **Phase 6** — Scene editor: swap the horizon band for a city skyline whose
