@@ -1,51 +1,23 @@
 /**
- * The timer engine.
+ * The timer engine: the reactive half.
  *
- * Two design decisions worth noting:
+ * The rules about what a run contains and how a duration reads live in
+ * `plan.ts`, which is plain TypeScript and therefore testable. What is left
+ * here is the part that genuinely needs reactivity — the state a component
+ * subscribes to, and the clock that advances it.
  *
- * 1. Countdown is derived from an absolute end timestamp, never from
- *    accumulating tick deltas. Browsers throttle timers in backgrounded or
- *    occluded windows, and this widget is meant to sit unattended on a second
- *    screen for half an hour at a time. Accumulating would drift; comparing
- *    against `Date.now()` cannot.
- *
- * 2. Breaks are placed *between* focus sessions, never after the last one.
- *    A trailing break has nothing to resume into, so it is dead time.
+ * One decision worth keeping in view: the countdown is derived from an
+ * absolute end timestamp, never from accumulating tick deltas. Browsers
+ * throttle timers in backgrounded or occluded windows, and this widget is
+ * meant to sit unattended for half an hour at a time. Accumulating would
+ * drift; comparing against `Date.now()` cannot.
  */
 
-export type Phase = "focus" | "break";
+import { buildPlan, DEFAULT_CONFIG, formatDuration } from "./plan";
+import type { Phase, Segment, TimerConfig } from "./plan";
 
-export interface Segment {
-  phase: Phase;
-  durationMs: number;
-}
-
-export interface TimerConfig {
-  focusMinutes: number;
-  breakMinutes: number;
-  /** How many focus sessions make up one full run. */
-  focusSessions: number;
-}
-
-export const DEFAULT_CONFIG: TimerConfig = {
-  focusMinutes: 30,
-  breakMinutes: 10,
-  focusSessions: 2,
-};
-
-/** Expands a config into the flat list of segments to run, in order. */
-export function buildPlan(config: TimerConfig): Segment[] {
-  const plan: Segment[] = [];
-  const sessions = Math.max(1, Math.floor(config.focusSessions));
-
-  for (let i = 0; i < sessions; i++) {
-    if (i > 0) {
-      plan.push({ phase: "break", durationMs: config.breakMinutes * 60_000 });
-    }
-    plan.push({ phase: "focus", durationMs: config.focusMinutes * 60_000 });
-  }
-  return plan;
-}
+export { buildPlan, DEFAULT_CONFIG, formatDuration };
+export type { Phase, Segment, TimerConfig };
 
 const TICK_MS = 100;
 
@@ -92,13 +64,7 @@ export class Timer {
     return this.phase === "focus" ? "FOCUS" : "BREAK";
   });
 
-  /** mm:ss, rounding up so the display never shows 00:00 while still running. */
-  display = $derived.by(() => {
-    const totalSeconds = Math.max(0, Math.ceil(this.remainingMs / 1000));
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  });
+  display = $derived(formatDuration(this.remainingMs));
 
   start(): void {
     if (this.finished) this.reset();

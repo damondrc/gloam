@@ -1,4 +1,6 @@
-import { defineConfig } from "vite";
+// Imported from vitest rather than vite so the `test` block below is typed.
+// It is the same defineConfig otherwise.
+import { defineConfig } from "vitest/config";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // Tauri expects a fixed port and must not obscure Vite errors.
@@ -20,5 +22,11 @@ export default defineConfig({
     target: "esnext",
     minify: "esbuild",
     sourcemap: false,
+  },
+  test: {
+    // The suite covers pure logic only, so it needs no DOM — which keeps a
+    // full run under a second and gives the tests no reason to be flaky.
+    environment: "node",
+    include: ["src/**/*.test.ts"],
   },
 });
