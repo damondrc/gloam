@@ -3,7 +3,7 @@
   import { LockController } from "./lib/lock.svelte";
   import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
   import { skyFor, skyVars } from "./lib/sky";
-  import { chime, unlockAudio } from "./lib/chime";
+  import * as sound from "./lib/sound";
   import {
     closeWindow,
     onBackendEvent,
@@ -25,10 +25,14 @@
   const lock = new LockController();
   const scale = new ScaleController();
 
-  timer.onSegmentEnd = (done, next) => {
-    if (!next) chime("done");
-    else if (done.phase === "focus") chime("focus-end");
-    else chime("break-end");
+  // Named for the segment that is starting rather than the one that ended.
+  // They are the same instant, but "a break is beginning" is what the listener
+  // needs to act on, and it keeps the sound vocabulary and the phrase names
+  // describing the same thing.
+  timer.onSegmentEnd = (_done, next) => {
+    if (!next) sound.runComplete();
+    else if (next.phase === "focus") sound.enterFocus();
+    else sound.enterBreak();
   };
 
   const stored = loadPrefs();
@@ -116,9 +120,23 @@
 
   function toggleTimer(): void {
     // The first click doubles as the user gesture that unlocks WebAudio, so the
-    // end-of-segment chime is guaranteed to be audible later.
-    unlockAudio();
+    // end-of-segment sounds are guaranteed to be audible later.
+    sound.unlockAudio();
+    sound.press(timer.running ? "pause" : "start");
     timer.toggle();
+  }
+
+  // Manual actions get the faint interface tick, never a transition phrase.
+  // The phrases mean "the timer moved on by itself"; when you moved it, you
+  // already know.
+  function resetTimer(): void {
+    sound.press("reset");
+    timer.reset();
+  }
+
+  function skipSegment(): void {
+    sound.press("reset");
+    timer.skip();
   }
 
   function onDoubleClick(): void {
@@ -144,11 +162,11 @@
         break;
       case "r":
       case "R":
-        timer.reset();
+        resetTimer();
         break;
       case "s":
       case "S":
-        timer.skip();
+        skipSegment();
         break;
       case "l":
       case "L":
@@ -259,8 +277,8 @@
           running={timer.running}
           finished={timer.finished}
           onToggle={toggleTimer}
-          onReset={() => timer.reset()}
-          onSkip={() => timer.skip()}
+          onReset={resetTimer}
+          onSkip={skipSegment}
           {compact}
         />
       </div>
