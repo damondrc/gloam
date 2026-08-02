@@ -1,6 +1,6 @@
 [package]
 name = "gloam"
-version = "0.3.0"
+version = "0.3.1"
 description = "A floating, ambient focus timer that lives in the corner of your screen."
 authors = ["Damond"]
 license = "MIT"
