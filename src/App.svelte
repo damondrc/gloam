@@ -16,10 +16,17 @@
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
   import Grip from "./lib/Grip.svelte";
+  import Panel from "./lib/Panel.svelte";
 
   /** Layout sizes at scale 1. The window is these multiplied by the scale. */
   const NORMAL_SIZE = { width: 336, height: 148 };
   const COMPACT_SIZE = { width: 196, height: 74 };
+
+  /** Empty margin around the widget, where its drop shadow falls. */
+  const FRAME_PADDING = 8;
+
+  /** How much taller the window gets when the panel is open. */
+  const PANEL_HEIGHT = 132;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -38,6 +45,12 @@
   const stored = loadPrefs();
   let compact = $state(stored.compact);
   let hovering = $state(false);
+  let panelOpen = $state(false);
+  let volume = $state(stored.volume);
+
+  $effect(() => {
+    sound.setVolume(volume);
+  });
 
   /** How long the escape-hatch hint stays up after locking. */
   const HINT_MS = 4500;
@@ -62,12 +75,23 @@
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
 
+  /** The stage is the timer; the panel grows the window beneath it. */
+  const stageHeight = $derived(baseSize.height - FRAME_PADDING * 2);
+  const panelHeight = $derived(panelOpen ? PANEL_HEIGHT : 0);
+  const frameHeight = $derived(baseSize.height + panelHeight);
+
   // The layout's own dimensions travel to CSS as custom properties so the
   // numbers live in one place. Because 1rem is one scaled design pixel, the
   // frame written as `calc(var(--frame-w) * 1rem)` is exactly the size the
   // window is being asked for — without CSS having to know the constants.
   const vars = $derived(
-    `${skyVars(sky)}; --frame-w: ${baseSize.width}; --frame-h: ${baseSize.height}`
+    [
+      skyVars(sky),
+      `--pad: ${FRAME_PADDING}`,
+      `--frame-w: ${baseSize.width}`,
+      `--frame-h: ${frameHeight}`,
+      `--stage-h: ${stageHeight}`,
+    ].join("; ")
   );
 
   // One number drives every size in the stylesheet; see app.css.
@@ -91,12 +115,12 @@
     const factor = scale.dragging ? MAX_SCALE : scale.value;
     void setWindowSize(
       Math.round(baseSize.width * factor),
-      Math.round(baseSize.height * factor)
+      Math.round(frameHeight * factor)
     );
   });
 
   $effect(() => {
-    savePrefs({ compact, scale: scale.value });
+    savePrefs({ compact, scale: scale.value, volume });
   });
 
   // No reactive reads, so this registers cleanup once and never re-runs.
@@ -141,7 +165,16 @@
 
   function onDoubleClick(): void {
     if (lock.locked) return;
+    // Compact has no room for the panel, so entering it closes what is open
+    // rather than leaving a panel attached to a strip.
+    if (!compact) panelOpen = false;
     compact = !compact;
+  }
+
+  function togglePanel(): void {
+    if (lock.locked || compact) return;
+    sound.press("reset");
+    panelOpen = !panelOpen;
   }
 
   function onDragStart(event: MouseEvent): void {
@@ -176,6 +209,9 @@
       case "C":
         onDoubleClick();
         break;
+      case ",":
+        togglePanel();
+        break;
       case "+":
       case "=":
         scale.nudge(SCALE_STEP);
@@ -198,11 +234,13 @@
   class:locked={lock.locked}
   class:compact
   class:hovering
+  class:open={panelOpen}
   style={vars}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
 >
   <div class="widget">
+   <div class="stage">
     <!-- Everything that should recede when the widget is locked lives in here,
          so the padlock can stay at full strength outside it. -->
     <div class="canvas">
@@ -259,7 +297,9 @@
       ></div>
     {/if}
 
-    <div class="ui" class:show={hovering && !lock.locked}>
+    <!-- With the panel out the widget is in use, so the controls stay up even
+         if the pointer wanders off. -->
+    <div class="ui" class:show={(hovering || panelOpen) && !lock.locked}>
       <button class="close" onclick={closeWindow} title="Close" aria-label="Close">
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path
@@ -295,6 +335,25 @@
           onNudge={(delta) => scale.nudge(delta)}
           onReset={() => scale.reset()}
         />
+
+        <button
+          class="disclose"
+          onclick={togglePanel}
+          title={panelOpen ? "Close settings" : "Open settings"}
+          aria-label={panelOpen ? "Close settings" : "Open settings"}
+          aria-expanded={panelOpen}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M3.6 6.4 8 10.4l4.4-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
       {/if}
     </div>
 
@@ -313,6 +372,11 @@
         small={compact}
       />
     </div>
+   </div>
+
+   {#if panelOpen}
+     <Panel {volume} onVolume={(next) => (volume = next)} />
+   {/if}
   </div>
 </main>
 
@@ -331,11 +395,15 @@
     left: 0;
     width: calc(var(--frame-w) * 1rem);
     height: calc(var(--frame-h) * 1rem);
-    padding: 8rem;
+    padding: calc(var(--pad) * 1rem);
   }
 
+  /* Two stacked zones: the stage holds the timer and its sky, the panel grows
+     beneath it. The stage keeps a fixed height so opening the panel adds space
+     rather than squeezing the clock. */
   .widget {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
     border-radius: var(--radius);
@@ -347,6 +415,11 @@
     transition:
       border-color 0.45s ease,
       box-shadow 0.45s ease;
+  }
+
+  .stage {
+    position: relative;
+    flex: 0 0 calc(var(--stage-h) * 1rem);
   }
 
   .canvas {
@@ -366,6 +439,12 @@
     clip-path: inset(0 round var(--radius));
     isolation: isolate;
     transition: opacity 0.45s ease;
+  }
+
+  /* With the panel out, the bottom corners belong to the panel instead. */
+  .frame.open .canvas {
+    border-radius: var(--radius) var(--radius) 0 0;
+    clip-path: inset(0 round var(--radius) var(--radius) 0 0);
   }
 
   /* Locked: recede so the document underneath stays readable through it. */
@@ -631,6 +710,49 @@
 
   .frame.compact .close {
     display: none;
+  }
+
+  /* Centred on the bottom edge: the classic "there is more below" affordance,
+     and the one spot on that edge not already claimed by the dots or the dock. */
+  .disclose {
+    position: absolute;
+    left: 50%;
+    bottom: 5rem;
+    transform: translateX(-50%);
+    display: grid;
+    place-items: center;
+    width: 26rem;
+    height: 18rem;
+    padding: 0;
+    border: none;
+    border-radius: 9rem;
+    background: rgb(255 255 255 / 0.08);
+    color: rgb(var(--ink) / 0.75);
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition:
+      background 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .disclose:hover {
+    background: rgb(255 255 255 / 0.18);
+    color: rgb(var(--ink));
+  }
+
+  .disclose:focus-visible {
+    outline: 2px solid rgb(var(--accent) / 0.8);
+    outline-offset: 2px;
+  }
+
+  .disclose svg {
+    width: 13rem;
+    height: 13rem;
+    transition: transform 0.26s ease;
+  }
+
+  .frame.open .disclose svg {
+    transform: rotate(180deg);
   }
 
   /* Close sits in the opposite corner from the padlock on purpose. They are

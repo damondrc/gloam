@@ -22,16 +22,18 @@ const KEY = "gloam.prefs.v1";
 export interface Prefs {
   compact: boolean;
   scale: number;
+  volume: number;
 }
 
 export const DEFAULT_PREFS: Prefs = {
   compact: false,
   scale: 1,
+  volume: 0.6,
 };
 
-function readScale(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+function readNumber(value: unknown, min: number, max: number, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
 }
 
 export function loadPrefs(): Prefs {
@@ -47,7 +49,8 @@ export function loadPrefs(): Prefs {
     const value = parsed as Partial<Prefs>;
     return {
       compact: typeof value.compact === "boolean" ? value.compact : false,
-      scale: readScale(value.scale),
+      scale: readNumber(value.scale, MIN_SCALE, MAX_SCALE, DEFAULT_PREFS.scale),
+      volume: readNumber(value.volume, 0, 1, DEFAULT_PREFS.volume),
     };
   } catch {
     // Corrupt or unavailable storage should never keep the widget from opening.
