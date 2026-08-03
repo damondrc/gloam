@@ -6,17 +6,66 @@
    * where the machinery lives. Controls laid over the gradient would be hard
    * to read and would break the one idea the backdrop is carrying.
    */
+  import { LIMITS } from "./plan";
+  import type { TimerConfig } from "./plan";
+  import Stepper from "./Stepper.svelte";
+
   interface Props {
+    config: TimerConfig;
+    onConfig: (next: TimerConfig) => void;
+    /** True while the timer is running: durations are frozen. */
+    frozen: boolean;
+    /** True when applying a change would discard progress already made. */
+    willReset: boolean;
     volume: number;
     onVolume: (value: number) => void;
   }
 
-  let { volume, onVolume }: Props = $props();
+  let { config, onConfig, frozen, willReset, volume, onVolume }: Props = $props();
 
   const percent = $derived(Math.round(volume * 100));
+
+  function set(key: keyof TimerConfig, value: number): void {
+    onConfig({ ...config, [key]: value });
+  }
 </script>
 
 <div class="panel">
+  <p class="section">
+    Timer
+    {#if frozen}
+      <span class="note">pause to edit</span>
+    {:else if willReset}
+      <span class="note">changing restarts the run</span>
+    {/if}
+  </p>
+
+  <div class="rows">
+    <Stepper
+      label="Focus"
+      value={config.focusMinutes}
+      {...LIMITS.focusMinutes}
+      suffix=" min"
+      disabled={frozen}
+      onChange={(value) => set("focusMinutes", value)}
+    />
+    <Stepper
+      label="Break"
+      value={config.breakMinutes}
+      {...LIMITS.breakMinutes}
+      suffix=" min"
+      disabled={frozen}
+      onChange={(value) => set("breakMinutes", value)}
+    />
+    <Stepper
+      label="Sessions"
+      value={config.focusSessions}
+      {...LIMITS.focusSessions}
+      disabled={frozen}
+      onChange={(value) => set("focusSessions", value)}
+    />
+  </div>
+
   <p class="section">Sound</p>
 
   <label class="row">
@@ -58,11 +107,34 @@
   }
 
   .section {
-    margin: 0 0 10rem;
+    display: flex;
+    align-items: baseline;
+    gap: 8rem;
+    margin: 0 0 9rem;
     font-size: 9rem;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: rgb(var(--accent) / 0.85);
+  }
+
+  .section + .rows + .section {
+    margin-top: 14rem;
+  }
+
+  /* Says out loud what a change is about to cost, rather than letting the user
+     discover it by losing a session. */
+  .note {
+    font-size: 8.5rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: rgb(var(--ink) / 0.45);
+  }
+
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 7rem;
   }
 
   .row {

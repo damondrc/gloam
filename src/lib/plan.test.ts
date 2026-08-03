@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildPlan, formatDuration } from "./plan";
-import type { TimerConfig } from "./plan";
+import { buildPlan, clampSetting, DEFAULT_CONFIG, formatDuration, LIMITS } from "./plan";
+import type { SettingKey, TimerConfig } from "./plan";
 
 const config = (focusSessions: number): TimerConfig => ({
   focusMinutes: 25,
@@ -66,6 +66,35 @@ describe("buildPlan", () => {
     expect(plan).toHaveLength(3);
     expect(plan.every((s) => Number.isFinite(s.durationMs) && s.durationMs >= 0))
       .toBe(true);
+  });
+});
+
+describe("clampSetting", () => {
+  const keys = Object.keys(LIMITS) as SettingKey[];
+
+  it.each(keys)("keeps %s inside its own range", (key) => {
+    const { min, max } = LIMITS[key];
+
+    expect(clampSetting(key, min - 1000)).toBe(min);
+    expect(clampSetting(key, max + 1000)).toBe(max);
+  });
+
+  it.each(keys)("snaps %s onto its step", (key) => {
+    const { min, step } = LIMITS[key];
+    const offGrid = min + step * 1.5;
+
+    expect(clampSetting(key, offGrid) % step).toBe(0);
+  });
+
+  // Stored preferences can be hand-edited or left over from an older build.
+  it.each(keys)("falls back to the default for a non-number %s", (key) => {
+    expect(clampSetting(key, Number.NaN)).toBe(DEFAULT_CONFIG[key]);
+  });
+
+  // A default outside its own limits would show the panel a value its buttons
+  // could never produce.
+  it.each(keys)("ships a default that its own limits allow (%s)", (key) => {
+    expect(clampSetting(key, DEFAULT_CONFIG[key])).toBe(DEFAULT_CONFIG[key]);
   });
 });
 

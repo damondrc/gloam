@@ -30,6 +30,30 @@ export const DEFAULT_CONFIG: TimerConfig = {
   focusSessions: 2,
 };
 
+/**
+ * What each setting is allowed to be.
+ *
+ * Declared here rather than in the panel so the controls, the validation
+ * applied to stored preferences and the tests all read the same numbers.
+ * Ranges that disagree between the widget and its storage are the kind of bug
+ * that only shows up after a restart.
+ */
+export const LIMITS = {
+  focusMinutes: { min: 5, max: 90, step: 5 },
+  breakMinutes: { min: 1, max: 30, step: 1 },
+  focusSessions: { min: 1, max: 8, step: 1 },
+} as const;
+
+export type SettingKey = keyof typeof LIMITS;
+
+/** Snaps a value into range and onto the setting's step. */
+export function clampSetting(key: SettingKey, value: number): number {
+  const { min, max, step } = LIMITS[key];
+  if (!Number.isFinite(value)) return DEFAULT_CONFIG[key];
+  const snapped = Math.round(value / step) * step;
+  return Math.min(max, Math.max(min, snapped));
+}
+
 const MS_PER_MINUTE = 60_000;
 
 /**

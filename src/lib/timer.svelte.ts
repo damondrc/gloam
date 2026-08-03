@@ -66,6 +66,17 @@ export class Timer {
 
   display = $derived(formatDuration(this.remainingMs));
 
+  /**
+   * True when nothing would be lost by rebuilding the plan: the run is stopped
+   * on its first segment with none of it spent.
+   */
+  atStart = $derived(
+    !this.running &&
+      !this.finished &&
+      this.index === 0 &&
+      this.remainingMs === this.plan[0].durationMs
+  );
+
   start(): void {
     if (this.finished) this.reset();
     if (this.running) return;

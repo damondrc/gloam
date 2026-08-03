@@ -26,7 +26,7 @@
   const FRAME_PADDING = 8;
 
   /** How much taller the window gets when the panel is open. */
-  const PANEL_HEIGHT = 132;
+  const PANEL_HEIGHT = 182;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -71,6 +71,7 @@
   });
 
   scale.set(stored.scale);
+  timer.applyConfig(stored.config);
 
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
@@ -120,7 +121,7 @@
   });
 
   $effect(() => {
-    savePrefs({ compact, scale: scale.value, volume });
+    savePrefs({ compact, scale: scale.value, volume, config: timer.config });
   });
 
   // No reactive reads, so this registers cleanup once and never re-runs.
@@ -375,7 +376,14 @@
    </div>
 
    {#if panelOpen}
-     <Panel {volume} onVolume={(next) => (volume = next)} />
+     <Panel
+       config={timer.config}
+       onConfig={(next) => timer.applyConfig(next)}
+       frozen={timer.running}
+       willReset={!timer.atStart}
+       {volume}
+       onVolume={(next) => (volume = next)}
+     />
    {/if}
   </div>
 </main>

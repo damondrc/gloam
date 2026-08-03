@@ -6,6 +6,8 @@
  * swap for a JSON file managed by Rust.
  */
 
+import { clampSetting, DEFAULT_CONFIG } from "./plan";
+import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
 
 const KEY = "gloam.prefs.v1";
@@ -23,17 +25,36 @@ export interface Prefs {
   compact: boolean;
   scale: number;
   volume: number;
+  config: TimerConfig;
 }
 
 export const DEFAULT_PREFS: Prefs = {
   compact: false,
   scale: 1,
   volume: 0.6,
+  config: { ...DEFAULT_CONFIG },
 };
 
 function readNumber(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Stored settings are treated as untrusted input. They can be hand-edited,
+ * left over from an older build with different limits, or corrupted — so each
+ * one goes back through the same clamp the controls use rather than being
+ * believed on sight.
+ */
+function readConfig(value: unknown): TimerConfig {
+  if (typeof value !== "object" || value === null) return { ...DEFAULT_CONFIG };
+
+  const stored = value as Partial<TimerConfig>;
+  return {
+    focusMinutes: clampSetting("focusMinutes", Number(stored.focusMinutes)),
+    breakMinutes: clampSetting("breakMinutes", Number(stored.breakMinutes)),
+    focusSessions: clampSetting("focusSessions", Number(stored.focusSessions)),
+  };
 }
 
 export function loadPrefs(): Prefs {
@@ -51,6 +72,7 @@ export function loadPrefs(): Prefs {
       compact: typeof value.compact === "boolean" ? value.compact : false,
       scale: readNumber(value.scale, MIN_SCALE, MAX_SCALE, DEFAULT_PREFS.scale),
       volume: readNumber(value.volume, 0, 1, DEFAULT_PREFS.volume),
+      config: readConfig(value.config),
     };
   } catch {
     // Corrupt or unavailable storage should never keep the widget from opening.
