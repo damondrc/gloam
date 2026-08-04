@@ -26,7 +26,7 @@
   const FRAME_PADDING = 8;
 
   /** How much taller the window gets when the panel is open. */
-  const PANEL_HEIGHT = 182;
+  const PANEL_HEIGHT = 236;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -47,9 +47,19 @@
   let hovering = $state(false);
   let panelOpen = $state(false);
   let volume = $state(stored.volume);
+  let timbre = $state(stored.timbre);
+  let interfaceStyle = $state(stored.interfaceStyle);
 
   $effect(() => {
     sound.setVolume(volume);
+  });
+
+  $effect(() => {
+    sound.setTimbre(timbre);
+  });
+
+  $effect(() => {
+    sound.setInterfaceStyle(interfaceStyle);
   });
 
   /** How long the escape-hatch hint stays up after locking. */
@@ -121,7 +131,14 @@
   });
 
   $effect(() => {
-    savePrefs({ compact, scale: scale.value, volume, config: timer.config });
+    savePrefs({
+      compact,
+      scale: scale.value,
+      volume,
+      timbre,
+      interfaceStyle,
+      config: timer.config,
+    });
   });
 
   // No reactive reads, so this registers cleanup once and never re-runs.
@@ -132,7 +149,7 @@
     let dispose: (() => void) | null = null;
     let cancelled = false;
 
-    void onBackendEvent("gloam://toggle-lock", () => lock.toggle()).then((fn) => {
+    void onBackendEvent("gloam://toggle-lock", () => toggleLock()).then((fn) => {
       if (cancelled) fn();
       else dispose = fn;
     });
@@ -162,6 +179,14 @@
   function skipSegment(): void {
     sound.press("reset");
     timer.skip();
+  }
+
+  // Every route into lock mode goes through here — the padlock, the L key and
+  // the global shortcut — so the feedback cannot depend on which one was used.
+  function toggleLock(): void {
+    sound.unlockAudio();
+    sound.press(lock.locked ? "unlock" : "lock");
+    lock.toggle();
   }
 
   function onDoubleClick(): void {
@@ -204,7 +229,7 @@
         break;
       case "l":
       case "L":
-        lock.toggle();
+        toggleLock();
         break;
       case "c":
       case "C":
@@ -368,7 +393,7 @@
       <Padlock
         locked={lock.locked}
         hot={lock.hot}
-        onToggle={() => lock.toggle()}
+        onToggle={toggleLock}
         register={(el) => lock.attach(el)}
         small={compact}
       />
@@ -383,6 +408,20 @@
        willReset={!timer.atStart}
        {volume}
        onVolume={(next) => (volume = next)}
+       {timbre}
+       onTimbre={(next) => {
+         timbre = next;
+         // Judge it the moment you choose it, rather than at the end of the
+         // next session.
+         sound.setTimbre(next);
+         sound.preview();
+       }}
+       {interfaceStyle}
+       onInterfaceStyle={(next) => {
+         interfaceStyle = next;
+         sound.setInterfaceStyle(next);
+         sound.press("start");
+       }}
      />
    {/if}
   </div>

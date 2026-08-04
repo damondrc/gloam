@@ -8,7 +8,9 @@
    */
   import { LIMITS } from "./plan";
   import type { TimerConfig } from "./plan";
+  import type { InterfaceStyle, Timbre } from "./sound";
   import Stepper from "./Stepper.svelte";
+  import Cycler from "./Cycler.svelte";
 
   interface Props {
     config: TimerConfig;
@@ -19,9 +21,37 @@
     willReset: boolean;
     volume: number;
     onVolume: (value: number) => void;
+    timbre: Timbre;
+    onTimbre: (value: Timbre) => void;
+    interfaceStyle: InterfaceStyle;
+    onInterfaceStyle: (value: InterfaceStyle) => void;
   }
 
-  let { config, onConfig, frozen, willReset, volume, onVolume }: Props = $props();
+  let {
+    config,
+    onConfig,
+    frozen,
+    willReset,
+    volume,
+    onVolume,
+    timbre,
+    onTimbre,
+    interfaceStyle,
+    onInterfaceStyle,
+  }: Props = $props();
+
+  const TIMBRE_OPTIONS = [
+    { value: "bowl", label: "Bowl" },
+    { value: "bell", label: "Bell" },
+    { value: "marimba", label: "Marimba" },
+    { value: "pulse", label: "Pulse" },
+  ] as const satisfies readonly { value: Timbre; label: string }[];
+
+  const STYLE_OPTIONS = [
+    { value: "off", label: "Off" },
+    { value: "soft", label: "Soft" },
+    { value: "deep", label: "Deep" },
+  ] as const satisfies readonly { value: InterfaceStyle; label: string }[];
 
   const percent = $derived(Math.round(volume * 100));
 
@@ -68,19 +98,35 @@
 
   <p class="section">Sound</p>
 
-  <label class="row">
-    <span class="name">Volume</span>
-    <input
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      value={percent}
-      oninput={(event) => onVolume(Number(event.currentTarget.value) / 100)}
-      aria-label="Volume"
+  <div class="rows">
+    <label class="row">
+      <span class="name">Volume</span>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value={percent}
+        oninput={(event) => onVolume(Number(event.currentTarget.value) / 100)}
+        aria-label="Volume"
+      />
+      <span class="value">{percent}%</span>
+    </label>
+
+    <Cycler
+      label="Alarm"
+      value={timbre}
+      options={TIMBRE_OPTIONS}
+      onChange={onTimbre}
     />
-    <span class="value">{percent}%</span>
-  </label>
+
+    <Cycler
+      label="Buttons"
+      value={interfaceStyle}
+      options={STYLE_OPTIONS}
+      onChange={onInterfaceStyle}
+    />
+  </div>
 </div>
 
 <style>

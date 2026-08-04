@@ -31,9 +31,23 @@ export function unlockAudio(): void {
 
 export type Timbre = "bowl" | "bell" | "marimba" | "pulse";
 
+/**
+ * How button feedback sounds, or whether it does.
+ *
+ * "deep" exists because of a real difference between machines rather than a
+ * taste for knobs: laptop speakers roll off below roughly 250 Hz, so a pause
+ * cue built on a low fundamental is inaudible on one machine and the nicest
+ * option on another. "soft" conveys the same settling with falling mid-range
+ * tones, which every speaker can reproduce.
+ */
+export type InterfaceStyle = "off" | "soft" | "deep";
+
+export const TIMBRES: readonly Timbre[] = ["bowl", "bell", "marimba", "pulse"];
+export const INTERFACE_STYLES: readonly InterfaceStyle[] = ["off", "soft", "deep"];
+
 let volume = 0.6;
 let timbre: Timbre = "bowl";
-let interfaceSounds = true;
+let interfaceStyle: InterfaceStyle = "soft";
 
 export function setVolume(next: number): void {
   volume = Math.min(1, Math.max(0, next));
@@ -43,8 +57,8 @@ export function setTimbre(next: Timbre): void {
   timbre = next;
 }
 
-export function setInterfaceSounds(enabled: boolean): void {
-  interfaceSounds = enabled;
+export function setInterfaceStyle(next: InterfaceStyle): void {
+  interfaceStyle = next;
 }
 
 // --- one oscillator ------------------------------------------------------
@@ -175,15 +189,19 @@ export function runComplete(): void {
 
 // --- interface feedback --------------------------------------------------
 
-export type Press = "start" | "pause" | "reset";
+export type Press = "start" | "pause" | "reset" | "lock" | "unlock";
 
 /**
  * Deliberately faint and brief. These fire on every button, so anything with
  * presence would compete with the transitions, which are the sounds that
  * actually carry information.
+ *
+ * They stay in the percussive family — short and dry — while the transitions
+ * are sustained and musical. That separation is what keeps the padlock's
+ * falling pair from being mistaken for a break beginning.
  */
 export function press(kind: Press): void {
-  if (!interfaceSounds) return;
+  if (interfaceStyle === "off") return;
 
   switch (kind) {
     // Rising: affirmative.
@@ -192,10 +210,16 @@ export function press(kind: Press): void {
       partial(1320, 0.045, 0.06, 0.04, 0.002);
       break;
 
-    // Low and settling.
     case "pause":
-      partial(150, 0, 0.14, 0.16, 0.002);
-      partial(300, 0, 0.09, 0.04, 0.002);
+      if (interfaceStyle === "deep") {
+        partial(150, 0, 0.14, 0.16, 0.002);
+        partial(300, 0, 0.09, 0.04, 0.002);
+      } else {
+        // Two identical taps: repetition reads as "stop" without needing a
+        // low fundamental to carry it.
+        partial(500, 0, 0.05, 0.11, 0.002);
+        partial(500, 0.075, 0.06, 0.085, 0.002);
+      }
       break;
 
     // Neutral and mechanical.
@@ -203,5 +227,23 @@ export function press(kind: Press): void {
       partial(1760, 0, 0.05, 0.09, 0.001);
       partial(2640, 0, 0.035, 0.03, 0.001);
       break;
+
+    // The padlock's pair, falling shut and springing open. It is the one
+    // control that stays live when the widget stops accepting input, so a
+    // press that made no sound would leave the user unsure it registered.
+    case "lock":
+      partial(620, 0, 0.05, 0.1, 0.002);
+      partial(430, 0.07, 0.075, 0.1, 0.002);
+      break;
+
+    case "unlock":
+      partial(430, 0, 0.05, 0.1, 0.002);
+      partial(620, 0.07, 0.075, 0.1, 0.002);
+      break;
   }
+}
+
+/** A single strike, so a timbre can be judged the moment it is chosen. */
+export function preview(): void {
+  instruments[timbre]({ freq: HIGH, at: 0, duration: 2.2, gain: 0.26 });
 }

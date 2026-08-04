@@ -9,6 +9,8 @@
 import { clampSetting, DEFAULT_CONFIG } from "./plan";
 import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
+import { INTERFACE_STYLES, TIMBRES } from "./sound";
+import type { InterfaceStyle, Timbre } from "./sound";
 
 const KEY = "gloam.prefs.v1";
 
@@ -25,6 +27,8 @@ export interface Prefs {
   compact: boolean;
   scale: number;
   volume: number;
+  timbre: Timbre;
+  interfaceStyle: InterfaceStyle;
   config: TimerConfig;
 }
 
@@ -32,8 +36,19 @@ export const DEFAULT_PREFS: Prefs = {
   compact: false,
   scale: 1,
   volume: 0.6,
+  timbre: "bowl",
+  interfaceStyle: "soft",
   config: { ...DEFAULT_CONFIG },
 };
+
+/** Accepts a stored string only if it is still one of the options we offer. */
+function readOption<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
 
 function readNumber(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
@@ -72,6 +87,12 @@ export function loadPrefs(): Prefs {
       compact: typeof value.compact === "boolean" ? value.compact : false,
       scale: readNumber(value.scale, MIN_SCALE, MAX_SCALE, DEFAULT_PREFS.scale),
       volume: readNumber(value.volume, 0, 1, DEFAULT_PREFS.volume),
+      timbre: readOption(value.timbre, TIMBRES, DEFAULT_PREFS.timbre),
+      interfaceStyle: readOption(
+        value.interfaceStyle,
+        INTERFACE_STYLES,
+        DEFAULT_PREFS.interfaceStyle
+      ),
       config: readConfig(value.config),
     };
   } catch {
