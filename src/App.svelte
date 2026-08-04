@@ -18,12 +18,15 @@
   import Grip from "./lib/Grip.svelte";
   import Panel from "./lib/Panel.svelte";
 
-  /** Layout sizes at scale 1. The window is these multiplied by the scale. */
-  const NORMAL_SIZE = { width: 336, height: 148 };
-  const COMPACT_SIZE = { width: 196, height: 74 };
-
-  /** Empty margin around the widget, where its drop shadow falls. */
-  const FRAME_PADDING = 8;
+  /**
+   * Layout sizes at scale 1. The window is these multiplied by the scale.
+   *
+   * There is no margin around the widget any more: it existed only to give a
+   * drop shadow room to fade out, and without one it was a band of invisible
+   * window that caught the pointer without showing anything.
+   */
+  const NORMAL_SIZE = { width: 320, height: 132 };
+  const COMPACT_SIZE = { width: 180, height: 58 };
 
   /** How much taller the window gets when the panel is open. */
   const PANEL_HEIGHT = 236;
@@ -87,7 +90,7 @@
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
 
   /** The stage is the timer; the panel grows the window beneath it. */
-  const stageHeight = $derived(baseSize.height - FRAME_PADDING * 2);
+  const stageHeight = $derived(baseSize.height);
   const panelHeight = $derived(panelOpen ? PANEL_HEIGHT : 0);
   const frameHeight = $derived(baseSize.height + panelHeight);
 
@@ -98,7 +101,6 @@
   const vars = $derived(
     [
       skyVars(sky),
-      `--pad: ${FRAME_PADDING}`,
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
@@ -442,7 +444,6 @@
     left: 0;
     width: calc(var(--frame-w) * 1rem);
     height: calc(var(--frame-h) * 1rem);
-    padding: calc(var(--pad) * 1rem);
   }
 
   /* Two stacked zones: the stage holds the timer and its sky, the panel grows
@@ -456,12 +457,7 @@
     border-radius: var(--radius);
     overflow: hidden;
     border: 1px solid rgb(255 255 255 / 0.1);
-    box-shadow:
-      0 6rem 22rem rgb(0 0 0 / 0.42),
-      0 1rem 3rem rgb(0 0 0 / 0.3);
-    transition:
-      border-color 0.45s ease,
-      box-shadow 0.45s ease;
+    transition: border-color 0.45s ease;
   }
 
   .stage {
@@ -501,7 +497,6 @@
 
   .frame.locked .widget {
     border-color: rgb(255 255 255 / 0.05);
-    box-shadow: none;
   }
 
   .frame.locked .content {

@@ -53,13 +53,42 @@ export async function setClickThrough(value: boolean): Promise<void> {
   await m?.getCurrentWindow().setIgnoreCursorEvents(value);
 }
 
+/**
+ * Resizes the window, which is otherwise declared fixed.
+ *
+ * The widget carries its own dimensions, so a window resized by anything but
+ * this function goes out of step with what is drawn inside it: the widget ends
+ * up clipped, ringed by dead transparent space, or dragged away to nothing
+ * with no obvious way back.
+ *
+ * Declaring the window non-resizable is what stops a window manager offering
+ * an invisible resize border and swapping the cursor for it — pinning the
+ * minimum and maximum is not enough, since a manager may still advertise the
+ * grip it will then refuse. But GTK also reads the same flag as "ignore
+ * programmatic resizing", which is the bug this whole dance exists to avoid.
+ *
+ * So the flag is treated as momentary rather than permanent: opened for the
+ * length of one resize and closed again. The min/max pins are set to the new
+ * size as well, so that closing it cannot snap the window back to some size
+ * GTK would rather it had.
+ */
 export async function setWindowSize(
   width: number,
   height: number
 ): Promise<void> {
   const m = await api();
   if (!m) return;
-  await m.getCurrentWindow().setSize(new m.LogicalSize(width, height));
+
+  const win = m.getCurrentWindow();
+  const size = new m.LogicalSize(width, height);
+
+  await win.setResizable(true);
+  await win.setMinSize(null);
+  await win.setMaxSize(null);
+  await win.setSize(size);
+  await win.setMinSize(size);
+  await win.setMaxSize(size);
+  await win.setResizable(false);
 }
 
 export interface Geometry {

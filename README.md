@@ -126,13 +126,21 @@ Folding these into a single "size" control is tempting and wrong: dragging to
 enlarge the clock would also unfold the music player, and collapsing the player
 would shrink your type.
 
-The window is declared `resizable: true` even though it has no visible resize
-border, and that is load-bearing rather than leftover. Windows reads the flag
-as "the user may not drag the edges" and still honours programmatic resizing;
-GTK reads it as "this window has a fixed size", pins its size hints and ignores
-every later resize request, including the app's own. With it set to false the
-Linux build kept one size forever: enlarging clipped the content against a
-window that would not grow, and compact mode stayed as tall as the full layout.
+The window is declared non-resizable, and `setWindowSize` opens that flag for
+the length of one resize before closing it again. The dance is not decoration:
+the two platforms read the same flag differently.
+
+Windows takes it to mean "the user may not drag the edges" and still honours
+programmatic resizing. GTK takes it to mean "this window has one size" and
+ignores every later resize request, including the app's own — with it simply
+set to false, the Linux build kept its startup size forever. Set to true
+instead, the window manager advertises an invisible resize border and swaps the
+cursor for it all around the widget, and a hand-resized window desyncs from the
+widget drawn inside it, since the frame carries its own dimensions.
+
+Pinning the minimum and maximum is not enough on its own: a window manager may
+still offer the grip it will then refuse. So the flag stays shut except for the
+instant a resize needs it.
 
 ## Settings
 
