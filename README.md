@@ -36,7 +36,9 @@ trailing break has nothing to resume into, so it is dead time.
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
-- Soft synthesised chimes at every transition — no audio assets, no jump scares
+- A settings panel that unfolds below the horizon: durations, session count,
+  volume, alarm timbre and button feedback
+- Soft synthesised sound throughout — no audio assets, no jump scares
 - Controls stay hidden until you hover, so the widget reads as scenery
 
 ### Keyboard
@@ -48,6 +50,7 @@ trailing break has nothing to resume into, so it is dead time.
 | `R` | Reset the run |
 | `L` | Toggle lock |
 | `C` | Toggle compact mode |
+| `,` | Open or close the settings panel |
 | `+` / `-` | Scale the widget up or down |
 | `0` | Reset the scale |
 | `Ctrl+Alt+G` | Toggle lock, from anywhere |
@@ -131,6 +134,46 @@ every later resize request, including the app's own. With it set to false the
 Linux build kept one size forever: enlarging clipped the content against a
 window that would not grow, and compact mode stayed as tall as the full layout.
 
+## Settings
+
+The chevron on the bottom edge unfolds a panel below the horizon. That
+placement is deliberate: the sky is the timer, the ground is where the
+machinery lives. Controls laid over the gradient would be hard to read and
+would break the one idea the backdrop carries.
+
+Durations are steppers rather than number fields. At this size a form input
+looks borrowed from another application, and more usefully a stepper cannot
+produce an invalid value — there is no empty state and nothing to mistype. They
+freeze while the timer runs, so a stray click cannot discard a session; when
+the run is paused part-way the panel says that applying a change will restart
+it, rather than letting the cost be discovered.
+
+### Sound
+
+Everything is synthesised. No audio files means nothing to license, nothing to
+decode, no binaries in the repository, and a timbre that stays editable as code.
+
+The module splits along one line: an *instrument* decides how a single note
+sounds, a *phrase* decides which notes and in what order. Phrases are the app's
+vocabulary and do not change — a rising pair always means work is starting.
+Choosing a different alarm swaps the instrument, which is why adding one is a
+function rather than a redesign.
+
+The two transitions are the same perfect fifth in opposite directions: rising
+into focus, falling into a break. Identical material makes them audibly a pair,
+opposite direction makes them impossible to confuse, and direction was chosen
+over register because it survives being half-heard — which is the condition
+these play under. The end of a run is a fuller three-note chord, marking an
+ending rather than a change.
+
+Button feedback has three settings rather than an on/off, because of a real
+difference between machines rather than a taste for knobs: laptop speakers roll
+off below roughly 250 Hz, so a pause cue built on a low fundamental is
+inaudible on one machine and the nicest option on another. **Soft** conveys the
+same settling with falling mid-range tones that any speaker can reproduce;
+**deep** uses the low version. Preferences are stored per install, so each
+machine keeps its own.
+
 ## Compact mode
 
 Double-clicking collapses the widget to a single row: the readout, the play
@@ -159,6 +202,25 @@ npm run dev        # then open http://localhost:1420
 
 All Tauri calls are guarded, so the widget degrades gracefully outside the
 desktop shell.
+
+### Tests
+
+```bash
+npm test           # once
+npm run test:watch # on every save
+```
+
+The suite covers the timer's pure logic — the plan builder, the duration
+formatter, the settings clamp — and nothing else. That boundary is the point
+rather than a shortcut: the window, the click-through and the layout are where
+every bug in this project has actually lived, and they are also where automated
+tests are expensive, fragile and need a real desktop to run against. What *is*
+covered is the part where being wrong would be invisible. A misplaced button is
+obvious; a seven-session run with six breaks instead of five is not.
+
+The tests assert rules rather than examples, running the same checks across a
+spread of configurations, so what they protect is "a plan always alternates and
+never ends on a break" rather than "with these numbers it comes out like this".
 
 ## Platform support
 
@@ -195,9 +257,8 @@ it for more. Growth goes into disclosure, not into the resting state.
 - [x] **Phase 2** — Lock mode with cursor hit-testing, compact mode, persistence
 - [x] **Phase 3** — A scale factor and a corner resize handle, so later panels are
       built inside a container that already knows how to grow
-- [ ] **Phase 4** — Settings panel: durations, session count, alarm timbre, and
-      quiet interface sounds on start, pause and reset — grouped here because
-      this is where the volume control that mutes them lives
+- [x] **Phase 4** — Settings panel: durations, session count, alarm timbre and
+      button feedback, with the timer's rules under test
 - [ ] **Phase 5** — Ambient life on the backdrop: slow drifting clouds, and a
       distant flock of birds as a rare event
 - [ ] **Phase 6** — Scene editor: swap the horizon band for a city skyline whose
@@ -232,18 +293,23 @@ them work.
 src/
   App.svelte          composition and layout of every visual layer
   lib/
-    timer.svelte.ts   the state machine and countdown
+    plan.ts           the timer's pure logic, and the only tested code
+    plan.test.ts      its rules, asserted across many configurations
+    timer.svelte.ts   the reactive state and the countdown
     lock.svelte.ts    click-through and cursor hit-testing
     scale.svelte.ts   the scale factor and its drag interaction
     sky.ts            the palette, keyframes and interpolation
-    chime.ts          WebAudio alarm synthesis
-    prefs.ts          persisted preferences
+    sound.ts          instruments and phrases, all synthesised
+    prefs.ts          persisted preferences, validated on the way in
     window.ts         guarded wrappers over the Tauri window API
     Stars.svelte      fixed star field
     Grain.svelte      generated film grain
     Controls.svelte   transport buttons
     Padlock.svelte    the animated lock
     Grip.svelte       the corner resize handle
+    Panel.svelte      the settings panel below the horizon
+    Stepper.svelte    minus/value/plus row
+    Cycler.svelte     one-of-a-short-list row
 src-tauri/            Rust shell, window configuration, global shortcut
 ```
 
