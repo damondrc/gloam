@@ -30,6 +30,10 @@ export interface SkyState {
   glow: number;
   /** Star field visibility, 0..1. */
   stars: number;
+  /** Cloud colour: what the light of the moment does to them. */
+  cloud: Rgb;
+  /** Cloud visibility, 0..1. */
+  clouds: number;
   /** Colour used for text, dots and the progress line. */
   accent: Rgb;
   /** Colour used for the large time readout. */
@@ -46,6 +50,8 @@ const FOCUS_START: SkyState = {
   bodyR: 26,
   glow: 0.85,
   stars: 0,
+  cloud: [255, 216, 190],
+  clouds: 0.5,
   accent: [245, 199, 126],
   ink: [255, 244, 232],
 };
@@ -60,6 +66,8 @@ const FOCUS_END: SkyState = {
   bodyR: 30,
   glow: 0.45,
   stars: 0.35,
+  cloud: [122, 84, 112],
+  clouds: 0.44,
   accent: [232, 150, 130],
   ink: [246, 228, 224],
 };
@@ -74,6 +82,8 @@ const BREAK_START: SkyState = {
   bodyR: 17,
   glow: 0.3,
   stars: 0.55,
+  cloud: [48, 55, 90],
+  clouds: 0.3,
   accent: [168, 184, 232],
   ink: [231, 237, 255],
 };
@@ -88,6 +98,8 @@ const BREAK_END: SkyState = {
   bodyR: 15,
   glow: 0.5,
   stars: 1,
+  cloud: [34, 40, 72],
+  clouds: 0.2,
   accent: [186, 200, 240],
   ink: [238, 243, 255],
 };
@@ -102,6 +114,8 @@ const DONE: SkyState = {
   bodyR: 16,
   glow: 0.65,
   stars: 0.9,
+  cloud: [178, 150, 202],
+  clouds: 0.4,
   accent: [214, 186, 240],
   ink: [244, 238, 255],
 };
@@ -125,10 +139,12 @@ function mix(a: SkyState, b: SkyState, t: number): SkyState {
     bottom: lerpRgb(a.bottom, b.bottom, e),
     ground: lerpRgb(a.ground, b.ground, e),
     body: lerpRgb(a.body, b.body, e),
+    cloud: lerpRgb(a.cloud, b.cloud, e),
     bodyY: lerp(a.bodyY, b.bodyY, e),
     bodyR: lerp(a.bodyR, b.bodyR, e),
     glow: lerp(a.glow, b.glow, e),
     stars: lerp(a.stars, b.stars, e),
+    clouds: lerp(a.clouds, b.clouds, e),
     accent: lerpRgb(a.accent, b.accent, e),
     ink: lerpRgb(a.ink, b.ink, e),
   };
@@ -160,6 +176,7 @@ export function skyVars(s: SkyState): string {
     `--body-r: ${s.bodyR.toFixed(1)}rem`,
     `--glow: ${s.glow.toFixed(3)}`,
     `--stars: ${s.stars.toFixed(3)}`,
+    `--cloud: ${css(s.cloud)}`,
     `--accent: ${css(s.accent)}`,
     `--ink: ${css(s.ink)}`,
   ].join("; ");

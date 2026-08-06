@@ -12,6 +12,7 @@
   } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
   import Stars from "./lib/Stars.svelte";
+  import Clouds from "./lib/Clouds.svelte";
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
@@ -277,6 +278,9 @@
       <Stars visible={sky.stars} />
 
       <div class="celestial"></div>
+
+      <!-- After the sun, so a bank crossing it dims it. -->
+      <Clouds visible={sky.clouds} />
 
       <div class="haze haze-a"></div>
       <div class="haze haze-b"></div>
