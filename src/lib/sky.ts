@@ -34,6 +34,8 @@ export interface SkyState {
   cloud: Rgb;
   /** Cloud visibility, 0..1. */
   clouds: number;
+  /** How readable a passing flock is, 0..1. Nothing flies after dark. */
+  birds: number;
   /** Colour used for text, dots and the progress line. */
   accent: Rgb;
   /** Colour used for the large time readout. */
@@ -52,6 +54,7 @@ const FOCUS_START: SkyState = {
   stars: 0,
   cloud: [255, 216, 190],
   clouds: 0.5,
+  birds: 0.85,
   accent: [245, 199, 126],
   ink: [255, 244, 232],
 };
@@ -68,6 +71,7 @@ const FOCUS_END: SkyState = {
   stars: 0.35,
   cloud: [122, 84, 112],
   clouds: 0.44,
+  birds: 1,
   accent: [232, 150, 130],
   ink: [246, 228, 224],
 };
@@ -84,6 +88,7 @@ const BREAK_START: SkyState = {
   stars: 0.55,
   cloud: [48, 55, 90],
   clouds: 0.3,
+  birds: 0.12,
   accent: [168, 184, 232],
   ink: [231, 237, 255],
 };
@@ -100,6 +105,7 @@ const BREAK_END: SkyState = {
   stars: 1,
   cloud: [34, 40, 72],
   clouds: 0.2,
+  birds: 0,
   accent: [186, 200, 240],
   ink: [238, 243, 255],
 };
@@ -116,6 +122,7 @@ const DONE: SkyState = {
   stars: 0.9,
   cloud: [178, 150, 202],
   clouds: 0.4,
+  birds: 0,
   accent: [214, 186, 240],
   ink: [244, 238, 255],
 };
@@ -145,6 +152,7 @@ function mix(a: SkyState, b: SkyState, t: number): SkyState {
     glow: lerp(a.glow, b.glow, e),
     stars: lerp(a.stars, b.stars, e),
     clouds: lerp(a.clouds, b.clouds, e),
+    birds: lerp(a.birds, b.birds, e),
     accent: lerpRgb(a.accent, b.accent, e),
     ink: lerpRgb(a.ink, b.ink, e),
   };

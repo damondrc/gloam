@@ -13,6 +13,7 @@
   import { loadPrefs, savePrefs } from "./lib/prefs";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
+  import Birds from "./lib/Birds.svelte";
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
@@ -102,6 +103,11 @@
   const vars = $derived(
     [
       skyVars(sky),
+      // Distant detail is damped rather than scaled one to one: enlarging the
+      // widget should reveal more sky, not bigger birds. A square root is a
+      // middle ground — at 180% the widget grows by four fifths and the flock
+      // by a third.
+      `--ambient: ${Math.sqrt(scale.value).toFixed(3)}`,
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
@@ -281,6 +287,8 @@
 
       <!-- After the sun, so a bank crossing it dims it. -->
       <Clouds visible={sky.clouds} />
+
+      <Birds visible={sky.birds} />
 
       <div class="haze haze-a"></div>
       <div class="haze haze-b"></div>
