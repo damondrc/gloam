@@ -8,7 +8,7 @@
    */
   import { LIMITS } from "./plan";
   import type { TimerConfig } from "./plan";
-  import type { InterfaceStyle, Timbre } from "./sound";
+  import type { AlarmPattern, ButtonSet, Timbre } from "./sound";
   import type { Ambience } from "./ambience";
   import Stepper from "./Stepper.svelte";
   import Cycler from "./Cycler.svelte";
@@ -40,8 +40,10 @@
     onVolume: (value: number) => void;
     timbre: Timbre;
     onTimbre: (value: Timbre) => void;
-    interfaceStyle: InterfaceStyle;
-    onInterfaceStyle: (value: InterfaceStyle) => void;
+    pattern: AlarmPattern;
+    onPattern: (value: AlarmPattern) => void;
+    buttons: ButtonSet;
+    onButtons: (value: ButtonSet) => void;
     ambience: Ambience;
     onAmbience: (value: Ambience) => void;
   }
@@ -55,8 +57,10 @@
     onVolume,
     timbre,
     onTimbre,
-    interfaceStyle,
-    onInterfaceStyle,
+    pattern,
+    onPattern,
+    buttons,
+    onButtons,
     ambience,
     onAmbience,
   }: Props = $props();
@@ -81,11 +85,18 @@
     { value: "pulse", label: "Pulse" },
   ] as const satisfies readonly { value: Timbre; label: string }[];
 
-  const STYLE_OPTIONS = [
-    { value: "off", label: "Off" },
-    { value: "soft", label: "Soft" },
-    { value: "deep", label: "Deep" },
-  ] as const satisfies readonly { value: InterfaceStyle; label: string }[];
+  const PATTERN_OPTIONS = [
+    { value: "fifth", label: "Fifth" },
+    { value: "triad", label: "Triad" },
+    { value: "echo", label: "Echo" },
+  ] as const satisfies readonly { value: AlarmPattern; label: string }[];
+
+  const BUTTON_OPTIONS = [
+    { value: "bowl", label: "Bowl" },
+    { value: "felt", label: "Felt" },
+    { value: "string", label: "String" },
+    { value: "drop", label: "Drop" },
+  ] as const satisfies readonly { value: ButtonSet; label: string }[];
 
   const percent = $derived(Math.round(volume * 100));
 
@@ -167,10 +178,17 @@
       />
 
       <Cycler
+        label="Pattern"
+        value={pattern}
+        options={PATTERN_OPTIONS}
+        onChange={onPattern}
+      />
+
+      <Cycler
         label="Buttons"
-        value={interfaceStyle}
-        options={STYLE_OPTIONS}
-        onChange={onInterfaceStyle}
+        value={buttons}
+        options={BUTTON_OPTIONS}
+        onChange={onButtons}
       />
     </div>
   {:else}

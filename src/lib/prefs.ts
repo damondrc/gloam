@@ -9,8 +9,8 @@
 import { clampSetting, DEFAULT_CONFIG } from "./plan";
 import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
-import { INTERFACE_STYLES, TIMBRES } from "./sound";
-import type { InterfaceStyle, Timbre } from "./sound";
+import { ALARM_PATTERNS, BUTTON_SETS, TIMBRES } from "./sound";
+import type { AlarmPattern, ButtonSet, Timbre } from "./sound";
 import { AMBIENCE_MODES } from "./ambience";
 import type { Ambience } from "./ambience";
 
@@ -30,7 +30,8 @@ export interface Prefs {
   scale: number;
   volume: number;
   timbre: Timbre;
-  interfaceStyle: InterfaceStyle;
+  pattern: AlarmPattern;
+  buttons: ButtonSet;
   ambience: Ambience;
   config: TimerConfig;
 }
@@ -40,7 +41,8 @@ export const DEFAULT_PREFS: Prefs = {
   scale: 1,
   volume: 0.6,
   timbre: "bowl",
-  interfaceStyle: "soft",
+  pattern: "fifth",
+  buttons: "bowl",
   ambience: "full",
   config: { ...DEFAULT_CONFIG },
 };
@@ -92,11 +94,8 @@ export function loadPrefs(): Prefs {
       scale: readNumber(value.scale, MIN_SCALE, MAX_SCALE, DEFAULT_PREFS.scale),
       volume: readNumber(value.volume, 0, 1, DEFAULT_PREFS.volume),
       timbre: readOption(value.timbre, TIMBRES, DEFAULT_PREFS.timbre),
-      interfaceStyle: readOption(
-        value.interfaceStyle,
-        INTERFACE_STYLES,
-        DEFAULT_PREFS.interfaceStyle
-      ),
+      pattern: readOption(value.pattern, ALARM_PATTERNS, DEFAULT_PREFS.pattern),
+      buttons: readOption(value.buttons, BUTTON_SETS, DEFAULT_PREFS.buttons),
       ambience: readOption(
         value.ambience,
         AMBIENCE_MODES,

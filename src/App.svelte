@@ -54,7 +54,8 @@
   let panelOpen = $state(false);
   let volume = $state(stored.volume);
   let timbre = $state(stored.timbre);
-  let interfaceStyle = $state(stored.interfaceStyle);
+  let pattern = $state(stored.pattern);
+  let buttons = $state(stored.buttons);
   let ambience = $state(stored.ambience);
 
   const backdrop = $derived(ambienceSettings(ambience));
@@ -68,7 +69,11 @@
   });
 
   $effect(() => {
-    sound.setInterfaceStyle(interfaceStyle);
+    sound.setAlarmPattern(pattern);
+  });
+
+  $effect(() => {
+    sound.setButtonSet(buttons);
   });
 
   /** How long the escape-hatch hint stays up after locking. */
@@ -149,7 +154,8 @@
       scale: scale.value,
       volume,
       timbre,
-      interfaceStyle,
+      pattern,
+      buttons,
       ambience,
       config: timer.config,
     });
@@ -446,10 +452,16 @@
          sound.setTimbre(next);
          sound.preview();
        }}
-       {interfaceStyle}
-       onInterfaceStyle={(next) => {
-         interfaceStyle = next;
-         sound.setInterfaceStyle(next);
+       {pattern}
+       onPattern={(next) => {
+         pattern = next;
+         sound.setAlarmPattern(next);
+         sound.preview();
+       }}
+       {buttons}
+       onButtons={(next) => {
+         buttons = next;
+         sound.setButtonSet(next);
          sound.press("start");
        }}
        {ambience}
