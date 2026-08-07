@@ -11,6 +11,7 @@
     startDragging,
   } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
+  import { ambienceSettings } from "./lib/ambience";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
   import Birds from "./lib/Birds.svelte";
@@ -31,7 +32,7 @@
   const COMPACT_SIZE = { width: 180, height: 58 };
 
   /** How much taller the window gets when the panel is open. */
-  const PANEL_HEIGHT = 236;
+  const PANEL_HEIGHT = 152;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -54,6 +55,9 @@
   let volume = $state(stored.volume);
   let timbre = $state(stored.timbre);
   let interfaceStyle = $state(stored.interfaceStyle);
+  let ambience = $state(stored.ambience);
+
+  const backdrop = $derived(ambienceSettings(ambience));
 
   $effect(() => {
     sound.setVolume(volume);
@@ -146,6 +150,7 @@
       volume,
       timbre,
       interfaceStyle,
+      ambience,
       config: timer.config,
     });
   });
@@ -281,17 +286,28 @@
     <div class="canvas">
       <div class="sky"></div>
 
-      <Stars visible={sky.stars} />
+      <Stars visible={sky.stars} twinkle={backdrop.twinkle} />
 
       <div class="celestial"></div>
 
       <!-- After the sun, so a bank crossing it dims it. -->
-      <Clouds visible={sky.clouds} />
+      <Clouds
+        visible={sky.clouds}
+        banks={backdrop.cloudBanks}
+        blur={backdrop.cloudBlur}
+      />
 
-      <Birds visible={sky.birds} />
+      <!-- Not rendered rather than hidden: that stops the scheduler and the
+           twelve animations each bird carries, which is the point of the
+           lighter modes. -->
+      {#if backdrop.birds}
+        <Birds visible={sky.birds} />
+      {/if}
 
-      <div class="haze haze-a"></div>
-      <div class="haze haze-b"></div>
+      {#if backdrop.haze}
+        <div class="haze haze-a"></div>
+        <div class="haze haze-b"></div>
+      {/if}
 
       <div class="ground"></div>
 
@@ -436,6 +452,8 @@
          sound.setInterfaceStyle(next);
          sound.press("start");
        }}
+       {ambience}
+       onAmbience={(next) => (ambience = next)}
      />
    {/if}
   </div>

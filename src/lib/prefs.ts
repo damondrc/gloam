@@ -11,6 +11,8 @@ import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
 import { INTERFACE_STYLES, TIMBRES } from "./sound";
 import type { InterfaceStyle, Timbre } from "./sound";
+import { AMBIENCE_MODES } from "./ambience";
+import type { Ambience } from "./ambience";
 
 const KEY = "gloam.prefs.v1";
 
@@ -29,6 +31,7 @@ export interface Prefs {
   volume: number;
   timbre: Timbre;
   interfaceStyle: InterfaceStyle;
+  ambience: Ambience;
   config: TimerConfig;
 }
 
@@ -38,6 +41,7 @@ export const DEFAULT_PREFS: Prefs = {
   volume: 0.6,
   timbre: "bowl",
   interfaceStyle: "soft",
+  ambience: "full",
   config: { ...DEFAULT_CONFIG },
 };
 
@@ -92,6 +96,11 @@ export function loadPrefs(): Prefs {
         value.interfaceStyle,
         INTERFACE_STYLES,
         DEFAULT_PREFS.interfaceStyle
+      ),
+      ambience: readOption(
+        value.ambience,
+        AMBIENCE_MODES,
+        DEFAULT_PREFS.ambience
       ),
       config: readConfig(value.config),
     };

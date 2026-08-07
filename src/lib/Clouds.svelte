@@ -15,9 +15,14 @@
   interface Props {
     /** 0..1, driven by the sky state. */
     visible: number;
+    /** How many banks to draw. Fewer is cheaper. */
+    banks: number;
+    /** Blur is what makes these read as cloud rather than blob, and also
+        where nearly all of their cost is. */
+    blur: boolean;
   }
 
-  let { visible }: Props = $props();
+  let { visible, banks, blur }: Props = $props();
 
   /**
    * Three banks at different heights, sizes and speeds, with negative delays
@@ -40,13 +45,13 @@
 </script>
 
 <div class="clouds" style="opacity: {visible}" aria-hidden="true">
-  {#each BANKS as bank, i (i)}
+  {#each BANKS.slice(0, banks) as bank, i (i)}
     <div
       class="bank"
       style="
         top: {bank.top}%;
         --s: {bank.scale};
-        --blur: {bank.blur}rem;
+        --blur: {blur ? bank.blur : 0}rem;
         --alpha: {bank.alpha};
         animation-duration: {bank.duration}s;
         animation-delay: {bank.delay}s;

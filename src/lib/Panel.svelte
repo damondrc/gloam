@@ -9,8 +9,25 @@
   import { LIMITS } from "./plan";
   import type { TimerConfig } from "./plan";
   import type { InterfaceStyle, Timbre } from "./sound";
+  import type { Ambience } from "./ambience";
   import Stepper from "./Stepper.svelte";
   import Cycler from "./Cycler.svelte";
+
+  /**
+   * Tabs rather than one long column. Stacked, the sections had grown past
+   * 280 design pixels, which at 180% scale is most of a laptop screen — and
+   * the scene editor still has to fit somewhere. Tabs also group by question:
+   * how long, how it sounds, how alive the backdrop is.
+   */
+  type Tab = "general" | "sound" | "ambience";
+
+  const TABS: readonly { id: Tab; label: string }[] = [
+    { id: "general", label: "General" },
+    { id: "sound", label: "Sound" },
+    { id: "ambience", label: "Backdrop" },
+  ];
+
+  let tab = $state<Tab>("general");
 
   interface Props {
     config: TimerConfig;
@@ -25,6 +42,8 @@
     onTimbre: (value: Timbre) => void;
     interfaceStyle: InterfaceStyle;
     onInterfaceStyle: (value: InterfaceStyle) => void;
+    ambience: Ambience;
+    onAmbience: (value: Ambience) => void;
   }
 
   let {
@@ -38,7 +57,22 @@
     onTimbre,
     interfaceStyle,
     onInterfaceStyle,
+    ambience,
+    onAmbience,
   }: Props = $props();
+
+  const AMBIENCE_OPTIONS = [
+    { value: "full", label: "Full" },
+    { value: "calm", label: "Calm" },
+    { value: "light", label: "Light" },
+  ] as const satisfies readonly { value: Ambience; label: string }[];
+
+  /** Says what each mode is for, since the names alone do not. */
+  const AMBIENCE_HINTS: Record<Ambience, string> = {
+    full: "Clouds and the occasional flock.",
+    calm: "Clouds only. Nothing crosses quickly.",
+    light: "A flat sky, for a modest machine.",
+  };
 
   const TIMBRE_OPTIONS = [
     { value: "bowl", label: "Bowl" },
@@ -61,72 +95,95 @@
 </script>
 
 <div class="panel">
-  <p class="section">
-    Timer
-    {#if frozen}
-      <span class="note">pause to edit</span>
-    {:else if willReset}
-      <span class="note">changing restarts the run</span>
-    {/if}
-  </p>
-
-  <div class="rows">
-    <Stepper
-      label="Focus"
-      value={config.focusMinutes}
-      {...LIMITS.focusMinutes}
-      suffix=" min"
-      disabled={frozen}
-      onChange={(value) => set("focusMinutes", value)}
-    />
-    <Stepper
-      label="Break"
-      value={config.breakMinutes}
-      {...LIMITS.breakMinutes}
-      suffix=" min"
-      disabled={frozen}
-      onChange={(value) => set("breakMinutes", value)}
-    />
-    <Stepper
-      label="Sessions"
-      value={config.focusSessions}
-      {...LIMITS.focusSessions}
-      disabled={frozen}
-      onChange={(value) => set("focusSessions", value)}
-    />
+  <div class="tabs" role="tablist">
+    {#each TABS as item (item.id)}
+      <button
+        role="tab"
+        aria-selected={tab === item.id}
+        class:active={tab === item.id}
+        onclick={() => (tab = item.id)}
+      >
+        {item.label}
+      </button>
+    {/each}
   </div>
 
-  <p class="section">Sound</p>
+  {#if tab === "general"}
+    <p class="section">
+      Cycle
+      {#if frozen}
+        <span class="note">pause to edit</span>
+      {:else if willReset}
+        <span class="note">changing restarts the run</span>
+      {/if}
+    </p>
 
-  <div class="rows">
-    <label class="row">
-      <span class="name">Volume</span>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value={percent}
-        oninput={(event) => onVolume(Number(event.currentTarget.value) / 100)}
-        aria-label="Volume"
+    <div class="rows">
+      <Stepper
+        label="Focus"
+        value={config.focusMinutes}
+        {...LIMITS.focusMinutes}
+        suffix=" min"
+        disabled={frozen}
+        onChange={(value) => set("focusMinutes", value)}
       />
-      <span class="value">{percent}%</span>
-    </label>
+      <Stepper
+        label="Break"
+        value={config.breakMinutes}
+        {...LIMITS.breakMinutes}
+        suffix=" min"
+        disabled={frozen}
+        onChange={(value) => set("breakMinutes", value)}
+      />
+      <Stepper
+        label="Sessions"
+        value={config.focusSessions}
+        {...LIMITS.focusSessions}
+        disabled={frozen}
+        onChange={(value) => set("focusSessions", value)}
+      />
+    </div>
+  {:else if tab === "sound"}
+    <div class="rows">
+      <label class="row">
+        <span class="name">Volume</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={percent}
+          oninput={(event) => onVolume(Number(event.currentTarget.value) / 100)}
+          aria-label="Volume"
+        />
+        <span class="value">{percent}%</span>
+      </label>
 
-    <Cycler
-      label="Alarm"
-      value={timbre}
-      options={TIMBRE_OPTIONS}
-      onChange={onTimbre}
-    />
+      <Cycler
+        label="Alarm"
+        value={timbre}
+        options={TIMBRE_OPTIONS}
+        onChange={onTimbre}
+      />
 
-    <Cycler
-      label="Buttons"
-      value={interfaceStyle}
-      options={STYLE_OPTIONS}
-      onChange={onInterfaceStyle}
-    />
-  </div>
+      <Cycler
+        label="Buttons"
+        value={interfaceStyle}
+        options={STYLE_OPTIONS}
+        onChange={onInterfaceStyle}
+      />
+    </div>
+  {:else}
+    <div class="rows">
+      <Cycler
+        label="Ambience"
+        value={ambience}
+        options={AMBIENCE_OPTIONS}
+        onChange={onAmbience}
+      />
+      <p class="hint">{AMBIENCE_HINTS[ambience]}</p>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -152,6 +209,50 @@
     }
   }
 
+  .tabs {
+    display: flex;
+    gap: 4rem;
+    margin: 0 0 12rem;
+    border-bottom: 1px solid rgb(var(--ink) / 0.1);
+  }
+
+  .tabs button {
+    padding: 0 8rem 6rem;
+    border: none;
+    border-bottom: 1.5px solid transparent;
+    background: none;
+    font-size: 9.5rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgb(var(--ink) / 0.4);
+    cursor: pointer;
+    transition:
+      color 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .tabs button:hover {
+    color: rgb(var(--ink) / 0.7);
+  }
+
+  .tabs button.active {
+    color: rgb(var(--accent));
+    border-bottom-color: rgb(var(--accent));
+  }
+
+  .tabs button:focus-visible {
+    outline: 2px solid rgb(var(--accent) / 0.8);
+    outline-offset: 2px;
+  }
+
+  .hint {
+    margin: 2rem 0 0;
+    font-size: 9.5rem;
+    line-height: 1.4;
+    color: rgb(var(--ink) / 0.45);
+  }
+
   .section {
     display: flex;
     align-items: baseline;
@@ -161,10 +262,6 @@
     font-weight: 600;
     letter-spacing: 0.2em;
     color: rgb(var(--accent) / 0.85);
-  }
-
-  .section + .rows + .section {
-    margin-top: 14rem;
   }
 
   /* Says out loud what a change is about to cost, rather than letting the user

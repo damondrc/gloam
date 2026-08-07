@@ -7,9 +7,12 @@
   interface Props {
     /** 0..1, driven by the sky state. */
     visible: number;
+    /** Whether the field breathes. Forty-six looping animations is small but
+        not free, and it is the first thing a low-power mode should drop. */
+    twinkle: boolean;
   }
 
-  let { visible }: Props = $props();
+  let { visible, twinkle }: Props = $props();
 
   const STAR_COUNT = 46;
 
@@ -25,7 +28,7 @@
   }));
 </script>
 
-<div class="stars" style="opacity: {visible}" aria-hidden="true">
+<div class="stars" class:still={!twinkle} style="opacity: {visible}" aria-hidden="true">
   {#each stars as star, i (i)}
     <span
       style="
@@ -67,6 +70,11 @@
     50% {
       opacity: var(--base);
     }
+  }
+
+  .stars.still span {
+    animation: none;
+    opacity: var(--base);
   }
 
   @media (prefers-reduced-motion: reduce) {
