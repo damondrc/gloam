@@ -60,6 +60,53 @@ export function setButtonSet(next: ButtonSet): void {
   buttons = next;
 }
 
+// --- one gesture at a time -----------------------------------------------
+
+interface Sounding {
+  source: AudioScheduledSourceNode;
+  env: GainNode;
+}
+
+let sounding: Sounding[] = [];
+
+function register(source: AudioScheduledSourceNode, env: GainNode): void {
+  const entry = { source, env };
+  sounding.push(entry);
+  source.onended = () => {
+    const index = sounding.indexOf(entry);
+    if (index >= 0) sounding.splice(index, 1);
+  };
+}
+
+/**
+ * Fades out whatever is still ringing.
+ *
+ * Called once at the start of every gesture, never per note — the notes within
+ * a phrase are scheduled together and would otherwise cancel each other. What
+ * it buys is that auditioning a setting plays the thing you picked rather than
+ * the thing you picked on top of the last two, which is the whole reason to be
+ * in that menu.
+ *
+ * A short ramp rather than an immediate stop, because cutting a waveform
+ * mid-cycle is a click.
+ */
+function silence(): void {
+  if (sounding.length === 0) return;
+
+  const now = audio().currentTime;
+  for (const { source, env } of sounding) {
+    try {
+      env.gain.cancelScheduledValues(now);
+      env.gain.setValueAtTime(env.gain.value, now);
+      env.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+      source.stop(now + 0.035);
+    } catch {
+      // Already finished, or never started. Either way there is nothing to do.
+    }
+  }
+  sounding = [];
+}
+
 // --- primitives ----------------------------------------------------------
 
 interface Tone {
@@ -112,6 +159,7 @@ function tone(t: Tone): void {
 
   osc.start(start);
   osc.stop(start + t.duration + 0.05);
+  register(osc, env);
 }
 
 /** A filtered burst, used for the transient of a pluck or the thud of felt. */
@@ -149,6 +197,7 @@ function noise(
   env.connect(c.destination);
   source.start(start);
   source.stop(start + duration + 0.02);
+  register(source, env);
 }
 
 // --- alarm instruments ---------------------------------------------------
@@ -224,6 +273,8 @@ function play(strikes: Strike[]): void {
  * the condition these play under.
  */
 function transition(rising: boolean): void {
+  silence();
+
   switch (pattern) {
     case "fifth":
       play([
@@ -262,6 +313,7 @@ export function enterBreak(): void {
 
 /** Longer and fuller than a transition: this marks an ending, not a change. */
 export function runComplete(): void {
+  silence();
   play([
     { freq: LOW, at: 0, duration: 2.6, gain: 0.22 },
     { freq: HIGH, at: 0.34, duration: 3.0, gain: 0.2 },
@@ -429,6 +481,7 @@ const kits: Record<ButtonSet, ButtonKit> = {
  * control is for.
  */
 export function press(kind: Press): void {
+  silence();
   const kit = kits[buttons];
   for (const note of kit.notes[kind]) kit.voice(note);
 }

@@ -646,10 +646,15 @@
 
   /* --- readout --------------------------------------------------------- */
 
+  /* The readout sits above the horizon rather than across it.
+     `margin-top: auto` on the time pushes this group to the bottom, so the
+     bottom padding is what lifts it: at 13rem the digits straddled the line
+     between sky and ground and read as misaligned, while the shorter compact
+     layout never had the problem. */
   .content {
     position: absolute;
     inset: 0;
-    padding: 11rem 15rem 13rem;
+    padding: 11rem 15rem 30rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -715,6 +720,11 @@
   .frame.compact .content {
     padding: 0 0 0 14rem;
     justify-content: center;
+  }
+
+  /* The dots follow the readout up, so the pair stays one group. */
+  .dots {
+    margin-bottom: 0;
   }
 
   .frame.compact .label,
