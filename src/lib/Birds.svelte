@@ -9,13 +9,14 @@
    * Rarity is the mechanism rather than a limitation: caught once a session by
    * accident, it reads as a small gift instead of noise.
    *
-   * The flapping is driven from here rather than by a CSS animation, because
-   * small birds do not flap steadily. They fly in bursts and then glide, losing
-   * a little height each glide and regaining it on the next burst — which is
-   * why a sparrow's path undulates instead of running straight. A fixed
-   * animation duration cannot vary its own rate or hold a pose, so the frame
-   * index is computed instead. The loop only exists for the fifteen seconds a
-   * crossing lasts.
+   * Everything below exists to make that moment worth catching, and it comes
+   * down to one thing: the birds have to behave like individuals that happen to
+   * be travelling together, not like a shape being dragged across the screen.
+   * They flap at their own rates, glide at their own times, wander within the
+   * group, and pass in front of and behind each other.
+   *
+   * The animation is driven from here rather than by CSS, because none of that
+   * can be expressed as a fixed duration.
    */
   import { BIRD_BODY, BIRD_FRAMES, BIRD_VIEWBOX } from "./birdFrames";
 
@@ -43,7 +44,7 @@
   /**
    * Wingbeat, tied to ground speed rather than picked independently: a bird
    * crossing faster is beating harder. Each bird then varies around it, and
-   * each burst varies again, so no two are ever quite in step.
+   * each burst varies again.
    */
   const FLAP_FAST_MS = 730;
   const FLAP_SLOW_MS = 850;
@@ -61,42 +62,52 @@
   const GLIDE_FRAME = 2;
 
   /**
-   * Design pixels per millisecond, and the range height wanders over.
+   * Design pixels per millisecond, and the range height wanders over while
+   * beating and coasting. Flapping lifts and gliding sinks, and since the Y
+   * axis points down, lifting means subtracting.
    *
-   * Flapping lifts and gliding sinks, so these move `altitude` in opposite
-   * directions — and since the Y axis points down, lifting means subtracting.
-   *
-   * Barely more than half a pixel either way, and slow enough to spread across
-   * a whole glide rather than saturating in its first moment. Once glides run
-   * to several seconds a visible sink stops reading as a bird coasting and
-   * starts reading as one losing the fight, so what is left here is just enough
-   * to keep the path from being a ruled line.
+   * Barely more than half a pixel either way. Once glides run to several
+   * seconds a visible sink stops reading as a bird coasting and starts reading
+   * as one losing the fight.
    */
   const CLIMB = 0.0003;
   const SINK = 0.00035;
   const ALTITUDE = 0.6;
 
   /**
-   * How far ahead or behind its place in the formation a bird ends up. Applied
-   * across the whole crossing, so the extremes are this far apart twice over —
-   * enough that the shape of the group visibly changes on the way, without it
-   * coming apart.
-   */
-  const LEAD = 7;
-
-  /**
-   * Surge: how far a bird runs ahead of its own drift, and how fast.
-   *
-   * The drift above is linear, which spreads its whole effect across sixteen
-   * seconds and therefore amounts to under a pixel per second — visible by
-   * comparing the two ends of a crossing, invisible at any instant. This is the
-   * part you actually see, and it has a physical reason: a bird gains ground
-   * while it beats and gives some back while it coasts. Since no two are in
-   * step, they are forever passing each other.
+   * Ground gained while beating and given back while coasting. This is the
+   * short-term jostling, on the timescale of a wingbeat.
    */
   const SURGE = 3;
   const SURGE_GAIN = 0.0013;
   const SURGE_LOSS = 0.0015;
+
+  /**
+   * Wander: the slow shuffling of places within the flock.
+   *
+   * This replaced a linear drift, which could not do the job however far it was
+   * pushed. Spread evenly across a crossing it amounted to under a pixel per
+   * second — invisible at any instant — and being monotonic it preserved the
+   * order the birds set out in, so the flock arrived arranged as it departed.
+   *
+   * Two sines of unrelated periods per bird instead. They move back and forth
+   * within the group rather than away from it, so two birds in opposite phase
+   * separate by twice the amplitude — more than the spacing between
+   * neighbours — which is what lets them genuinely overtake. Two rather than
+   * one because a single sine is a pendulum, and pendulums read as machinery.
+   *
+   * What bounds these is not how far but how fast. The flock covers about 26
+   * design pixels a second, and a sine's peak speed is 2π·amplitude/period, so
+   * an amplitude of 10 over five seconds is 12 px/s — nearly half the crossing
+   * speed. An earlier pair summed to more than 26 between them, at which point
+   * a bird stops dead against the screen or slides backwards while still
+   * beating its wings. Long periods and small amplitudes keep the wander to
+   * something under a fifth of the ground speed: a bird leaves its place and
+   * returns about once per crossing, which is all it takes to read as alive.
+   */
+  const WANDER_MAJOR = 8;
+  const WANDER_MINOR = 3.5;
+  const WANDER_LIFT = 3.5;
 
   /**
    * The band a flock may cross in, as a percentage down the stage, and the
@@ -112,7 +123,7 @@
 
   /** Stage height in design pixels, for turning an offset into a depth. */
   const STAGE = 132;
-  const DEPTH_SPAN = (LOWEST - HIGHEST) / 100 + 26 / STAGE;
+  const DEPTH_SPAN = (LOWEST - HIGHEST) / 100 + 30 / STAGE;
 
   const COUNT_MIN = 4;
   const COUNT_MAX = 7;
@@ -140,6 +151,21 @@
   const between = (min: number, max: number): number =>
     min + Math.random() * (max - min);
 
+  interface Wave {
+    amp: number;
+    periodMs: number;
+    phase: number;
+  }
+
+  const wave = (amp: number, minMs: number, maxMs: number): Wave => ({
+    amp: amp * between(0.55, 1),
+    periodMs: between(minMs, maxMs),
+    phase: Math.random() * Math.PI * 2,
+  });
+
+  const sample = (w: Wave, t: number): number =>
+    w.amp * Math.sin((t / w.periodMs) * Math.PI * 2 + w.phase);
+
   /** What a bird is doing right now. Mutated in place by the loop. */
   interface Sim {
     mode: "flap" | "glide";
@@ -152,8 +178,10 @@
     altitude: number;
     /** Ground gained while beating, given back while coasting. */
     surge: number;
-    /** How far ahead or behind its place this one drifts by the far side. */
-    lead: number;
+    /** Two sideways sines and one vertical, all of unrelated periods. */
+    wanderA: Wave;
+    wanderB: Wave;
+    wanderY: Wave;
   }
 
   /** What the markup reads. Replaced wholesale each frame. */
@@ -171,7 +199,6 @@
     top: number;
     drift: number;
     durationMs: number;
-    count: number;
   }
 
   let flight = $state<Flight | null>(null);
@@ -229,6 +256,7 @@
       const speed = (durationMs - FLIGHT_MIN_MS) / (FLIGHT_MAX_MS - FLIGHT_MIN_MS);
       const base = FLAP_FAST_MS + (FLAP_SLOW_MS - FLAP_FAST_MS) * speed;
       const count = Math.round(between(COUNT_MIN, COUNT_MAX));
+      const top = between(HIGHEST, LOWEST);
 
       const sims: Sim[] = Array.from({ length: count }, () => {
         const sim: Sim = {
@@ -239,15 +267,15 @@
           glideLeft: 0,
           altitude: between(-ALTITUDE, ALTITUDE),
           surge: between(-SURGE, SURGE),
-          lead: between(-LEAD, LEAD),
+          wanderA: wave(WANDER_MAJOR, 9_000, 14_000),
+          wanderB: wave(WANDER_MINOR, 6_000, 9_000),
+          wanderY: wave(WANDER_LIFT, 7_000, 12_000),
         };
         restBurst(sim, base * between(0.9, 1.12));
         // Start mid-beat, so the flock does not enter in unison.
         sim.cycle = Math.random() * sim.period;
         return sim;
       });
-
-      const top = between(HIGHEST, LOWEST);
 
       flight = {
         id: id++,
@@ -256,7 +284,6 @@
         // line twice.
         drift: between(-6, 16),
         durationMs,
-        count,
       };
 
       const started = performance.now();
@@ -265,14 +292,16 @@
       const step = (now: number): void => {
         const dt = Math.min(now - last, 100);
         last = now;
-        const progress = Math.min(1, (now - started) / durationMs);
+        const elapsed = now - started;
 
         views = sims.map((sim, i) => {
           advance(sim, base, dt);
           const phase = sim.cycle / sim.period;
+
           const y =
             FORMATION[i].y +
             sim.altitude +
+            sample(sim.wanderY, elapsed) +
             (sim.mode === "glide" ? 0 : Math.cos(phase * Math.PI * 2) * BOB);
 
           // How far down the sky this bird actually is, counting the flock's
@@ -284,9 +313,11 @@
 
           return {
             frame: sim.mode === "glide" ? GLIDE_FRAME : Math.floor(phase * 12) % 12,
-            // Centred on the formation: the group is in its designed shape
-            // halfway across and stretches gently either side of that.
-            x: FORMATION[i].x + sim.lead * (progress * 2 - 1) + sim.surge,
+            x:
+              FORMATION[i].x +
+              sample(sim.wanderA, elapsed) +
+              sample(sim.wanderB, elapsed) +
+              sim.surge,
             y,
             scale: NEAR + (FAR - NEAR) * depth,
           };
@@ -330,6 +361,7 @@
             );
             width: calc({(SIZE * view.scale).toFixed(2)}px * var(--ambient));
             height: calc({((SIZE * view.scale * BIRD_VIEWBOX.height) / BIRD_VIEWBOX.width).toFixed(2)}px * var(--ambient));
+            z-index: {Math.round(view.scale * 100)};
           "
         >
           <svg viewBox="0 0 {BIRD_VIEWBOX.width} {BIRD_VIEWBOX.height}">
@@ -347,8 +379,8 @@
   .flock {
     position: absolute;
     left: 0;
-    width: calc(56px * var(--ambient));
-    height: calc(42px * var(--ambient));
+    width: calc(80px * var(--ambient));
+    height: calc(52px * var(--ambient));
     color: rgb(var(--ground));
     pointer-events: none;
     animation-name: cross;
@@ -357,6 +389,9 @@
     will-change: transform;
   }
 
+  /* Stacked by apparent size, so a nearer bird passes in front of a further
+     one. Overlapping is not a fault to be avoided — these are not on a plane,
+     and two crossing paths only look like a collision from here. */
   .bird {
     position: absolute;
     top: 0;
@@ -377,7 +412,7 @@
       transform: translate(calc(var(--frame-w) * 1rem), 0);
     }
     to {
-      transform: translate(calc(-60px * var(--ambient)), var(--drift));
+      transform: translate(calc(-90px * var(--ambient)), var(--drift));
     }
   }
 
