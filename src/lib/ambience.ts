@@ -27,6 +27,11 @@ export interface AmbienceSettings {
   /** Blur is what makes a cloud a cloud, and also its whole cost. */
   cloudBlur: boolean;
   birds: boolean;
+  /**
+   * The rarest event of all. Off outside "full" for the same reason as the
+   * flock: it crosses quickly, and calm exists so that nothing does.
+   */
+  meteor: boolean;
   /** Two large blurred gradients drifting on long loops. */
   haze: boolean;
   /** Whether the star field breathes or simply sits there. */
@@ -40,6 +45,7 @@ export function ambienceSettings(mode: Ambience): AmbienceSettings {
         cloudBanks: 3,
         cloudBlur: true,
         birds: true,
+        meteor: true,
         haze: true,
         twinkle: true,
       };
@@ -48,6 +54,7 @@ export function ambienceSettings(mode: Ambience): AmbienceSettings {
         cloudBanks: 3,
         cloudBlur: true,
         birds: false,
+        meteor: false,
         haze: true,
         twinkle: true,
       };
@@ -56,6 +63,7 @@ export function ambienceSettings(mode: Ambience): AmbienceSettings {
         cloudBanks: 0,
         cloudBlur: false,
         birds: false,
+        meteor: false,
         haze: false,
         twinkle: false,
       };

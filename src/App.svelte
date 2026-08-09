@@ -15,6 +15,7 @@
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
   import Birds from "./lib/Birds.svelte";
+  import ShootingStar from "./lib/ShootingStar.svelte";
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
@@ -316,6 +317,18 @@
       {/if}
 
       <div class="ground"></div>
+
+      <!-- After the ground, because its reflection has to land on the water
+           rather than behind it, and before the grain so it shares the same
+           texture as everything else. Compact has fifty pixels of sky and no
+           water to speak of, so it does not fall there. -->
+      {#if backdrop.meteor && !compact}
+        <ShootingStar
+          night={sky.stars}
+          width={baseSize.width}
+          height={baseSize.height}
+        />
+      {/if}
 
       <Grain />
 
