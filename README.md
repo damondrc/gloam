@@ -2,6 +2,11 @@
 
 A floating, ambient focus timer that lives in the corner of your screen.
 
+<p align="center">
+  <img src="docs/media/hero.png" width="640"
+       alt="The Gloam widget resting on a desktop: a dusk sky with the sun still high, the readout showing 35:00, and three session dots below the horizon">
+</p>
+
 Gloam is not a window you switch to. It is a small always-on-top widget that
 sits on a second monitor and runs configurable focus and break intervals while
 you work. Its backdrop moves through dusk as the session elapses — the sun
@@ -33,13 +38,23 @@ trailing break has nothing to resume into, so it is dead time.
 - Frameless, transparent, always-on-top window you can drag anywhere
 - Focus/break interval cycles with a plan that ends on a focus session
 - An ambient sky whose state encodes progress
+- Clouds that drift across it, and a flock that crosses once in a long while
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
-- A settings panel that unfolds below the horizon: durations, session count,
-  volume, alarm timbre and button feedback
+- A settings panel that unfolds below the horizon, in three tabs: the cycle,
+  sound, and how alive the backdrop is
 - Soft synthesised sound throughout — no audio assets, no jump scares
 - Controls stay hidden until you hover, so the widget reads as scenery
+
+<p align="center">
+  <img src="docs/media/controls.gif" width="640"
+       alt="Hovering over the widget fades the transport controls in; play, skip to the break, reset, then the padlock dims the whole thing to a watermark">
+</p>
+
+<p align="center"><em>The controls only exist while the pointer is over the
+widget. Skipping to a break swaps the sun for the moon; the padlock drops it to
+44% and hands the clicks to whatever is underneath.</em></p>
 
 ### Keyboard
 
@@ -120,11 +135,11 @@ Scale is kept independent of the other two size-ish concepts on purpose:
 | --- | --- | --- |
 | Scale | How big is everything drawn? | Corner grip, `+` / `-` |
 | Layout | Which elements exist? | Double-click for compact |
-| Panels | How much content is there? | Planned: disclosure arrow |
+| Panels | How much content is there? | The chevron, `,` |
 
 Folding these into a single "size" control is tempting and wrong: dragging to
-enlarge the clock would also unfold the music player, and collapsing the player
-would shrink your type.
+enlarge the clock would also unfold the settings, and collapsing them would
+shrink your type.
 
 The window is declared non-resizable, and `setWindowSize` opens that flag for
 the length of one resize before closing it again. The dance is not decoration:
@@ -149,6 +164,17 @@ placement is deliberate: the sky is the timer, the ground is where the
 machinery lives. Controls laid over the gradient would be hard to read and
 would break the one idea the backdrop carries.
 
+<p align="center">
+  <img src="docs/media/settings.gif" width="640"
+       alt="The chevron unfolds a panel below the horizon; stepping the focus and break durations on the general tab, then moving through the sound and backdrop tabs">
+</p>
+
+It is split into three tabs — the cycle, sound, and the backdrop. Stacked in
+one column the sections had grown past 280 design pixels, which at 180% scale
+is most of a laptop screen. Tabs cut that to 152 and group by question rather
+than by type: how long, how it sounds, how alive the sky is. The tab is
+navigation rather than preference, so it is not remembered.
+
 Durations are steppers rather than number fields. At this size a form input
 looks borrowed from another application, and more usefully a stepper cannot
 produce an invalid value — there is no empty state and nothing to mistype. They
@@ -162,25 +188,73 @@ Everything is synthesised. No audio files means nothing to license, nothing to
 decode, no binaries in the repository, and a timbre that stays editable as code.
 
 The module splits along one line: an *instrument* decides how a single note
-sounds, a *phrase* decides which notes and in what order. Phrases are the app's
-vocabulary and do not change — a rising pair always means work is starting.
-Choosing a different alarm swaps the instrument, which is why adding one is a
-function rather than a redesign.
+sounds, a *phrase* decides which notes and in what order. That split is why
+timbre and pattern are separate settings, and why adding either is a function
+rather than a redesign.
 
-The two transitions are the same perfect fifth in opposite directions: rising
-into focus, falling into a break. Identical material makes them audibly a pair,
-opposite direction makes them impossible to confuse, and direction was chosen
-over register because it survives being half-heard — which is the condition
-these play under. The end of a run is a fuller three-note chord, marking an
-ending rather than a change.
+Whatever the pattern, the two transitions are always the same material in
+opposite directions: rising into focus, falling into a break. Identical notes
+make them audibly a pair, opposite direction makes them impossible to confuse,
+and direction was chosen over register because it survives being half-heard —
+which is the condition these play under. The end of a run is a fuller chord,
+marking an ending rather than a change.
 
-Button feedback has three settings rather than an on/off, because of a real
-difference between machines rather than a taste for knobs: laptop speakers roll
-off below roughly 250 Hz, so a pause cue built on a low fundamental is
-inaudible on one machine and the nicest option on another. **Soft** conveys the
-same settling with falling mid-range tones that any speaker can reproduce;
-**deep** uses the low version. Preferences are stored per install, so each
-machine keeps its own.
+Button sets were first designed around what different speakers can reproduce,
+which turned out to be the wrong question — a recommendation mistaken for a
+rule. The right one is what this widget sounds like. Its alarms are a struck
+bowl, so its buttons are struck, plucked or dropped things too: soft attacks,
+some warmth, no digital edges. Every set keeps the same grammar, so the meaning
+survives changing the material — start rises, pause falls, reset is neutral,
+locking falls shut and unlocking springs open.
+
+There is no way to silence the buttons alone, deliberately. Feedback you cannot
+hear is a button you are not sure you pressed, and muting is what the volume
+control is for.
+
+Every gesture fades out whatever is still ringing before it starts. Auditioning
+a setting is the reason: you are there to hear the thing you picked, not the
+thing you picked over the last two.
+
+### The backdrop
+
+Clouds drift across the sky in three banks, taking six to eight minutes to
+cross. Their colour is interpolated from the same keyframes as everything else,
+so they are lit by the moment: cream at golden hour, dull violet at dusk,
+near-silhouettes once night falls. They render above the sun, so a bank
+crossing it dims it — that occlusion is most of what separates a cloud from a
+smudge.
+
+A flock crosses once every four to nine minutes and is gone in fifteen seconds.
+The birds are a twelve-frame flipbook rather than a rotating shape, which is
+the whole animation: swapping silhouettes lets the wing change shape as well as
+angle, so it extends through the downstroke, folds on the recovery, and its
+tips curl upward as it rises. A wing that keeps its length reads as a
+windscreen wiper. Every crossing rolls its own duration, flock size, height and
+descent, and each bird holds its own pace within the group, so the formation
+changes shape on the way across and no two crossings are alike.
+
+The flock is damped against the widget's scale rather than tracking it: making
+the window bigger should reveal more sky, not larger birds.
+
+Three modes, in the panel, answering three different questions rather than
+being three degrees of one:
+
+| | |
+| --- | --- |
+| **Full** | Clouds and the occasional flock. |
+| **Calm** | Clouds only. Nothing crosses quickly. |
+| **Light** | A flat sky, for a modest machine. |
+
+*Calm* is about attention. *Light* is about a laptop's battery, so it drops
+what actually costs something — blurred surfaces and per-frame animation —
+rather than what merely looks busy; the birds are unrendered rather than
+hidden, which stops their scheduler too. A fourth mode sat between the two for
+a while, with one unblurred cloud bank and nothing else, but blur is what makes
+a cloud a cloud, so all it did was leave a shape on the sky. A mode has to be a
+coherent thing to want rather than a point on a slider.
+
+The sky, the horizon and the grain are never touched by any of them. They are
+the widget's face rather than its ambience.
 
 ## Compact mode
 
@@ -188,6 +262,14 @@ Double-clicking collapses the widget to a single row: the readout, the play
 control and the padlock. Skip, reset and close are dropped rather than shrunk —
 below about 24px a button stops being worth aiming at — and stay available on
 the keyboard. Double-clicking again restores the full widget.
+
+<p align="center">
+  <img src="docs/media/compact.gif" width="640"
+       alt="Double-clicking collapses the widget to a single row and back; the corner grip then drags it through its scale range, from 80% up to 180%">
+</p>
+
+<p align="center"><em>Compact mode and the scale range are separate axes: one
+decides how much the widget shows, the other how big it is.</em></p>
 
 ## Running it
 
@@ -267,8 +349,8 @@ it for more. Growth goes into disclosure, not into the resting state.
       built inside a container that already knows how to grow
 - [x] **Phase 4** — Settings panel: durations, session count, alarm timbre and
       button feedback, with the timer's rules under test
-- [ ] **Phase 5** — Ambient life on the backdrop: slow drifting clouds, and a
-      distant flock of birds as a rare event
+- [x] **Phase 5** — Ambient life on the backdrop: drifting clouds, a rare flock,
+      and the panel split into tabs to make room for what follows
 - [ ] **Phase 6** — Scene editor: swap the horizon band for a city skyline whose
       windows light up as the sun goes down, or a mountain ridge
 - [ ] **Phase 7** — System tray, launch on startup, session history
@@ -307,10 +389,14 @@ src/
     lock.svelte.ts    click-through and cursor hit-testing
     scale.svelte.ts   the scale factor and its drag interaction
     sky.ts            the palette, keyframes and interpolation
+    ambience.ts       what each backdrop mode switches off
     sound.ts          instruments and phrases, all synthesised
     prefs.ts          persisted preferences, validated on the way in
     window.ts         guarded wrappers over the Tauri window API
     Stars.svelte      fixed star field
+    Clouds.svelte     drifting banks
+    Birds.svelte      the flock, and when it flies
+    birdFrames.ts     its twelve silhouettes, generated
     Grain.svelte      generated film grain
     Controls.svelte   transport buttons
     Padlock.svelte    the animated lock

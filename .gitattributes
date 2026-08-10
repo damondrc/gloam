@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Never let line-ending normalization near the README media
+*.png binary
+*.gif binary
+*.jpg binary
+*.ico binary
