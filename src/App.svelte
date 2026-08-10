@@ -149,7 +149,16 @@
     );
   });
 
+  // Reading `dragging` first, and bailing out on it, is the same trick the
+  // resize effect above uses: while the grip is held, scale.value is never
+  // read, so it is not a dependency and this does not re-run per pointer
+  // event. Serialising the whole preference object into storage at that rate
+  // is work nobody asked for, and the intermediate values are not worth
+  // keeping — the effect re-runs the moment the drag ends, which is when the
+  // one that is worth keeping exists.
   $effect(() => {
+    if (scale.dragging) return;
+
     savePrefs({
       compact,
       scale: scale.value,
@@ -232,11 +241,30 @@
     void startDragging();
   }
 
+  /**
+   * Elements that are activated by the spacebar, and therefore own it.
+   *
+   * Only these matter. The rest of the shortcuts below are keys no control has
+   * a meaning for — a letter typed at a focused button does nothing — so they
+   * stay global, which is the point of binding them to the window.
+   */
+  const SPACE_CLAIMS = "button, input, select, textarea, a[href], summary";
+
+  function ownsSpace(target: EventTarget | null): boolean {
+    return target instanceof Element && target.closest(SPACE_CLAIMS) !== null;
+  }
+
   function onKeydown(event: KeyboardEvent): void {
     if (event.repeat) return;
 
     switch (event.key) {
       case " ":
+        // Preventing the default is how the page is stopped from scrolling,
+        // and it is also how a button is stopped from firing. With the focus
+        // on a settings tab, the widget would start the timer instead of
+        // switching tab — so when something else has a claim on the key, this
+        // stands down rather than competing for it.
+        if (ownsSpace(event.target)) return;
         event.preventDefault();
         toggleTimer();
         break;
@@ -799,6 +827,23 @@
     pointer-events: auto;
   }
 
+  /* The controls fade rather than leave the document, so they keep their place
+     in the tab order while invisible — which meant tabbing through the widget
+     moved a focus ring nobody could see. Focus has to be able to summon what
+     hover summons, or the keyboard path is a guess.
+
+     Not while locked, though. That is the one state where the controls are
+     meant to be gone rather than merely hidden, and the padlock stays
+     reachable on its own below. */
+  .frame:not(.locked) .ui:focus-within {
+    opacity: 1;
+  }
+
+  .frame:not(.locked) .ui:focus-within :global(button),
+  .frame:not(.locked) .ui:focus-within :global(.grip) {
+    pointer-events: auto;
+  }
+
   /* Offset from the right edge to leave the corner to the resize grip. */
   .dock {
     position: absolute;
@@ -905,7 +950,8 @@
     transition: opacity 0.25s ease;
   }
 
-  .lock-slot.show {
+  .lock-slot.show,
+  .lock-slot:focus-within {
     opacity: 1;
     pointer-events: auto;
   }
