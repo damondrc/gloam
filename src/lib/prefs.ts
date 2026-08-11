@@ -1,9 +1,13 @@
 /**
  * Preferences that should survive a restart.
  *
- * localStorage is enough while the set is this small and non-sensitive. When
- * the settings panel lands and durations move here too, this is the seam to
- * swap for a JSON file managed by Rust.
+ * The durations moved here when the settings panel landed, which was the point
+ * at which this was expected to become a JSON file managed by Rust. It has not,
+ * on purpose: the reason to leave localStorage would be reliability, and that
+ * is already handled below by treating whatever comes back as untrusted rather
+ * than by trusting the store more. Moving would buy two Tauri commands, two
+ * permissions, a file format and a migration path, none of which the user would
+ * notice. If a reason ever appears, this is still the seam.
  */
 
 import { clampSetting, DEFAULT_CONFIG } from "./plan";
