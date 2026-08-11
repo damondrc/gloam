@@ -24,16 +24,6 @@ export async function closeWindow(): Promise<void> {
   await m?.getCurrentWindow().close();
 }
 
-export async function minimizeWindow(): Promise<void> {
-  const m = await api();
-  await m?.getCurrentWindow().minimize();
-}
-
-export async function setAlwaysOnTop(value: boolean): Promise<void> {
-  const m = await api();
-  await m?.getCurrentWindow().setAlwaysOnTop(value);
-}
-
 /**
  * Begins a window drag.
  *
