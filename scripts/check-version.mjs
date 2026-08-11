@@ -54,8 +54,12 @@ for (const { file, version } of sources) {
   }
 }
 
-// Tags are written with a leading v; the files are not.
-const tag = process.argv[2]?.replace(/^v/, "");
+// Tags are written with a leading v; the files are not. A prerelease suffix is
+// dropped before comparing, so v0.5.0-rc.1 is accepted on a tree that says
+// 0.5.0 — a release candidate is a rehearsal of exactly that commit, and
+// making the three files carry an -rc suffix for it would mean two more edits
+// to undo before the real tag.
+const tag = process.argv[2]?.replace(/^v/, "").replace(/-.*$/, "");
 if (tag && tag !== expected) {
   problems.push(`tag: ${process.argv[2]} (expected v${expected})`);
 }

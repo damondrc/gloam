@@ -1,0 +1,182 @@
+name: Release
+
+# Pushing a tag is the whole release process. Everything below is what used to
+# be one laptop and an afternoon.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # Refuses to build a release that disagrees with itself. A tag is cheap to
+  # delete and an artifact carrying the wrong version is not, so the checks
+  # that cost a minute run before the ones that cost twenty.
+  #
+  # CI does not run on tags, so the type check and the tests happen here too
+  # rather than being assumed from the commit this tag points at.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tag matches the declared version
+        run: node scripts/check-version.mjs "${{ github.ref_name }}"
+
+      # Tagging a version nobody wrote an entry for should stop here rather
+      # than publish a release with an empty body.
+      - name: Changelog has an entry
+        run: node scripts/changelog-section.mjs "${{ github.ref_name }}"
+
+      - name: Type check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+  windows:
+    name: Windows installer
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - run: npm run app:build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-windows
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+  # Built inside a container rather than on a runner image, and this is the
+  # one decision in the file worth explaining.
+  #
+  # glibc is not backward compatible: a binary linked against 2.39 will not
+  # start on a system that has 2.35, so the oldest distribution a release can
+  # reach is decided by whatever it was compiled on. Building on the current
+  # runner image would leave out Ubuntu 22.04 LTS and Debian 12, which is most
+  # of the installed base.
+  #
+  # The obvious fix — ask for the ubuntu-22.04 runner — has an expiry date on
+  # it: that image begins deprecation in September 2026 and is unsupported by
+  # April 2027, after which the label stops working and the release silently
+  # gets younger. A container image does not expire the same way. Ubuntu 22.04
+  # is supported until 2027 and on extended maintenance until 2032, and the
+  # tag stays pullable regardless of which runners GitHub happens to offer.
+  #
+  # So the runner is only a machine, and the toolchain that decides
+  # compatibility is pinned in one place, visibly, here.
+  linux:
+    name: Linux packages
+    needs: verify
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      # linuxdeploy mounts the AppImage it is assembling, and there is no FUSE
+      # inside a container. Extracting instead of mounting is the supported way
+      # out and costs nothing but disk.
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      # Before checkout, because a bare Ubuntu image has no git — without it
+      # the checkout action silently falls back to downloading a tarball, and
+      # anything that wants the tag or the history stops working.
+      - name: Container prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl wget file git build-essential \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - run: npm run app:build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-linux
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+  publish:
+    name: Draft release
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: bundle-*
+          merge-multiple: true
+
+      # Unsigned installers are going to make Windows warn, and the honest
+      # answer to "should I trust this" is a hash the user can check against
+      # one published beside it.
+      - name: Checksums
+        working-directory: artifacts
+        run: |
+          sha256sum *.exe *.deb *.AppImage > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Release notes
+        run: |
+          node scripts/changelog-section.mjs "${{ github.ref_name }}" > notes.md
+
+      # A draft, always. The last step of a release is a person looking at
+      # what is about to go out, and that is not something to automate away.
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          name: ${{ github.ref_name }}
+          body_path: notes.md
+          files: artifacts/*
+          fail_on_unmatched_files: true
