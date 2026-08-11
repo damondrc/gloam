@@ -7,6 +7,13 @@ A floating, ambient focus timer that lives in the corner of your screen.
        alt="The Gloam widget resting on a desktop: a dusk sky with the sun still high, the readout showing 35:00, and three session dots below the horizon">
 </p>
 
+<p align="center">
+  <a href="https://github.com/damondrc/gloam/actions/workflows/ci.yml">
+    <img src="https://github.com/damondrc/gloam/actions/workflows/ci.yml/badge.svg"
+         alt="CI status">
+  </a>
+</p>
+
 Gloam is not a window you switch to. It is a small always-on-top widget that
 sits on a second monitor and runs configurable focus and break intervals while
 you work. Its backdrop moves through dusk as the session elapses — the sun

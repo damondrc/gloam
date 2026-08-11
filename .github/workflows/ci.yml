@@ -1,0 +1,148 @@
+name: CI
+
+# Pull requests and anything landing on main. Tags belong to the release
+# workflow, so cutting a version does not pay for the same checks twice.
+#
+# Documentation-only changes are skipped: nothing under docs/ or any .md file
+# can break a build, and a run that can only ever pass teaches nothing.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
+  workflow_dispatch:
+
+# A new push supersedes the one before it. There is nothing to learn from
+# finishing a twenty-minute build of a commit that is already history.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # Everything that can fail in seconds, failing in seconds. This is the job
+  # the badge reports, because it is the one that answers "is main sane".
+  check:
+    name: Types and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # First, because a project that disagrees with itself about its own
+      # version makes every artifact produced afterwards ambiguous.
+      - name: Version is consistent
+        run: npm run check:version
+
+      - name: Type check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+  # The expensive half: proof that the thing assembles on both platforms it
+  # claims to support. Gated behind `check` so a typo cannot spend twenty
+  # minutes of runner time before failing.
+  #
+  # This job answers "does it build", not "will it run on an older distro".
+  # That second question is glibc's, and it is answered in the release
+  # workflow, which builds Linux inside a container old enough to matter.
+  build:
+    name: Build (${{ matrix.os }})
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing should not hide the state of the other.
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Tauri's Linux prerequisites. libayatana-appindicator is not needed by
+      # anything yet and is here on purpose: the tray lands next, and a build
+      # machine that cannot produce it is better discovered now than then.
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf \
+            build-essential \
+            file \
+            wget
+
+      - run: npm ci
+
+      # Before cargo is touched at all: build.rs hands tauri-build the
+      # frontendDist path from tauri.conf.json, and it refuses to run if that
+      # directory does not exist. A fresh checkout has no dist/, so clippy
+      # would fail for a reason that has nothing to do with the Rust.
+      #
+      # `tauri build` runs this again through beforeBuildCommand. The repeat
+      # costs seconds and buys a lint failure that arrives in two minutes
+      # rather than after the whole bundle.
+      - name: Build frontend
+        run: npm run build
+
+      - name: Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: Rust lints
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Bundle
+        run: npm run app:build
+
+      # Not published — these exist so a change to the window, the bundle
+      # configuration or a dependency can be installed and looked at before it
+      # is merged.
+      - name: Collect installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: gloam-${{ matrix.os }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: ignore
+          retention-days: 7
