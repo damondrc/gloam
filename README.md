@@ -24,6 +24,26 @@ Built with **Tauri 2**, **Svelte 5** and **TypeScript**. The release binary is
 a few megabytes and idles at a fraction of the memory an Electron equivalent
 would need, which matters for something meant to stay open all day.
 
+## Download
+
+Installers are on the
+[latest release](https://github.com/damondrc/gloam/releases/latest): an `.exe`
+for Windows, a `.deb` and an AppImage for Linux.
+
+Every release publishes a `SHA256SUMS.txt` beside them. Gloam is not
+code-signed — a certificate costs more per year than this project costs to run —
+so Windows will raise a SmartScreen warning the first time you run the
+installer. The checksum is the honest answer to that, and it is worth checking
+before clicking through:
+
+```powershell
+Get-FileHash .\Gloam_x.y.z_x64-setup.exe -Algorithm SHA256
+```
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
+
 ---
 
 ## Why this exists
@@ -45,7 +65,8 @@ trailing break has nothing to resume into, so it is dead time.
 - Frameless, transparent, always-on-top window you can drag anywhere
 - Focus/break interval cycles with a plan that ends on a focus session
 - An ambient sky whose state encodes progress
-- Clouds that drift across it, and a flock that crosses once in a long while
+- Clouds that drift across it, a flock that crosses once in a long while, and
+  a shooting star on a rare night
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
@@ -323,55 +344,105 @@ never ends on a break" rather than "with these numbers it comes out like this".
 
 | | Status |
 | --- | --- |
-| Windows 10/11 | Fully supported |
-| Linux (X11) | Fully supported |
+| Windows 10/11 | Supported |
+| Linux (X11) | Supported |
 | Linux (Wayland) | Runs, but always-on-top is ignored |
 
 The Wayland limitation is [upstream](https://github.com/tauri-apps/tao/issues/1134):
 the protocol gives clients no way to request that a surface stay above others.
-The planned workaround is a `gtk-layer-shell` overlay surface — see the roadmap.
+Running under XWayland restores it. A `gtk-layer-shell` surface would too, in
+principle, except that the protocol it depends on is one GNOME has declined to
+implement — so it would fix the smaller half of Wayland. Both are being looked
+at rather than promised.
+
+macOS is not listed because it has never been run there. Nothing in the code is
+Windows- or Linux-specific by design, but a platform nobody has opened the app
+on is not one to claim.
 
 ### Linux binaries
 
-Released Linux builds are produced on **Linux Mint 22 (Ubuntu 24.04 base)** and
-therefore require **glibc 2.39 or newer** — Mint 22+, Ubuntu 24.04+, Debian 13+,
-Fedora 40+. glibc is not backward compatible, so a binary built on a newer base
-will not start on an older one.
+Released Linux packages are built by CI inside an **Ubuntu 22.04** container,
+and therefore need **glibc 2.35 or newer** — Ubuntu 22.04+, Debian 12+, Mint
+21+, Fedora 36+. glibc is not backward compatible, so a binary built on a newer
+base will not start on an older one: the build environment is what decides how
+far a release reaches, and it is worth deciding on purpose.
 
-Older distributions are not unsupported so much as un-built-for: the source
-compiles on anything providing `libwebkit2gtk-4.1-dev`, which reaches back to
-Ubuntu 22.04 and Debian 12. Widening the released binaries means building on
-that older base, which is what the planned CI workflow is for.
+A container rather than a runner image of the right age, because runner images
+are retired on a schedule that has nothing to do with this project — the one
+that matched was already weeks from deprecation when this was set up. An image
+tag does not move underneath you.
 
 ## Roadmap
 
-Everything below is built on one rule: **the default state never gets busier.**
-Settings and the music player arrive as panels you expand into, so a Gloam with
-every feature enabled still looks like the Gloam in the screenshot until you ask
-it for more. Growth goes into disclosure, not into the resting state.
+Everything here is built on one rule: **the default state never gets busier.**
+Anything new arrives as something you expand into, so a Gloam with every
+setting turned on still looks like the screenshot above until you ask it for
+more. Growth goes into disclosure, not into the resting state.
 
-- [x] **Phase 1** — Floating widget, fixed 30/10 cycles, ambient sky, chimes
-- [x] **Phase 2** — Lock mode with cursor hit-testing, compact mode, persistence
-- [x] **Phase 3** — A scale factor and a corner resize handle, so later panels are
-      built inside a container that already knows how to grow
-- [x] **Phase 4** — Settings panel: durations, session count, alarm timbre and
-      button feedback, with the timer's rules under test
-- [x] **Phase 5** — Ambient life on the backdrop: drifting clouds, a rare flock,
-      and the panel split into tabs to make room for what follows
-- [ ] **Phase 6** — Scene editor: swap the horizon band for a city skyline whose
-      windows light up as the sun goes down, or a mountain ridge
-- [ ] **Phase 7** — System tray, launch on startup, session history
-- [ ] **Phase 8** — `gtk-layer-shell` path so always-on-top works under Wayland
-- [ ] **Infrastructure** — CI that builds Windows and Ubuntu 22.04 artifacts on
-      tag, so releases reach older distributions without needing a second
-      machine to build on
+What is left before 1.0 is mostly not features. The timer works; what Gloam has
+been missing is everything around it — remembering where it lives, being
+impossible to lose, and being verifiable by someone who is not holding the
+laptop it was built on.
 
-Phases 1–8 make a complete v1.0.
+**Done**
 
-- [ ] **Phase 9** — Ambient music from a local folder: an expandable mini player
-      showing the current track, elapsed time and transport controls, with tag
-      reading and FLAC decoding in Rust. Deliberately last: it is the heaviest
-      subsystem in the project and the only one nothing else depends on.
+- [x] The widget: frameless, always-on-top, an ambient sky that encodes progress
+- [x] Lock mode with cursor hit-testing, compact mode, persisted preferences
+- [x] A scale factor and a corner grip, so later panels grow inside a container
+      that already knows how
+- [x] The settings panel: durations, session count, alarm timbre and button
+      feedback, with the timer's rules under test
+- [x] A living backdrop: clouds, a rare flock, a rarer shooting star, and three
+      ambience modes
+- [x] CI on every push, and a release built, checksummed and drafted by tag
+
+**0.6.0 — the widget stays where you put it**
+
+- [ ] A tray icon: show, reset the position, quit. Closing hides rather than
+      exits, so the widget cannot be lost by clicking the wrong thing.
+- [ ] The window position remembered between runs, and checked against the
+      monitors that actually exist at startup rather than the ones that did
+- [ ] The countdown correct while the window is hidden, not only while it is
+      being watched
+- [ ] The timer engine, the preference validation and the hit-test arithmetic
+      under test — the places where being wrong would be invisible
+
+**0.7.0 — polish, if it earns its place**
+
+- [ ] A one-time hint on first run, so dragging and the compact toggle are
+      discovered rather than read about
+- [ ] The shortcuts listed inside the app
+- [ ] Launch on startup, as a preference
+- [ ] An alternative horizon or two — a city skyline whose windows light up as
+      the sun goes down — as one row in the backdrop tab
+
+**1.0.0 — the declaration**
+
+No new code. The README split into documentation that suits someone using
+Gloam and documentation that suits someone reading it, a contributing guide
+that states the bar a feature has to clear, a security policy, and a platform
+checklist that has actually been run rather than assumed. The version people
+judge a project by should be the one with the least left to go wrong.
+
+### Deliberately not on this list
+
+- **Statistics, history, streaks.** The second paragraph of this README says
+  what Gloam is not, and a dashboard is the shortest path to becoming it.
+- **A scene *editor*.** A skyline is worth having. A mode for arranging one,
+  inside a 320-pixel window, is not.
+- **Notifications.** The widget is already on screen, and a notification is
+  precisely the interruption it exists in order not to be.
+- **Accounts, sync, anything networked.** Gloam opens no connections at all.
+  That is worth more than any feature which would end it.
+
+### After 1.0
+
+- `gtk-layer-shell`, if enough people turn out to be on a compositor that
+  implements the protocol GNOME does not.
+- Ambient music from a local folder. It would be the heaviest subsystem in the
+  project, the only one nothing else depends on, and a transport with a track
+  name on it is a thing to fiddle with — which is the argument this README
+  opens with. Last on purpose, and not certain.
 
 ### A note on motion
 
@@ -412,6 +483,9 @@ src/
     Stepper.svelte    minus/value/plus row
     Cycler.svelte     one-of-a-short-list row
 src-tauri/            Rust shell, window configuration, global shortcut
+scripts/              version and changelog checks, used by CI
+.github/workflows/    checks on every push, a release on every tag
+docs/media/           the stills and GIFs in this file
 ```
 
 ## License
