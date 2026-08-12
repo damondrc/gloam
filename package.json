@@ -1,7 +1,7 @@
 {
   "name": "gloam",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "A floating, ambient focus timer that lives in the corner of your screen.",
   "license": "MIT",

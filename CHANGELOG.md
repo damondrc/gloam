@@ -13,6 +13,8 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-08-11
+
 ### Added
 
 - A drifting cloud bank on the backdrop, lit by the same keyframes as
@@ -24,6 +26,13 @@ commit that made the change, and in the architecture notes.
 - Button sound sets, and a second axis for the alarms, so timbre and pattern
   are chosen separately.
 - Screenshots and GIFs in the README.
+- Continuous integration: every push runs the version check, the type check and
+  the tests, then assembles installers on Windows and Linux.
+- A release pipeline. Pushing a tag verifies that the tag, the three declared
+  versions and the changelog agree, builds both platforms, publishes SHA256
+  checksums beside the installers, and opens a draft for review.
+- A download section in the README, with how to check a build against its
+  checksum.
 
 ### Changed
 
@@ -32,6 +41,9 @@ commit that made the change, and in the architecture notes.
 - Only one sound gesture plays at a time: starting one fades out whatever is
   still ringing, so auditioning a setting plays the thing you picked.
 - The readout sits above the horizon rather than straddling it.
+- Linux packages are built inside an Ubuntu 22.04 container and need glibc 2.35
+  rather than 2.39, which brings back Ubuntu 22.04 LTS, Debian 12, Mint 21 and
+  Fedora 36 — none of which could run a Gloam release before this.
 
 ### Fixed
 
@@ -115,7 +127,8 @@ commit that made the change, and in the architecture notes.
 - Fixed 30/10 focus and break cycles.
 - An ambient sky whose state encodes progress, and chimes on each transition.
 
-[Unreleased]: https://github.com/damondrc/gloam/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/damondrc/gloam/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/damondrc/gloam/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/damondrc/gloam/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/damondrc/gloam/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/damondrc/gloam/compare/v0.2.0...v0.3.0
