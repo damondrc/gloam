@@ -157,13 +157,33 @@ jobs:
           pattern: bundle-*
           merge-multiple: true
 
+      # An artifact is rooted at the common ancestor of the files that went
+      # into it, which means its shape depends on how many directories the
+      # upload happened to match. Windows matched one and arrived flat; Linux
+      # matched deb/ and appimage/ and arrived with both still nested.
+      #
+      # Rather than teach this job that rule, everything is flattened here.
+      # A release page wants one list of files anyway, and a step that does
+      # not care how its input was packed cannot be broken by repacking it.
+      - name: Gather the installers
+        run: |
+          mkdir -p release
+          find artifacts -type f \
+            \( -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec mv -t release/ {} +
+          test -n "$(ls -A release)" || {
+            echo "The builds produced no installers."
+            exit 1
+          }
+          ls -l release
+
       # Unsigned installers are going to make Windows warn, and the honest
       # answer to "should I trust this" is a hash the user can check against
       # one published beside it.
       - name: Checksums
-        working-directory: artifacts
+        working-directory: release
         run: |
-          sha256sum *.exe *.deb *.AppImage > SHA256SUMS.txt
+          sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Release notes
@@ -178,5 +198,5 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           name: ${{ github.ref_name }}
           body_path: notes.md
-          files: artifacts/*
+          files: release/*
           fail_on_unmatched_files: true
