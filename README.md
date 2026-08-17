@@ -70,8 +70,8 @@ trailing break has nothing to resume into, so it is dead time.
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
-- A settings panel that unfolds below the horizon, in three tabs: the cycle,
-  sound, and how alive the backdrop is
+- A settings panel that unfolds below the horizon, in two tabs: the cycle, and
+  everything about what the widget is like to sit beside
 - Soft synthesised sound throughout — no audio assets, no jump scares
 - Controls stay hidden until you hover, so the widget reads as scenery
 
@@ -197,11 +197,19 @@ would break the one idea the backdrop carries.
        alt="The chevron unfolds a panel below the horizon; stepping the focus and break durations on the general tab, then moving through the sound and backdrop tabs">
 </p>
 
-It is split into three tabs — the cycle, sound, and the backdrop. Stacked in
-one column the sections had grown past 280 design pixels, which at 180% scale
-is most of a laptop screen. Tabs cut that to 152 and group by question rather
-than by type: how long, how it sounds, how alive the sky is. The tab is
-navigation rather than preference, so it is not remembered.
+It is split into two tabs, answering two questions: **General** is how long a
+run is, **Ambience** is what the widget is like to sit beside — its volume, the
+material it sounds like, and how alive the sky is.
+
+There were three for a while, with sound and the backdrop kept apart. They were
+apart because they were built at different times, not because anyone choosing
+between them thinks of them as different: both are the answer to how much of
+itself the widget should make you aware of. Reuniting them cost one tab and
+left the panel describing the widget instead of its history.
+
+Tabs at all, rather than one column, because stacked the sections run past 280
+design pixels — at 180% scale, most of a laptop screen. The tab is navigation
+rather than preference, so it is not remembered.
 
 Durations are steppers rather than number fields. At this size a form input
 looks borrowed from another application, and more usefully a stepper cannot
@@ -217,8 +225,27 @@ decode, no binaries in the repository, and a timbre that stays editable as code.
 
 The module splits along one line: an *instrument* decides how a single note
 sounds, a *phrase* decides which notes and in what order. That split is why
-timbre and pattern are separate settings, and why adding either is a function
-rather than a redesign.
+adding either is a function rather than a redesign.
+
+What the panel offers is a *set*: an instrument, a phrase and a kit of button
+sounds, picked together and named for their material.
+
+| | |
+| --- | --- |
+| **Bowl** | The widget's own voice. Warm, two notes, slow to fade. |
+| **Bell** | Metal, announced in three notes. Hard to miss. |
+| **Felt** | Wood and felt, fading into itself. Barely there. |
+
+They come together because the material has to be common — and because
+separate controls for the alarm and the buttons are, in practice, a tool for
+breaking that. Three settings offering forty-eight combinations is not more
+choice than three sets; it is the same choice with the coherent answers hidden
+among the incoherent ones. Each set answers one question instead: how it
+sounds when nobody has asked for anything, what to reach for when a transition
+keeps being missed, and what is left when it should barely register.
+
+Three instruments, three phrases, three kits of buttons, and each set uses
+exactly one of each.
 
 Whatever the pattern, the two transitions are always the same material in
 opposite directions: rising into focus, falling into a break. Identical notes
@@ -227,13 +254,12 @@ and direction was chosen over register because it survives being half-heard —
 which is the condition these play under. The end of a run is a fuller chord,
 marking an ending rather than a change.
 
-Button sets were first designed around what different speakers can reproduce,
+Button sounds were first designed around what different speakers can reproduce,
 which turned out to be the wrong question — a recommendation mistaken for a
-rule. The right one is what this widget sounds like. Its alarms are a struck
-bowl, so its buttons are struck, plucked or dropped things too: soft attacks,
-some warmth, no digital edges. Every set keeps the same grammar, so the meaning
-survives changing the material — start rises, pause falls, reset is neutral,
-locking falls shut and unlocking springs open.
+rule. The right one is what this widget sounds like: soft attacks, some warmth,
+no digital edges. Every kit keeps the same grammar, so the meaning survives
+changing the material — start rises, pause falls, reset is neutral, locking
+falls shut and unlocking springs open.
 
 There is no way to silence the buttons alone, deliberately. Feedback you cannot
 hear is a button you are not sure you pressed, and muting is what the volume
@@ -264,8 +290,8 @@ changes shape on the way across and no two crossings are alike.
 The flock is damped against the widget's scale rather than tracking it: making
 the window bigger should reveal more sky, not larger birds.
 
-Three modes, in the panel, answering three different questions rather than
-being three degrees of one:
+Three modes, under **Backdrop** in the panel, answering three different
+questions rather than being three degrees of one:
 
 | | |
 | --- | --- |

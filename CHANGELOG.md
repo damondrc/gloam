@@ -13,6 +13,26 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+### Changed
+
+- The settings panel has two tabs instead of three. **General** is how long a
+  run is; **Ambience** is everything about what the widget is like to sit
+  beside — volume, sound and backdrop together.
+- The three sound settings are now one. Alarm timbre, alarm pattern and button
+  set have become a single choice of **Bowl**, **Bell** or **Felt**, each of
+  which decides all three. The material of the alarms and the material of the
+  buttons were never meant to be picked apart, and separate controls were a way
+  to break that rather than a way to choose.
+- The backdrop row is labelled **Backdrop** rather than Ambience, which is now
+  the name of the tab it sits in.
+- Existing preferences carry over: whichever alarm you had chosen selects the
+  set nearest to it, so nobody who went looking for the quietest option is
+  handed a louder one by the update.
+
+### Removed
+
+- The `pulse` alarm and the `drop` button set, which no set composes from.
+
 ## [0.5.0] — 2026-08-11
 
 ### Added

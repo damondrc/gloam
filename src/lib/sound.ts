@@ -2,18 +2,22 @@
  * Sound.
  *
  * The module is split along one line: an *instrument* decides how a single
- * note sounds, a *phrase* decides which notes and in what order. Phrases are
- * the app's vocabulary and do not change — a rising pair always means work is
- * starting. Instruments are what the settings swap, so adding one is a
- * function rather than a redesign.
+ * note sounds, a *phrase* decides which notes and in what order. Phrases carry
+ * the meaning and never change it — a rising pair means work is starting,
+ * whatever it is played on.
+ *
+ * What the settings swap is a *set*: an instrument, a phrase and a kit of
+ * button sounds, picked together. Together, because the material has to be
+ * common — the alarms are a struck bowl, so the buttons are struck things too
+ * — and separate controls are a tool for breaking that. A set is a coherent
+ * thing to want. A grid of forty-eight combinations is not.
  *
  * Everything is synthesised rather than shipped as audio files: nothing to
  * license, nothing to decode, no binaries in the repository, and a timbre that
  * stays editable as code.
  *
- * One rule governs the whole palette: it has to sound like the same place. The
- * alarms are a struck bowl, so the buttons are struck or plucked or dropped
- * things too — soft attacks, some warmth, no digital edges.
+ * One rule governs the whole palette: it has to sound like the same place.
+ * Soft attacks, some warmth, no digital edges.
  */
 
 let ctx: AudioContext | null = null;
@@ -31,33 +35,29 @@ export function unlockAudio(): void {
 
 // --- settings ------------------------------------------------------------
 
-export type Timbre = "bowl" | "bell" | "marimba" | "pulse";
-export type AlarmPattern = "fifth" | "triad" | "echo";
-export type ButtonSet = "bowl" | "felt" | "string" | "drop";
+/**
+ * Named for the material, because the material is the character.
+ *
+ * A struck bowl is the widget's own voice. Struck metal carries further and
+ * says the change in three notes rather than two, which is what to reach for
+ * when a transition keeps being missed. Wood and felt are what is left when it
+ * should barely be there at all.
+ *
+ * What each one is made of is in `SETS`, at the bottom of this file.
+ */
+export type SoundSet = "bowl" | "bell" | "felt";
 
-export const TIMBRES: readonly Timbre[] = ["bowl", "bell", "marimba", "pulse"];
-export const ALARM_PATTERNS: readonly AlarmPattern[] = ["fifth", "triad", "echo"];
-export const BUTTON_SETS: readonly ButtonSet[] = ["bowl", "felt", "string", "drop"];
+export const SOUND_SETS: readonly SoundSet[] = ["bowl", "bell", "felt"];
 
 let volume = 0.6;
-let timbre: Timbre = "bowl";
-let pattern: AlarmPattern = "fifth";
-let buttons: ButtonSet = "bowl";
+let current: SoundSet = "bowl";
 
 export function setVolume(next: number): void {
   volume = Math.min(1, Math.max(0, next));
 }
 
-export function setTimbre(next: Timbre): void {
-  timbre = next;
-}
-
-export function setAlarmPattern(next: AlarmPattern): void {
-  pattern = next;
-}
-
-export function setButtonSet(next: ButtonSet): void {
-  buttons = next;
+export function setSoundSet(next: SoundSet): void {
+  current = next;
 }
 
 // --- one gesture at a time -----------------------------------------------
@@ -116,8 +116,6 @@ interface Tone {
   duration: number;
   gain: number;
   attack?: number;
-  /** Bends to this frequency, which is what makes a drop sound like water. */
-  bendTo?: number;
   /** Rolls off everything above, which is what makes a mallet sound felted. */
   lowpass?: number;
   detuneCents?: number;
@@ -134,9 +132,6 @@ function tone(t: Tone): void {
 
   osc.type = t.type ?? "sine";
   osc.frequency.setValueAtTime(t.freq, start);
-  if (t.bendTo) {
-    osc.frequency.exponentialRampToValueAtTime(t.bendTo, start + t.duration * 0.7);
-  }
   if (t.detuneCents) osc.detune.value = t.detuneCents;
 
   const peak = t.gain * volume;
@@ -239,14 +234,6 @@ const marimba: Instrument = ({ freq, at, duration, gain }) => {
   tone({ freq: freq * 9.2, at, duration: short * 0.72, gain: gain * 0.08, attack: 0.002 });
 };
 
-/** The plain sine of earlier versions, kept as the quietest option. */
-const pulse: Instrument = ({ freq, at, duration, gain }) => {
-  tone({ freq, at, duration, gain, attack: 0.015 });
-  tone({ freq: freq * 2, at, duration, gain: gain * 0.16, attack: 0.015 });
-};
-
-const instruments: Record<Timbre, Instrument> = { bowl, bell, marimba, pulse };
-
 // --- alarm phrases -------------------------------------------------------
 
 /**
@@ -262,45 +249,41 @@ const TOP = 587.33;
 const GAP = 0.42;
 
 function play(strikes: Strike[]): void {
-  const instrument = instruments[timbre];
+  const { instrument } = SETS[current];
   for (const strike of strikes) instrument(strike);
 }
 
 /**
- * The two transitions are always the same material in opposite directions.
- * Identical notes make them audibly a pair; opposite direction makes them
- * impossible to confuse — and direction survives being half-heard, which is
- * the condition these play under.
+ * A phrase is the same material in opposite directions. Identical notes make
+ * the two transitions audibly a pair; opposite direction makes them impossible
+ * to confuse — and direction survives being half-heard, which is the condition
+ * these play under.
  */
+type Phrase = (rising: boolean) => Strike[];
+
+/** Two notes. The least a transition can be and still be a gesture. */
+const fifth: Phrase = (rising) => [
+  { freq: rising ? LOW : HIGH, at: 0, duration: 1.7, gain: 0.24 },
+  { freq: rising ? HIGH : LOW, at: GAP, duration: 3.2, gain: 0.26 },
+];
+
+/** Three notes: more ceremony, for when the change needs announcing. */
+const triad: Phrase = (rising) => [
+  { freq: rising ? LOW : TOP, at: 0, duration: 1.5, gain: 0.22 },
+  { freq: HIGH, at: 0.3, duration: 1.8, gain: 0.2 },
+  { freq: rising ? TOP : LOW, at: 0.6, duration: 2.8, gain: 0.23 },
+];
+
+/** One note answering itself, fading. The quietest of the three. */
+const echo: Phrase = (rising) => [
+  { freq: HIGH, at: 0, duration: 2.6, gain: 0.26 },
+  { freq: HIGH, at: 0.62, duration: 2.2, gain: 0.11 },
+  { freq: rising ? TOP : LOW, at: 1.24, duration: 2.8, gain: 0.065 },
+];
+
 function transition(rising: boolean): void {
   silence();
-
-  switch (pattern) {
-    case "fifth":
-      play([
-        { freq: rising ? LOW : HIGH, at: 0, duration: 1.7, gain: 0.24 },
-        { freq: rising ? HIGH : LOW, at: GAP, duration: 3.2, gain: 0.26 },
-      ]);
-      break;
-
-    // Three notes: more ceremony, for someone who wants the change announced.
-    case "triad":
-      play([
-        { freq: rising ? LOW : TOP, at: 0, duration: 1.5, gain: 0.22 },
-        { freq: HIGH, at: 0.3, duration: 1.8, gain: 0.2 },
-        { freq: rising ? TOP : LOW, at: 0.6, duration: 2.8, gain: 0.23 },
-      ]);
-      break;
-
-    // One note answering itself, fading. The quietest of the three.
-    case "echo":
-      play([
-        { freq: HIGH, at: 0, duration: 2.6, gain: 0.26 },
-        { freq: HIGH, at: 0.62, duration: 2.2, gain: 0.11 },
-        { freq: rising ? TOP : LOW, at: 1.24, duration: 2.8, gain: 0.065 },
-      ]);
-      break;
-  }
+  play(SETS[current].phrase(rising));
 }
 
 export function enterFocus(): void {
@@ -321,7 +304,15 @@ export function runComplete(): void {
   ]);
 }
 
-/** Plays what a choice actually sounds like, at the moment it is made. */
+/**
+ * Plays what a choice actually sounds like, at the moment it is made.
+ *
+ * The transition rather than a button press, even though a set decides both.
+ * Every gesture silences whatever is still ringing, so the two cannot be
+ * played together — and between them it is the transition that carries
+ * information and the transition you will be listening for in half an hour.
+ * The buttons introduce themselves on the next click.
+ */
 export function preview(): void {
   enterFocus();
 }
@@ -335,8 +326,6 @@ interface Note {
   at: number;
   gain: number;
   duration: number;
-  /** Only the water set bends; the others ignore it. */
-  bendTo?: number;
 }
 
 type Voice = (note: Note) => void;
@@ -369,30 +358,17 @@ const stringButton: Voice = ({ freq, at, gain, duration }) => {
   noise(2200, 1.5, at, 0.018, gain * 0.18);
 };
 
-/** Water: the pitch bends as the drop lands, so the gesture carries itself. */
-const dropButton: Voice = ({ freq, at, gain, duration, bendTo }) => {
-  tone({ freq, bendTo, at, duration, gain, attack: 0.003, lowpass: 3000 });
-  tone({
-    freq: freq * 2,
-    bendTo: bendTo ? bendTo * 2 : undefined,
-    at,
-    duration: duration * 0.5,
-    gain: gain * 0.14,
-    attack: 0.003,
-  });
-};
-
 interface ButtonKit {
   voice: Voice;
   notes: Record<Press, Note[]>;
 }
 
 /**
- * Every set keeps the same grammar, so the meaning survives changing the
+ * Every kit keeps the same grammar, so the meaning survives changing the
  * material: start rises, pause falls, reset is neutral, locking falls shut and
  * unlocking springs open.
  */
-const kits: Record<ButtonSet, ButtonKit> = {
+const buttonKits = {
   bowl: {
     voice: bowlButton,
     notes: {
@@ -459,16 +435,36 @@ const kits: Record<ButtonSet, ButtonKit> = {
       ],
     },
   },
-  drop: {
-    voice: dropButton,
-    notes: {
-      start: [{ freq: 620, bendTo: 1080, at: 0, gain: 0.17, duration: 0.15 }],
-      pause: [{ freq: 980, bendTo: 540, at: 0, gain: 0.17, duration: 0.17 }],
-      reset: [{ freq: 820, bendTo: 760, at: 0, gain: 0.13, duration: 0.1 }],
-      lock: [{ freq: 900, bendTo: 520, at: 0, gain: 0.16, duration: 0.16 }],
-      unlock: [{ freq: 520, bendTo: 900, at: 0, gain: 0.16, duration: 0.15 }],
-    },
-  },
+} satisfies Record<string, ButtonKit>;
+
+// --- the sets ------------------------------------------------------------
+
+/**
+ * What each set is made of.
+ *
+ * Three instruments, three phrases, three kits of buttons, and each set uses
+ * exactly one of each. That is not a coincidence kept for tidiness: a piece
+ * nothing composes from is inventory rather than vocabulary, and the moment a
+ * fourth set is worth having, writing what it needs is a function rather than
+ * a redesign.
+ *
+ * The pairings are chosen so that the whole set answers one question. Bowl is
+ * the widget as it sounds when nobody has asked for anything: warm, two notes,
+ * slow to fade. Bell answers "I keep missing the change" — metal carries, and
+ * three notes are harder to half-hear than two. Felt answers "I would rather
+ * barely notice" — wood with no tail, a phrase that fades into itself, and
+ * buttons with the click filtered out of them.
+ */
+interface Composition {
+  instrument: Instrument;
+  phrase: Phrase;
+  buttons: ButtonKit;
+}
+
+const SETS: Record<SoundSet, Composition> = {
+  bowl: { instrument: bowl, phrase: fifth, buttons: buttonKits.bowl },
+  bell: { instrument: bell, phrase: triad, buttons: buttonKits.string },
+  felt: { instrument: marimba, phrase: echo, buttons: buttonKits.felt },
 };
 
 /**
@@ -482,6 +478,6 @@ const kits: Record<ButtonSet, ButtonKit> = {
  */
 export function press(kind: Press): void {
   silence();
-  const kit = kits[buttons];
-  for (const note of kit.notes[kind]) kit.voice(note);
+  const { buttons } = SETS[current];
+  for (const note of buttons.notes[kind]) buttons.voice(note);
 }

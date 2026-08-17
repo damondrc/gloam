@@ -8,23 +8,33 @@
    */
   import { LIMITS } from "./plan";
   import type { TimerConfig } from "./plan";
-  import type { AlarmPattern, ButtonSet, Timbre } from "./sound";
+  import type { SoundSet } from "./sound";
   import type { Ambience } from "./ambience";
   import Stepper from "./Stepper.svelte";
   import Cycler from "./Cycler.svelte";
 
   /**
-   * Tabs rather than one long column. Stacked, the sections had grown past
-   * 280 design pixels, which at 180% scale is most of a laptop screen — and
-   * the scene editor still has to fit somewhere. Tabs also group by question:
-   * how long, how it sounds, how alive the backdrop is.
+   * Two tabs, answering two questions: how long a run is, and what the widget
+   * is like to sit beside.
+   *
+   * There were three. Sound and the backdrop were separated because they were
+   * built at different times, not because anyone choosing between them thinks
+   * of them as different — they are both the answer to "how much of itself
+   * should this thing make you aware of". Reuniting them costs one tab and
+   * makes the panel describe the widget rather than its history.
+   *
+   * Tabs at all, rather than one column, because stacked the sections run past
+   * 280 design pixels, which at 180% scale is most of a laptop screen.
+   *
+   * Note for anyone reading further down: `ambience` in the code below means
+   * the backdrop's liveliness specifically, which is what it meant before this
+   * tab took the broader name. Its row is labelled Backdrop for that reason.
    */
-  type Tab = "general" | "sound" | "ambience";
+  type Tab = "general" | "ambience";
 
   const TABS: readonly { id: Tab; label: string }[] = [
     { id: "general", label: "General" },
-    { id: "sound", label: "Sound" },
-    { id: "ambience", label: "Backdrop" },
+    { id: "ambience", label: "Ambience" },
   ];
 
   let tab = $state<Tab>("general");
@@ -38,12 +48,8 @@
     willReset: boolean;
     volume: number;
     onVolume: (value: number) => void;
-    timbre: Timbre;
-    onTimbre: (value: Timbre) => void;
-    pattern: AlarmPattern;
-    onPattern: (value: AlarmPattern) => void;
-    buttons: ButtonSet;
-    onButtons: (value: ButtonSet) => void;
+    sound: SoundSet;
+    onSound: (value: SoundSet) => void;
     ambience: Ambience;
     onAmbience: (value: Ambience) => void;
   }
@@ -55,12 +61,8 @@
     willReset,
     volume,
     onVolume,
-    timbre,
-    onTimbre,
-    pattern,
-    onPattern,
-    buttons,
-    onButtons,
+    sound,
+    onSound,
     ambience,
     onAmbience,
   }: Props = $props();
@@ -78,25 +80,18 @@
     light: "A flat sky, for a modest machine.",
   };
 
-  const TIMBRE_OPTIONS = [
+  const SOUND_OPTIONS = [
     { value: "bowl", label: "Bowl" },
     { value: "bell", label: "Bell" },
-    { value: "marimba", label: "Marimba" },
-    { value: "pulse", label: "Pulse" },
-  ] as const satisfies readonly { value: Timbre; label: string }[];
-
-  const PATTERN_OPTIONS = [
-    { value: "fifth", label: "Fifth" },
-    { value: "triad", label: "Triad" },
-    { value: "echo", label: "Echo" },
-  ] as const satisfies readonly { value: AlarmPattern; label: string }[];
-
-  const BUTTON_OPTIONS = [
-    { value: "bowl", label: "Bowl" },
     { value: "felt", label: "Felt" },
-    { value: "string", label: "String" },
-    { value: "drop", label: "Drop" },
-  ] as const satisfies readonly { value: ButtonSet; label: string }[];
+  ] as const satisfies readonly { value: SoundSet; label: string }[];
+
+  /** Says what each set is for, since the material alone does not. */
+  const SOUND_HINTS: Record<SoundSet, string> = {
+    bowl: "The widget's own voice. Warm, and slow to fade.",
+    bell: "Metal, announced in three notes. Hard to miss.",
+    felt: "Wood and felt, fading into itself. Barely there.",
+  };
 
   const percent = $derived(Math.round(volume * 100));
 
@@ -154,7 +149,7 @@
         onChange={(value) => set("focusSessions", value)}
       />
     </div>
-  {:else if tab === "sound"}
+  {:else}
     <div class="rows">
       <label class="row">
         <span class="name">Volume</span>
@@ -170,35 +165,25 @@
         <span class="value">{percent}%</span>
       </label>
 
+      <!-- What it sounds like, then what it looks like, each followed by a
+           line saying what the choice is for: the names are materials and
+           degrees, and neither says on its own what it is good for. -->
       <Cycler
-        label="Alarm"
-        value={timbre}
-        options={TIMBRE_OPTIONS}
-        onChange={onTimbre}
+        label="Sound"
+        value={sound}
+        options={SOUND_OPTIONS}
+        onChange={onSound}
       />
 
-      <Cycler
-        label="Pattern"
-        value={pattern}
-        options={PATTERN_OPTIONS}
-        onChange={onPattern}
-      />
+      <p class="hint">{SOUND_HINTS[sound]}</p>
 
       <Cycler
-        label="Buttons"
-        value={buttons}
-        options={BUTTON_OPTIONS}
-        onChange={onButtons}
-      />
-    </div>
-  {:else}
-    <div class="rows">
-      <Cycler
-        label="Ambience"
+        label="Backdrop"
         value={ambience}
         options={AMBIENCE_OPTIONS}
         onChange={onAmbience}
       />
+
       <p class="hint">{AMBIENCE_HINTS[ambience]}</p>
     </div>
   {/if}
@@ -264,8 +249,11 @@
     outline-offset: 2px;
   }
 
+  /* Pulled up against the row it explains. With the list's own gap on both
+     sides a hint sits equidistant between two rows and reads as belonging to
+     neither, which matters now that there are two of them. */
   .hint {
-    margin: 2rem 0 0;
+    margin: -3rem 0 0;
     font-size: 9.5rem;
     line-height: 1.4;
     color: rgb(var(--ink) / 0.45);

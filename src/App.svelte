@@ -32,8 +32,15 @@
   const NORMAL_SIZE = { width: 320, height: 132 };
   const COMPACT_SIZE = { width: 180, height: 58 };
 
-  /** How much taller the window gets when the panel is open. */
-  const PANEL_HEIGHT = 152;
+  /**
+   * How much taller the window gets when the panel is open.
+   *
+   * One height for every tab, sized to the tallest — a panel that resized as
+   * you moved between tabs would make the window jump under the pointer that
+   * was navigating it. Ambience is now the tall one: a slider, two choices and
+   * the line under each explaining what it is for.
+   */
+  const PANEL_HEIGHT = 164;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -54,9 +61,7 @@
   let hovering = $state(false);
   let panelOpen = $state(false);
   let volume = $state(stored.volume);
-  let timbre = $state(stored.timbre);
-  let pattern = $state(stored.pattern);
-  let buttons = $state(stored.buttons);
+  let soundSet = $state(stored.sound);
   let ambience = $state(stored.ambience);
 
   const backdrop = $derived(ambienceSettings(ambience));
@@ -66,15 +71,7 @@
   });
 
   $effect(() => {
-    sound.setTimbre(timbre);
-  });
-
-  $effect(() => {
-    sound.setAlarmPattern(pattern);
-  });
-
-  $effect(() => {
-    sound.setButtonSet(buttons);
+    sound.setSoundSet(soundSet);
   });
 
   /** How long the escape-hatch hint stays up after locking. */
@@ -163,9 +160,7 @@
       compact,
       scale: scale.value,
       volume,
-      timbre,
-      pattern,
-      buttons,
+      sound: soundSet,
       ambience,
       config: timer.config,
     });
@@ -485,25 +480,14 @@
        willReset={!timer.atStart}
        {volume}
        onVolume={(next) => (volume = next)}
-       {timbre}
-       onTimbre={(next) => {
-         timbre = next;
+       sound={soundSet}
+       onSound={(next) => {
+         soundSet = next;
          // Judge it the moment you choose it, rather than at the end of the
-         // next session.
-         sound.setTimbre(next);
+         // next session. Applied by hand rather than waiting for the effect,
+         // because the preview has to be played on the set just picked.
+         sound.setSoundSet(next);
          sound.preview();
-       }}
-       {pattern}
-       onPattern={(next) => {
-         pattern = next;
-         sound.setAlarmPattern(next);
-         sound.preview();
-       }}
-       {buttons}
-       onButtons={(next) => {
-         buttons = next;
-         sound.setButtonSet(next);
-         sound.press("start");
        }}
        {ambience}
        onAmbience={(next) => (ambience = next)}

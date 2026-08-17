@@ -13,8 +13,8 @@
 import { clampSetting, DEFAULT_CONFIG } from "./plan";
 import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
-import { ALARM_PATTERNS, BUTTON_SETS, TIMBRES } from "./sound";
-import type { AlarmPattern, ButtonSet, Timbre } from "./sound";
+import { SOUND_SETS } from "./sound";
+import type { SoundSet } from "./sound";
 import { AMBIENCE_MODES } from "./ambience";
 import type { Ambience } from "./ambience";
 
@@ -33,9 +33,7 @@ export interface Prefs {
   compact: boolean;
   scale: number;
   volume: number;
-  timbre: Timbre;
-  pattern: AlarmPattern;
-  buttons: ButtonSet;
+  sound: SoundSet;
   ambience: Ambience;
   config: TimerConfig;
 }
@@ -44,12 +42,39 @@ export const DEFAULT_PREFS: Prefs = {
   compact: false,
   scale: 1,
   volume: 0.6,
-  timbre: "bowl",
-  pattern: "fifth",
-  buttons: "bowl",
+  sound: "bowl",
   ambience: "full",
   config: { ...DEFAULT_CONFIG },
 };
+
+/**
+ * What an older Gloam stored, before the three sound settings became one.
+ *
+ * The alarm timbre is the one worth carrying over: it is what a user actually
+ * heard, and someone who went looking for the quietest option should not be
+ * handed a louder one by an update. The old pattern and button set are
+ * dropped, because the set they belong to now decides both.
+ */
+const LEGACY_TIMBRES: Record<string, SoundSet> = {
+  bowl: "bowl",
+  bell: "bell",
+  marimba: "felt",
+  pulse: "felt",
+};
+
+interface StoredSound {
+  sound?: unknown;
+  /** Only present in preferences written before the sets existed. */
+  timbre?: unknown;
+}
+
+function readSound(value: StoredSound): SoundSet {
+  if (SOUND_SETS.includes(value.sound as SoundSet)) return value.sound as SoundSet;
+  if (typeof value.timbre === "string" && value.timbre in LEGACY_TIMBRES) {
+    return LEGACY_TIMBRES[value.timbre];
+  }
+  return DEFAULT_PREFS.sound;
+}
 
 /** Accepts a stored string only if it is still one of the options we offer. */
 function readOption<T extends string>(
@@ -97,9 +122,7 @@ export function loadPrefs(): Prefs {
       compact: typeof value.compact === "boolean" ? value.compact : false,
       scale: readNumber(value.scale, MIN_SCALE, MAX_SCALE, DEFAULT_PREFS.scale),
       volume: readNumber(value.volume, 0, 1, DEFAULT_PREFS.volume),
-      timbre: readOption(value.timbre, TIMBRES, DEFAULT_PREFS.timbre),
-      pattern: readOption(value.pattern, ALARM_PATTERNS, DEFAULT_PREFS.pattern),
-      buttons: readOption(value.buttons, BUTTON_SETS, DEFAULT_PREFS.buttons),
+      sound: readSound(value),
       ambience: readOption(
         value.ambience,
         AMBIENCE_MODES,
