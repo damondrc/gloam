@@ -372,6 +372,27 @@ are retired on a schedule that has nothing to do with this project — the one
 that matched was already weeks from deprecation when this was set up. An image
 tag does not move underneath you.
 
+### Running the AppImage
+
+An AppImage is a file rather than an installed program: it arrives without the
+execute bit, and until it has one nothing happens when you open it.
+
+```bash
+chmod +x Gloam_0.5.0_amd64.AppImage
+./Gloam_0.5.0_amd64.AppImage
+```
+
+On a distribution newer than the one it was built on it prints a few lines
+about `libgvfscommon.so` and an undefined `g_task_set_static_name`, and on Mint
+one more about a missing `xapp-gtk3-module`. Neither stops it starting, and
+both are the other side of the trade above: the AppImage carries the GLib it
+was compiled against, the host's GIO modules were compiled against a newer one,
+and the two decline to load into each other. Building old is what lets the
+packages reach back to 2022, and this is what it costs. Gloam opens no files
+and mounts nothing, so there is nothing in gvfs for it to miss.
+
+The `.deb` carries none of this, and is the better choice wherever it fits.
+
 ## Roadmap
 
 Everything here is built on one rule: **the default state never gets busier.**
