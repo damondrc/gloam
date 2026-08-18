@@ -15,6 +15,10 @@ commit that made the change, and in the architecture notes.
 
 ### Added
 
+- Tests for the timer engine and for the validation applied to stored
+  preferences: pausing and resuming, skipping, resetting, reconfiguring
+  mid-run, the sequence of transition sounds, and every way a preferences blob
+  can be corrupt without stopping the widget from opening.
 - Tests for the keyboard bindings and for the arithmetic that decides whether
   the cursor is over the padlock — the two pieces of logic most able to be
   quietly wrong on a second monitor or at a scale nobody tried.

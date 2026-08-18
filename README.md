@@ -362,10 +362,14 @@ npm run test:watch # on every save
 ```
 
 The suite covers the parts where being wrong would be invisible: the plan
-builder, the duration formatter, the settings clamp, the keyboard bindings, and
-the arithmetic that decides whether the cursor is over the padlock. A misplaced
-button is obvious. A seven-session run with six breaks instead of five is not,
-and neither is a hotspot that is six pixels out on a second monitor.
+builder, the duration formatter, the settings clamp, the timer engine, the
+validation applied to stored preferences, the keyboard bindings, and the
+arithmetic that decides whether the cursor is over the padlock.
+
+A misplaced button is obvious. A seven-session run with six breaks instead of
+five is not. Neither is a pause that loses forty milliseconds, a transition
+that chimes twice, a hotspot six pixels out on a second monitor, or a
+preferences file that quietly stops the widget opening at all.
 
 That boundary is the point rather than a shortcut. The window, the
 click-through and the layout are where every bug in this project has actually
@@ -381,6 +385,12 @@ answer.
 The tests assert rules rather than examples, running the same checks across a
 spread of configurations, so what they protect is "a plan always alternates and
 never ends on a break" rather than "with these numbers it comes out like this".
+
+They are checked the same way anything else is: by breaking the code on purpose
+and confirming they notice. That is how the pause tests were found to be
+worthless — they paused on a whole number of ticks, where the tick that had
+just run already held the right answer, so a pause that captured nothing still
+looked correct. Fifty milliseconds off the grid, and they mean something.
 
 ## Platform support
 
