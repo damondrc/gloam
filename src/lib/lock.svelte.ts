@@ -22,6 +22,7 @@
  * fails on some window manager, the widget is still recoverable.
  */
 
+import { contains } from "./hitbox";
 import { readCursor, readGeometry, setClickThrough } from "./window";
 import type { Geometry } from "./window";
 
@@ -153,23 +154,13 @@ export class LockController {
     const cursor = await readCursor();
     if (!cursor) return false;
 
-    // getBoundingClientRect is in CSS pixels relative to the window's client
-    // area; the cursor is in physical pixels relative to the desktop. Scale the
-    // rect and offset it by the window origin to compare the two.
-    const rect = this.#hotspot.getBoundingClientRect();
-    const { x, y, scale } = geometry;
-    const pad = HOTSPOT_PADDING_PX * scale;
-
-    const left = x + rect.left * scale - pad;
-    const top = y + rect.top * scale - pad;
-    const right = x + rect.right * scale + pad;
-    const bottom = y + rect.bottom * scale + pad;
-
-    return (
-      cursor.x >= left &&
-      cursor.x <= right &&
-      cursor.y >= top &&
-      cursor.y <= bottom
+    // The conversion between the rectangle's coordinates and the cursor's is
+    // in hitbox.ts, where it can be checked without a desktop to check it on.
+    return contains(
+      this.#hotspot.getBoundingClientRect(),
+      geometry,
+      cursor,
+      HOTSPOT_PADDING_PX
     );
   }
 
