@@ -11,6 +11,8 @@
     startDragging,
   } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
+  import { resolveShortcut } from "./lib/shortcuts";
+  import type { Action } from "./lib/shortcuts";
   import { ambienceSettings } from "./lib/ambience";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
@@ -237,63 +239,50 @@
   }
 
   /**
-   * Elements that are activated by the spacebar, and therefore own it.
+   * Elements the spacebar activates, and which therefore own it.
    *
-   * Only these matter. The rest of the shortcuts below are keys no control has
-   * a meaning for — a letter typed at a focused button does nothing — so they
-   * stay global, which is the point of binding them to the window.
+   * Answering this needs the DOM, which is why it is here and the rules are in
+   * shortcuts.ts.
    */
   const SPACE_CLAIMS = "button, input, select, textarea, a[href], summary";
 
+  /**
+   * `:focus-visible` is the browser's own answer to "did the user arrive here
+   * with the keyboard", and it is already what decides whether a focus ring is
+   * drawn. Reusing it here means a button only claims the space bar while the
+   * user is actually driving with the keyboard: click the padlock and the
+   * focus stays on it, but it is residue rather than intent, and space goes
+   * back to meaning start.
+   */
   function ownsSpace(target: EventTarget | null): boolean {
-    return target instanceof Element && target.closest(SPACE_CLAIMS) !== null;
+    if (!(target instanceof Element)) return false;
+    const control = target.closest(SPACE_CLAIMS);
+    return control !== null && control.matches(":focus-visible");
   }
+
+  /**
+   * What each intention does. Naming them apart from the keys that trigger
+   * them is what lets the bindings be a table rather than a control flow, and
+   * the table be checked without a browser.
+   */
+  const ACTIONS: Record<Action, () => void> = {
+    toggleTimer,
+    toggleCompact: onDoubleClick,
+    togglePanel,
+    scaleUp: () => scale.nudge(SCALE_STEP),
+    scaleDown: () => scale.nudge(-SCALE_STEP),
+  };
 
   function onKeydown(event: KeyboardEvent): void {
     if (event.repeat) return;
 
-    switch (event.key) {
-      case " ":
-        // Preventing the default is how the page is stopped from scrolling,
-        // and it is also how a button is stopped from firing. With the focus
-        // on a settings tab, the widget would start the timer instead of
-        // switching tab — so when something else has a claim on the key, this
-        // stands down rather than competing for it.
-        if (ownsSpace(event.target)) return;
-        event.preventDefault();
-        toggleTimer();
-        break;
-      case "r":
-      case "R":
-        resetTimer();
-        break;
-      case "s":
-      case "S":
-        skipSegment();
-        break;
-      case "l":
-      case "L":
-        toggleLock();
-        break;
-      case "c":
-      case "C":
-        onDoubleClick();
-        break;
-      case ",":
-        togglePanel();
-        break;
-      case "+":
-      case "=":
-        scale.nudge(SCALE_STEP);
-        break;
-      case "-":
-      case "_":
-        scale.nudge(-SCALE_STEP);
-        break;
-      case "0":
-        scale.reset();
-        break;
-    }
+    const shortcut = resolveShortcut(event.key, {
+      ownsSpace: ownsSpace(event.target),
+    });
+    if (!shortcut) return;
+
+    if (shortcut.preventDefault) event.preventDefault();
+    ACTIONS[shortcut.action]();
   }
 </script>
 
@@ -816,15 +805,22 @@
      moved a focus ring nobody could see. Focus has to be able to summon what
      hover summons, or the keyboard path is a guess.
 
+     `:has(:focus-visible)` rather than `:focus-within`, so that this answers
+     the same question the keyboard handler asks: was this reached with the
+     keyboard, or is it focus left lying around by a click? A button keeps the
+     focus after being clicked, and with the plain version the controls stayed
+     lit after the pointer had gone — which is the opposite of a widget that
+     reads as scenery.
+
      Not while locked, though. That is the one state where the controls are
      meant to be gone rather than merely hidden, and the padlock stays
      reachable on its own below. */
-  .frame:not(.locked) .ui:focus-within {
+  .frame:not(.locked) .ui:has(:focus-visible) {
     opacity: 1;
   }
 
-  .frame:not(.locked) .ui:focus-within :global(button),
-  .frame:not(.locked) .ui:focus-within :global(.grip) {
+  .frame:not(.locked) .ui:has(:focus-visible) :global(button),
+  .frame:not(.locked) .ui:has(:focus-visible) :global(.grip) {
     pointer-events: auto;
   }
 
@@ -935,7 +931,7 @@
   }
 
   .lock-slot.show,
-  .lock-slot:focus-within {
+  .lock-slot:has(:focus-visible) {
     opacity: 1;
     pointer-events: auto;
   }

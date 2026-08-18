@@ -89,14 +89,21 @@ widget. Skipping to a break swaps the sun for the moon; the padlock drops it to
 | Key | Action |
 | --- | --- |
 | `Space` | Start / pause |
-| `S` | Skip to next segment |
-| `R` | Reset the run |
-| `L` | Toggle lock |
 | `C` | Toggle compact mode |
 | `,` | Open or close the settings panel |
 | `+` / `-` | Scale the widget up or down |
-| `0` | Reset the scale |
 | `Ctrl+Alt+G` | Toggle lock, from anywhere |
+
+A short list on purpose. A key is bound only if what it does is reversible,
+cheap to undo, and reachable some other way — so skipping, resetting and
+locking are buttons rather than letters. Gloam sits on top of everything and
+can hold the keyboard focus without you thinking of it as the application you
+are in, and a window like that should not be able to discard a session because
+a letter was typed at it.
+
+Lock keeps `Ctrl+Alt+G`: modified, so it cannot be hit by accident, and
+registered globally, so it still works when the widget cannot be clicked —
+which is the one situation an escape hatch is for.
 
 ## Lock mode
 
@@ -354,13 +361,22 @@ npm test           # once
 npm run test:watch # on every save
 ```
 
-The suite covers the timer's pure logic — the plan builder, the duration
-formatter, the settings clamp — and nothing else. That boundary is the point
-rather than a shortcut: the window, the click-through and the layout are where
-every bug in this project has actually lived, and they are also where automated
-tests are expensive, fragile and need a real desktop to run against. What *is*
-covered is the part where being wrong would be invisible. A misplaced button is
-obvious; a seven-session run with six breaks instead of five is not.
+The suite covers the parts where being wrong would be invisible: the plan
+builder, the duration formatter, the settings clamp, the keyboard bindings, and
+the arithmetic that decides whether the cursor is over the padlock. A misplaced
+button is obvious. A seven-session run with six breaks instead of five is not,
+and neither is a hotspot that is six pixels out on a second monitor.
+
+That boundary is the point rather than a shortcut. The window, the
+click-through and the layout are where every bug in this project has actually
+lived, and they are also where automated tests are expensive, fragile and need
+a real desktop to run against — so what gets tested is what can be asked a
+question by a function call.
+
+Some of it had to be moved before it could be asked anything. The key bindings
+were a `switch` inside a component and the hit-test was four lines behind two
+IPC round trips; both are now plain modules that take values and return an
+answer.
 
 The tests assert rules rather than examples, running the same checks across a
 spread of configurations, so what they protect is "a plan always alternates and
@@ -511,7 +527,9 @@ src/
     plan.ts           the timer's pure logic, and the only tested code
     plan.test.ts      its rules, asserted across many configurations
     timer.svelte.ts   the reactive state and the countdown
+    shortcuts.ts      what each key means, and who else claims it
     lock.svelte.ts    click-through and cursor hit-testing
+    hitbox.ts         CSS pixels to desktop pixels, for the padlock
     scale.svelte.ts   the scale factor and its drag interaction
     sky.ts            the palette, keyframes and interpolation
     ambience.ts       what each backdrop mode switches off

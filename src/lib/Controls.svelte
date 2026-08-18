@@ -40,14 +40,14 @@
   </button>
 
   {#if !compact}
-    <button onclick={onSkip} disabled={finished} title="Skip segment (S)" aria-label="Skip segment">
+    <button onclick={onSkip} disabled={finished} title="Skip segment" aria-label="Skip segment">
       <svg viewBox="0 0 16 16" aria-hidden="true">
         <path d="M3.5 3.6v8.8a.5.5 0 0 0 .77.42l6.4-4.4a.5.5 0 0 0 0-.84l-6.4-4.4a.5.5 0 0 0-.77.42Z" />
         <rect x="11.4" y="3.2" width="1.9" height="9.6" rx="0.9" />
       </svg>
     </button>
 
-    <button onclick={onReset} title="Reset (R)" aria-label="Reset">
+    <button onclick={onReset} title="Reset" aria-label="Reset">
       <svg viewBox="0 0 16 16" aria-hidden="true">
         <path
           d="M8 3.2a4.8 4.8 0 1 1-4.53 6.36"

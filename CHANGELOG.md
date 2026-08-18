@@ -13,6 +13,12 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+### Added
+
+- Tests for the keyboard bindings and for the arithmetic that decides whether
+  the cursor is over the padlock — the two pieces of logic most able to be
+  quietly wrong on a second monitor or at a scale nobody tried.
+
 ### Changed
 
 - The settings panel has two tabs instead of three. **General** is how long a
@@ -31,6 +37,10 @@ commit that made the change, and in the architecture notes.
 
 ### Removed
 
+- The `S`, `R`, `L` and `0` shortcuts. A key is bound now only if what it does
+  is reversible and reachable another way; skipping, resetting and locking are
+  none of those, and all three have a button. Lock keeps `Ctrl+Alt+G`, which is
+  modified and cannot be pressed by accident.
 - The `pulse` alarm and the `drop` button set, which no set composes from.
 
 ## [0.5.0] — 2026-08-11
@@ -74,6 +84,11 @@ commit that made the change, and in the architecture notes.
   pressing space started the timer instead of switching tab.
 - Preferences are no longer written to storage on every pointer move while the
   resize grip is held.
+- The space bar starts and pauses again after clicking a button. A button keeps
+  the keyboard focus once it has been clicked, so space was pressing it a
+  second time — most noticeably on the padlock, where it toggled the lock. A
+  control claims the space bar only while it is being driven by the keyboard.
+- The controls no longer stay lit after a click once the pointer has left.
 
 ### Removed
 
