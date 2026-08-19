@@ -840,15 +840,21 @@
      lit after the pointer had gone — which is the opposite of a widget that
      reads as scenery.
 
+     The `:global` inside `:has` is load-bearing. Svelte scopes the selector
+     within a `:has` too, so the plain version compiled to "focus on something
+     App.svelte itself rendered" — which is the close button and the chevron,
+     and not the transport controls or the grip, since those are components
+     with a scope of their own. Tabbing to play revealed nothing at all.
+
      Not while locked, though. That is the one state where the controls are
      meant to be gone rather than merely hidden, and the padlock stays
      reachable on its own below. */
-  .frame:not(.locked) .ui:has(:focus-visible) {
+  .frame:not(.locked) .ui:has(:global(:focus-visible)) {
     opacity: 1;
   }
 
-  .frame:not(.locked) .ui:has(:focus-visible) :global(button),
-  .frame:not(.locked) .ui:has(:focus-visible) :global(.grip) {
+  .frame:not(.locked) .ui:has(:global(:focus-visible)) :global(button),
+  .frame:not(.locked) .ui:has(:global(:focus-visible)) :global(.grip) {
     pointer-events: auto;
   }
 
@@ -958,8 +964,12 @@
     transition: opacity 0.25s ease;
   }
 
+  /* Same reason as above, and here it was not merely narrowed but dropped:
+     everything inside this slot belongs to the padlock component, so with the
+     selector scoped there was nothing left for it to match and Svelte removed
+     the rule. */
   .lock-slot.show,
-  .lock-slot:has(:focus-visible) {
+  .lock-slot:has(:global(:focus-visible)) {
     opacity: 1;
     pointer-events: auto;
   }

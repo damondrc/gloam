@@ -107,6 +107,11 @@ commit that made the change, and in the architecture notes.
   second time — most noticeably on the padlock, where it toggled the lock. A
   control claims the space bar only while it is being driven by the keyboard.
 - The controls no longer stay lit after a click once the pointer has left.
+- Tabbing to the transport controls, the resize grip or the padlock now reveals
+  them. Only the close button and the chevron ever did: Svelte scopes the
+  selector inside a `:has()` as well as outside it, so the rule was quietly
+  narrowed to elements the root component renders itself, and the padlock's
+  rule was dropped altogether.
 
 ### Removed
 
