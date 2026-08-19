@@ -19,9 +19,28 @@ async function api(): Promise<WindowModule | null> {
   return cached;
 }
 
-export async function closeWindow(): Promise<void> {
-  const m = await api();
-  await m?.getCurrentWindow().close();
+async function core(): Promise<typeof import("@tauri-apps/api/core") | null> {
+  if (!inTauri()) return null;
+  return await import("@tauri-apps/api/core");
+}
+
+/**
+ * What the close button does, decided in Rust.
+ *
+ * With a tray icon it hides and the run carries on; without one it quits,
+ * because a widget that is hidden with nothing to bring it back is a widget
+ * that has been lost. Only Rust knows which of those it managed to build, so
+ * only Rust decides.
+ */
+export async function dismissWindow(): Promise<void> {
+  const m = await core();
+  await m?.invoke("dismiss");
+}
+
+/** Whether a tray icon exists — which is to say, what dismissing will mean. */
+export async function hasTray(): Promise<boolean> {
+  const m = await core();
+  return (await m?.invoke<boolean>("tray_present")) ?? false;
 }
 
 /**

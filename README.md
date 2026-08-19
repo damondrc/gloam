@@ -73,6 +73,8 @@ trailing break has nothing to resume into, so it is dead time.
 - A settings panel that unfolds below the horizon, in two tabs: the cycle, and
   everything about what the widget is like to sit beside
 - Soft synthesised sound throughout — no audio assets, no jump scares
+- A tray icon, so the widget can be put away without stopping the run — and
+  found again if it ever ends up somewhere you cannot reach
 - Controls stay hidden until you hover, so the widget reads as scenery
 
 <p align="center">
@@ -332,6 +334,31 @@ the keyboard. Double-clicking again restores the full widget.
 <p align="center"><em>Compact mode and the scale range are separate axes: one
 decides how much the widget shows, the other how big it is.</em></p>
 
+## The tray
+
+Closing the widget hides it. The run carries on, and the tray icon brings it
+back — a left click, or `Show Gloam` from its menu. Quitting for real is the
+last entry in that menu.
+
+The middle entry is the reason the tray exists. A frameless window that stays
+on top can be dragged somewhere unhelpful, left on a monitor that is later
+unplugged, or hidden behind its own lock mode, and none of those has a way out
+from inside the widget. `Reset position` is the way out. It centres the window
+rather than returning it to the corner it starts in, because that corner is
+itself a position which may no longer exist — a changed monitor layout is the
+whole failure being recovered from, and the middle of the primary display is
+the one place that is always there.
+
+Nothing else goes in the menu. The tray is an escape hatch, not a second copy
+of the interface: a start button in there would be a control with none of the
+widget's own language around it, in a place the widget cannot draw.
+
+Some desktops have no tray, and several Linux environments ship with it turned
+off. When the icon cannot be created Gloam says so on stderr and closing goes
+back to meaning quit, since hiding into something that does not exist is how a
+window gets lost. The close button's tooltip says which of the two it is about
+to do.
+
 ## Running it
 
 Requires [Node.js](https://nodejs.org) 18+ and the
@@ -471,7 +498,7 @@ laptop it was built on.
 
 **0.6.0 — the widget stays where you put it**
 
-- [ ] A tray icon: show, reset the position, quit. Closing hides rather than
+- [x] A tray icon: show, reset the position, quit. Closing hides rather than
       exits, so the widget cannot be lost by clicking the wrong thing.
 - [ ] The window position remembered between runs, and checked against the
       monitors that actually exist at startup rather than the ones that did

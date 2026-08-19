@@ -5,7 +5,8 @@
   import { skyFor, skyVars } from "./lib/sky";
   import * as sound from "./lib/sound";
   import {
-    closeWindow,
+    dismissWindow,
+    hasTray,
     onBackendEvent,
     setWindowSize,
     startDragging,
@@ -57,6 +58,12 @@
     else if (next.phase === "focus") sound.enterFocus();
     else sound.enterBreak();
   };
+
+  // Asked once. What the close button does depends on it, and the button has
+  // to say which of the two it is going to do before it is pressed rather
+  // than after.
+  let tray = $state(false);
+  void hasTray().then((present) => (tray = present));
 
   const stored = loadPrefs();
   let compact = $state(stored.compact);
@@ -400,7 +407,15 @@
     <!-- With the panel out the widget is in use, so the controls stay up even
          if the pointer wanders off. -->
     <div class="ui" class:show={(hovering || panelOpen) && !lock.locked}>
-      <button class="close" onclick={closeWindow} title="Close" aria-label="Close">
+      <!-- Says which of the two things it is about to do. With a tray the run
+           keeps going and the icon is the way back; without one there is
+           nothing to hide into, so it quits. -->
+      <button
+        class="close"
+        onclick={dismissWindow}
+        title={tray ? "Hide — Gloam keeps running in the tray" : "Quit Gloam"}
+        aria-label={tray ? "Hide" : "Quit"}
+      >
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path
             d="M4.4 4.4 11.6 11.6M11.6 4.4 4.4 11.6"

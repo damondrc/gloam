@@ -15,6 +15,12 @@ commit that made the change, and in the architecture notes.
 
 ### Added
 
+- A tray icon, with `Show Gloam`, `Reset position` and `Quit`. Closing the
+  widget now hides it and the run carries on; the icon is the way back.
+  `Reset position` centres the window, which is the way out of having dragged
+  it somewhere unreachable or left it on a monitor that is no longer there.
+  Where no tray can be created — several Linux desktops ship without one —
+  closing goes back to meaning quit, and the button's tooltip says so.
 - Tests for the timer engine and for the validation applied to stored
   preferences: pausing and resuming, skipping, resetting, reconfiguring
   mid-run, the sequence of transition sounds, and every way a preferences blob
