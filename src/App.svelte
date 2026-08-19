@@ -171,6 +171,19 @@
   // No reactive reads, so this registers cleanup once and never re-runs.
   $effect(() => () => lock.destroy());
 
+  // A minimised window has its timers throttled, so the tick that should have
+  // ended a segment can arrive a minute late. The engine straightens itself
+  // out whenever it does arrive; this only means the widget is already right
+  // when you look at it, rather than a moment afterwards.
+  $effect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") timer.catchUp();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  });
+
   // The global shortcut is the way back in if hit-testing ever fails.
   $effect(() => {
     let dispose: (() => void) | null = null;

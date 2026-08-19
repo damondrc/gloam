@@ -306,6 +306,129 @@ describe("announcing segments", () => {
   });
 });
 
+/**
+ * What happens when nobody was looking.
+ *
+ * A minimised window has its timers throttled to once a second and then to
+ * once a minute; a suspended machine does not run them at all. So a tick can
+ * arrive long after the moment it was scheduled for, with several segments
+ * having quietly run out in between — and the lid of a laptop closing mid
+ * session guarantees it, which is why none of this needed measuring first.
+ */
+describe("time passing while the tick is starved", () => {
+  /** Lets the clock jump without letting a single timer run. */
+  const sleep = (ms: number): void => {
+    vi.setSystemTime(Date.now() + ms);
+  };
+
+  it("lands in the segment that is actually current", () => {
+    timer.applyConfig(quick(3));
+    const started = Date.now();
+    timer.start();
+
+    // Three and a half minutes into a five minute run: focus, break, focus
+    // have all gone, and the second break is half over.
+    sleep(3.5 * MINUTE);
+    vi.advanceTimersByTime(100);
+
+    expect(timer.index).toBe(3);
+    expect(timer.phase).toBe("break");
+    expect(timer.remainingMs).toBe(4 * MINUTE - (Date.now() - started));
+  });
+
+  // The failure this replaces: the next segment used to begin from the moment
+  // the tick noticed, so every interruption silently lengthened the run by
+  // however long the interruption had been.
+  it("starts each segment when the one before it ended, not when it was noticed", () => {
+    timer.applyConfig(quick(3));
+    const started = Date.now();
+    timer.start();
+
+    sleep(90_000);
+    vi.advanceTimersByTime(100);
+
+    expect(timer.index).toBe(1);
+    expect(timer.remainingMs).toBe(2 * MINUTE - (Date.now() - started));
+  });
+
+  it("ends a run that finished while it was asleep", () => {
+    timer.applyConfig(quick(3));
+    timer.start();
+
+    sleep(60 * MINUTE);
+    vi.advanceTimersByTime(100);
+
+    expect(timer.finished).toBe(true);
+    expect(timer.running).toBe(false);
+    expect(timer.remainingMs).toBe(0);
+  });
+
+  // Four chimes at once, on opening a laptop, would be an alarm going off
+  // about the past. The sounds mean "the timer has moved on"; being told four
+  // times is not four times as informative.
+  it("announces once, for where it arrived", () => {
+    const seen: string[] = [];
+    timer.onSegmentEnd = (done, next) =>
+      seen.push(`${done.phase}→${next ? next.phase : "done"}`);
+
+    timer.applyConfig(quick(3));
+    timer.start();
+    sleep(3.5 * MINUTE);
+    vi.advanceTimersByTime(100);
+
+    expect(seen).toEqual(["focus→break"]);
+  });
+
+  it("announces the end once, however far past it slept", () => {
+    const seen: string[] = [];
+    timer.onSegmentEnd = (done, next) =>
+      seen.push(`${done.phase}→${next ? next.phase : "done"}`);
+
+    timer.applyConfig(quick(3));
+    timer.start();
+    sleep(60 * MINUTE);
+    vi.advanceTimersByTime(100);
+
+    expect(seen).toEqual(["focus→done"]);
+  });
+
+  describe("catchUp", () => {
+    it("straightens the run out without waiting for a tick", () => {
+      timer.applyConfig(quick(3));
+      const started = Date.now();
+      timer.start();
+
+      sleep(3.5 * MINUTE);
+      timer.catchUp();
+
+      expect(timer.index).toBe(3);
+      expect(timer.remainingMs).toBe(4 * MINUTE - (Date.now() - started));
+    });
+
+    it("leaves a paused run alone", () => {
+      timer.applyConfig(quick(3));
+      timer.start();
+      vi.advanceTimersByTime(30_000);
+      timer.pause();
+      const left = timer.remainingMs;
+
+      sleep(30 * MINUTE);
+      timer.catchUp();
+
+      expect(timer.remainingMs).toBe(left);
+      expect(timer.index).toBe(0);
+    });
+
+    it("does nothing to a run that has not been started", () => {
+      timer.applyConfig(quick(3));
+
+      timer.catchUp();
+
+      expect(timer.atStart).toBe(true);
+    });
+  });
+});
+
 describe("destroy", () => {
   // The widget is meant to sit open all day. A clock that keeps ticking after
   // the thing that owned it has gone is the classic way that stops being true.

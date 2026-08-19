@@ -86,6 +86,14 @@ commit that made the change, and in the architecture notes.
   focus now summons them the way hover does.
 - A focused control keeps the spacebar. With the focus on a settings tab,
   pressing space started the timer instead of switching tab.
+- The countdown is right after the widget has been minimised, or after the
+  machine has been asleep. A tick that arrived late used to advance the run by
+  exactly one segment and start the next one from the moment it noticed, so an
+  interruption both lost the segments it spanned and lengthened the run by
+  however long it had lasted. Every segment that expired is now accounted for,
+  each starting when the one before it ended — and only the transition you
+  actually arrived at is announced, rather than four chimes at once on opening
+  a laptop.
 - Preferences are no longer written to storage on every pointer move while the
   resize grip is held.
 - The space bar starts and pauses again after clicking a button. A button keeps

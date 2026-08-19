@@ -127,6 +127,21 @@ export class Timer {
     this.reset();
   }
 
+  /**
+   * Re-read the clock now instead of waiting for the next tick.
+   *
+   * Called when the window becomes visible again. Nothing depends on it —
+   * `#advance` will straighten the run out whenever the tick eventually fires,
+   * and it does not care how late that is. What this buys is that the widget
+   * is already right at the moment you look at it, rather than right a moment
+   * afterwards, and a readout that corrects itself while you watch reads as a
+   * clock that was wrong.
+   */
+  catchUp(): void {
+    if (!this.running) return;
+    this.#tick();
+  }
+
   destroy(): void {
     this.#clearTick();
   }
@@ -150,24 +165,57 @@ export class Timer {
     this.#advance();
   }
 
+  /**
+   * Move on from a segment whose time has run out — possibly by more than one.
+   *
+   * A tick can arrive long after the moment it was scheduled for. Browsers
+   * throttle the timers of a window nobody is looking at, first to once a
+   * second and then to once a minute; a suspended machine does not run them at
+   * all. Closing a laptop lid mid-session is the case that guarantees it, and
+   * needs no measurement to believe.
+   *
+   * So this walks forward rather than stepping once. Two things make the walk
+   * correct:
+   *
+   * Each segment starts when the one before it ended, not when the tick that
+   * noticed happened to run — `#endsAt` accumulates durations rather than
+   * being reset from `Date.now()`. Otherwise every interruption would silently
+   * lengthen the run by however long the interruption was.
+   *
+   * And however many boundaries were crossed, only one is announced: the one
+   * that landed you where you are. The transition sounds mean "the timer has
+   * moved on", and four of them in a row after opening a laptop would be an
+   * alarm going off about the past.
+   */
   #advance(): void {
-    const done = this.plan[this.index];
-    const nextIndex = this.index + 1;
-    const next = this.plan[nextIndex] ?? null;
+    const now = Date.now();
+    let done = this.plan[this.index];
 
-    this.onSegmentEnd?.(done, next);
+    for (;;) {
+      const next = this.plan[this.index + 1] ?? null;
 
-    if (!next) {
-      this.#clearTick();
-      this.running = false;
-      this.finished = true;
-      return;
+      if (!next) {
+        this.#clearTick();
+        this.running = false;
+        this.finished = true;
+        this.remainingMs = 0;
+        this.onSegmentEnd?.(done, null);
+        return;
+      }
+
+      this.#endsAt += next.durationMs;
+      this.index += 1;
+
+      if (this.#endsAt > now) {
+        this.remainingMs = this.#endsAt - now;
+        this.#scheduleTick();
+        this.onSegmentEnd?.(done, next);
+        return;
+      }
+
+      // That one is over too. Keep walking, remembering what we last left.
+      done = next;
     }
-
-    this.index = nextIndex;
-    this.remainingMs = next.durationMs;
-    this.#endsAt = Date.now() + next.durationMs;
-    this.#scheduleTick();
   }
 
   #clearTick(): void {
