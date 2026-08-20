@@ -8,6 +8,7 @@
     dismissWindow,
     hasTray,
     onBackendEvent,
+    onWindowMoved,
     setWindowSize,
     startDragging,
   } from "./lib/window";
@@ -72,6 +73,7 @@
   let volume = $state(stored.volume);
   let soundSet = $state(stored.sound);
   let ambience = $state(stored.ambience);
+  let position = $state(stored.position);
 
   const backdrop = $derived(ambienceSettings(ambience));
 
@@ -172,7 +174,36 @@
       sound: soundSet,
       ambience,
       config: timer.config,
+      position,
     });
+  });
+
+  /** How still the window has to be before its position is worth writing down. */
+  const MOVE_SETTLE_MS = 400;
+
+  // A drag emits a move event per step of the pointer, and the intermediate
+  // positions are not places the widget was left — they are places it passed
+  // through. Only where it comes to rest is worth keeping, so the state is
+  // committed once the moving stops, and the same debounce covers the tray's
+  // `Reset position` for free.
+  $effect(() => {
+    let dispose: (() => void) | null = null;
+    let settle: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    void onWindowMoved((next) => {
+      if (settle !== null) clearTimeout(settle);
+      settle = setTimeout(() => (position = next), MOVE_SETTLE_MS);
+    }).then((fn) => {
+      if (cancelled) fn();
+      else dispose = fn;
+    });
+
+    return () => {
+      cancelled = true;
+      if (settle !== null) clearTimeout(settle);
+      dispose?.();
+    };
   });
 
   // No reactive reads, so this registers cleanup once and never re-runs.

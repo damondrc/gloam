@@ -334,6 +334,26 @@ the keyboard. Double-clicking again restores the full widget.
 <p align="center"><em>Compact mode and the scale range are separate axes: one
 decides how much the widget shows, the other how big it is.</em></p>
 
+## Where it lives
+
+Gloam remembers where you left it. The position is written down once the
+window has been still for a moment — a drag reports every step of the pointer,
+and the places it passed through are not where it was left — and applied again
+at the next launch before anything has been drawn into the window, so the
+widget appears in place rather than jumping there.
+
+A remembered position is a suggestion rather than an instruction. It is only
+good for the arrangement of screens it was recorded on, and unplugging a
+monitor is an ordinary thing to do to a laptop, so at startup it is checked
+against the screens actually attached: enough of the widget has to fall on one
+of them, in both directions, to be seen and grabbed. Both directions on the
+*same* screen — a window in the corner between a wide monitor and a tall one
+can overlap each of them generously and be visible on neither.
+
+When the check fails nothing happens and the window opens where it always
+does. Nudging it to the nearest valid spot was the alternative and is worse: a
+corner you can predict beats a position arithmetic chose for you.
+
 ## The tray
 
 Closing the widget hides it. The run carries on, and the tray icon brings it
@@ -390,8 +410,9 @@ npm run test:watch # on every save
 
 The suite covers the parts where being wrong would be invisible: the plan
 builder, the duration formatter, the settings clamp, the timer engine, the
-validation applied to stored preferences, the keyboard bindings, and the
-arithmetic that decides whether the cursor is over the padlock.
+validation applied to stored preferences, the keyboard bindings, whether a
+remembered window position is still on a screen, and the arithmetic that
+decides whether the cursor is over the padlock.
 
 A misplaced button is obvious. A seven-session run with six breaks instead of
 five is not. Neither is a pause that loses forty milliseconds, a transition
@@ -500,7 +521,7 @@ laptop it was built on.
 
 - [x] A tray icon: show, reset the position, quit. Closing hides rather than
       exits, so the widget cannot be lost by clicking the wrong thing.
-- [ ] The window position remembered between runs, and checked against the
+- [x] The window position remembered between runs, and checked against the
       monitors that actually exist at startup rather than the ones that did
 - [ ] The countdown correct while the window is hidden, not only while it is
       being watched
@@ -565,6 +586,7 @@ src/
     plan.test.ts      its rules, asserted across many configurations
     timer.svelte.ts   the reactive state and the countdown
     shortcuts.ts      what each key means, and who else claims it
+    placement.ts      whether a remembered position is still reachable
     lock.svelte.ts    click-through and cursor hit-testing
     hitbox.ts         CSS pixels to desktop pixels, for the padlock
     scale.svelte.ts   the scale factor and its drag interaction

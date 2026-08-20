@@ -15,6 +15,12 @@ commit that made the change, and in the architecture notes.
 
 ### Added
 
+- Gloam remembers where you left it. The position is recorded once the window
+  has been still for a moment and applied again at the next launch before
+  anything is drawn, so the widget appears in place rather than jumping there.
+  It is checked against the screens actually attached first: a position from a
+  monitor that is no longer plugged in is discarded, and the window opens where
+  it always did.
 - A tray icon, with `Show Gloam`, `Reset position` and `Quit`. Closing the
   widget now hides it and the run carries on; the icon is the way back.
   `Reset position` centres the window, which is the way out of having dragged

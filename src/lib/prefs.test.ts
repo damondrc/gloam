@@ -61,6 +61,7 @@ describe("round trip", () => {
       sound: "bell",
       ambience: "light",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
+      position: { x: 2400, y: 300 },
     },
     {
       compact: false,
@@ -69,6 +70,7 @@ describe("round trip", () => {
       sound: "felt",
       ambience: "calm",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
+      position: { x: -1200, y: -80 },
     },
   ];
 
@@ -204,6 +206,48 @@ describe("preferences written before the sound sets existed", () => {
 
     expect(prefs.compact).toBe(true);
     expect(prefs.scale).toBe(1.2);
+  });
+});
+
+describe("the window position", () => {
+  it("is absent until the window has been moved", () => {
+    expect(loadPrefs().position).toBeNull();
+  });
+
+  // Negative coordinates are ordinary: a monitor above or to the left of the
+  // primary one puts everything on it in negative space.
+  it.each([
+    { x: 48, y: 48 },
+    { x: 2400, y: 300 },
+    { x: -1600, y: -220 },
+    { x: 0, y: 0 },
+  ])("keeps %j", (position) => {
+    write({ position });
+
+    expect(loadPrefs().position).toEqual(position);
+  });
+
+  it("rounds a fractional pixel, which is not a place", () => {
+    write({ position: { x: 48.6, y: 47.2 } });
+
+    expect(loadPrefs().position).toEqual({ x: 49, y: 47 });
+  });
+
+  // Anything unusable becomes "no opinion", which is the safe answer: the
+  // window simply opens where it would have opened anyway.
+  it.each([
+    ["a string", "48,48"],
+    ["a number", 48],
+    ["null", null],
+    ["half a point", { x: 48 }],
+    ["strings for coordinates", { x: "48", y: "48" }],
+    ["not a number", { x: Number.NaN, y: 0 }],
+    ["infinite", { x: Number.POSITIVE_INFINITY, y: 0 }],
+    ["an array", [48, 48]],
+  ])("discards %s", (_, position) => {
+    write({ position });
+
+    expect(loadPrefs().position).toBeNull();
   });
 });
 

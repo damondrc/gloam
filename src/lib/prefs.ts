@@ -36,6 +36,15 @@ export interface Prefs {
   sound: SoundSet;
   ambience: Ambience;
   config: TimerConfig;
+  /**
+   * Where the window was left, in physical desktop pixels, or null if it has
+   * never been moved.
+   *
+   * Stored as a suggestion rather than an instruction: the monitor it refers
+   * to may not be there next time, so it is checked before it is obeyed. See
+   * `placement.ts`.
+   */
+  position: { x: number; y: number } | null;
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -45,7 +54,24 @@ export const DEFAULT_PREFS: Prefs = {
   sound: "bowl",
   ambience: "full",
   config: { ...DEFAULT_CONFIG },
+  position: null,
 };
+
+/**
+ * A position is only worth keeping if it is two real numbers.
+ *
+ * Rounded on the way in, because a fractional physical pixel is not a place
+ * and only ever arrives from a rounding error somewhere upstream.
+ */
+function readPosition(value: unknown): Prefs["position"] {
+  if (typeof value !== "object" || value === null) return null;
+
+  const { x, y } = value as { x?: unknown; y?: unknown };
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+  return { x: Math.round(x), y: Math.round(y) };
+}
 
 /**
  * What an older Gloam stored, before the three sound settings became one.
@@ -129,6 +155,7 @@ export function loadPrefs(): Prefs {
         DEFAULT_PREFS.ambience
       ),
       config: readConfig(value.config),
+      position: readPosition(value.position),
     };
   } catch {
     // Corrupt or unavailable storage should never keep the widget from opening.
