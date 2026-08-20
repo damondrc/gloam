@@ -6,6 +6,8 @@
  * iterable without a Rust toolchain or a full rebuild.
  */
 
+import type { Rect } from "./placement";
+
 type WindowModule = typeof import("@tauri-apps/api/window");
 
 let cached: WindowModule | null = null;
@@ -98,6 +100,57 @@ export async function setWindowSize(
   await win.setMinSize(size);
   await win.setMaxSize(size);
   await win.setResizable(false);
+}
+
+/**
+ * The window's rectangle on the desktop, in physical pixels.
+ *
+ * Outer rather than inner, because this is compared against monitors: what
+ * matters is the space the window occupies, not the part of it that draws.
+ */
+export async function readOuterRect(): Promise<Rect | null> {
+  const m = await api();
+  if (!m) return null;
+
+  const win = m.getCurrentWindow();
+  const [position, size] = await Promise.all([
+    win.outerPosition(),
+    win.outerSize(),
+  ]);
+  return { x: position.x, y: position.y, width: size.width, height: size.height };
+}
+
+/** Moves the window. Physical pixels, to match what everything else reports. */
+export async function setWindowPosition(x: number, y: number): Promise<void> {
+  const m = await api();
+  if (!m) return;
+  await m.getCurrentWindow().setPosition(new m.PhysicalPosition(x, y));
+}
+
+/** Every attached screen, as plain rectangles in physical pixels. */
+export async function listMonitors(): Promise<Rect[]> {
+  const m = await api();
+  if (!m) return [];
+
+  const monitors = await m.availableMonitors();
+  return monitors.map((monitor) => ({
+    x: monitor.position.x,
+    y: monitor.position.y,
+    width: monitor.size.width,
+    height: monitor.size.height,
+  }));
+}
+
+/**
+ * Fires while the window is being dragged, and whenever anything else moves
+ * it. Returns an unlisten function.
+ */
+export async function onWindowMoved(
+  handler: (position: { x: number; y: number }) => void
+): Promise<() => void> {
+  const m = await api();
+  if (!m) return () => {};
+  return m.getCurrentWindow().onMoved(({ payload }) => handler(payload));
 }
 
 export interface Geometry {
