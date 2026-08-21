@@ -434,8 +434,15 @@ The tests assert rules rather than examples, running the same checks across a
 spread of configurations, so what they protect is "a plan always alternates and
 never ends on a break" rather than "with these numbers it comes out like this".
 
-They are checked the same way anything else is: by breaking the code on purpose
-and confirming they notice. That is how the pause tests were found to be
+What no test covers is the window itself — always-on-top, click-through,
+resizing, trays, and the different opinions Windows and GTK hold about all
+four. Those need a desktop and a person, so they are a written checklist
+instead: [docs/platform-testing.md](docs/platform-testing.md). It is run before
+any release that changed how the window behaves, and a row nobody ran counts as
+a row that failed.
+
+The automated ones are checked the same way anything else is: by breaking the
+code on purpose and confirming they notice. That is how the pause tests were found to be
 worthless — they paused on a whole number of ticks, where the tick that had
 just run already held the right answer, so a pause that captured nothing still
 looked correct. Fifty milliseconds off the grid, and they mean something.
