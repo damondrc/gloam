@@ -95,21 +95,39 @@ fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         return;
     };
 
+    // Placed before it is shown, so the window manager maps it where it
+    // belongs. Showing first and correcting afterwards also works, and looks
+    // like the widget stumbling into place: it appears wherever the manager
+    // felt like putting it and then jumps, a frame later, to where it was
+    // actually left.
+    let hidden = take_hidden_position(app);
+    if let Some(position) = hidden {
+        let _ = window.set_position(position);
+    }
+
     let _ = window.show();
     let _ = window.unminimize();
 
-    // Before anything else is asserted, and only if this window is coming back
-    // from having been hidden. See `HiddenAt`.
-    if let Some(state) = app.try_state::<HiddenAt>() {
-        if let Ok(mut hidden) = state.0.lock() {
-            if let Some(position) = hidden.take() {
-                let _ = window.set_position(position);
-            }
-        }
+    // And again once it is mapped. A position set on an unmapped window is a
+    // hint, and a window manager is free to decline it; when the first attempt
+    // was honoured this is the same coordinates and moves nothing at all.
+    if let Some(position) = hidden {
+        let _ = window.set_position(position);
     }
 
     let _ = window.set_always_on_top(true);
     let _ = window.set_focus();
+}
+
+/// Reads and clears the position the window was last hidden from.
+///
+/// Taken rather than read: it should only ever apply to a window actually
+/// coming back from being hidden. Surfacing one that was merely behind
+/// something else must not move it.
+fn take_hidden_position<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Option<tauri::PhysicalPosition<i32>> {
+    app.try_state::<HiddenAt>()?.0.lock().ok()?.take()
 }
 
 /// Puts the widget away, remembering where it stood.

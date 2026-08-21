@@ -58,6 +58,9 @@ commit that made the change, and in the architecture notes.
 - The settings panel closes when the widget is locked. It was the one opaque
   part of the widget, so while everything else receded to a watermark the
   settings stayed at full strength, looking like the only thing on screen.
+- The widget comes back from the tray in one movement, rather than appearing
+  where the window manager felt like putting it and jumping into place a frame
+  later. It is positioned before it is shown.
 - The widget comes back from the tray where it was put away. Showing a hidden
   window on X11 is a remap, and a window manager places a remapped window
   wherever its own policy says — usually near the top left. The position is
