@@ -63,7 +63,7 @@ Windows: `______`   Linux: `______` (distro, desktop, session type)
 | # | Check | Win 11 | Linux |
 | --- | --- | --- | --- |
 | C1 | The padlock dims the widget and a click on it lands on the window underneath | | |
-| C2 | Moving the cursor onto the padlock makes it clickable again, and it unlocks | | |
+| C2 | While locked, moving the cursor onto the padlock and **clicking** it unlocks the widget. Hovering alone does not unlock anything — it only lets the click reach the padlock instead of passing through | | |
 | C3 | `Ctrl+Alt+G` locks and unlocks while another application has the focus | | |
 | C4 | C2 still works at 80% scale | | |
 | C5 | C2 still works at 180% scale | | |

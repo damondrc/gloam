@@ -89,6 +89,15 @@
   const HINT_MS = 4500;
   let showHint = $state(false);
 
+  // Locking is a request for the widget to stop being in the way, and a panel
+  // standing open is the least out-of-the-way it ever is: it is the one part
+  // of the widget that is opaque, so while everything else recedes to 44% the
+  // settings sit there at full strength looking like the only thing on screen.
+  // Entering compact mode already closes it, for the same reason.
+  $effect(() => {
+    if (lock.locked) panelOpen = false;
+  });
+
   // Locking hides the close button and stops the window accepting clicks
   // anywhere but the padlock, so the way out has to be stated rather than
   // discovered. Shown on every lock, not just the first: it costs nothing to

@@ -357,8 +357,14 @@ corner you can predict beats a position arithmetic chose for you.
 ## The tray
 
 Closing the widget hides it. The run carries on, and the tray icon brings it
-back — a left click, or `Show Gloam` from its menu. Quitting for real is the
-last entry in that menu.
+back. Quitting for real is the last entry in its menu.
+
+On Windows a left click on the icon is a toggle: it puts the widget away if it
+is out and brings it back if it is not, so one gesture covers both directions.
+On Linux it does nothing, and that is not something Gloam can fix — the
+AppIndicator protocol that Linux trays speak has no notion of a click on an
+icon. It offers a menu, and the menu is the whole interface. `Show Gloam` is
+the way back there.
 
 The middle entry is the reason the tray exists. A frameless window that stays
 on top can be dragged somewhere unhelpful, left on a monitor that is later

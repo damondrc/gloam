@@ -13,6 +13,21 @@ const TOGGLE_LOCK_EVENT: &str = "gloam://toggle-lock";
 /// at startup and asked by the frontend rather than guessed at.
 struct TrayPresence(bool);
 
+/// Where the window was standing when it was last hidden.
+///
+/// Hiding and showing a window on X11 is an unmap and a remap, and a remapped
+/// window is a new one as far as the window manager is concerned: it places it
+/// wherever its own policy says, which is usually somewhere near the top left
+/// and occasionally somewhere else entirely. Windows keeps the position across
+/// the same pair of calls and needs none of this.
+///
+/// Rather than depend on which platform is being polite, the position is
+/// written down on the way out and put back on the way in. Taken rather than
+/// read, so it only ever applies to a window that is actually coming back from
+/// being hidden — surfacing one that was merely behind something else should
+/// not move it.
+struct HiddenAt(std::sync::Mutex<Option<tauri::PhysicalPosition<i32>>>);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
@@ -53,6 +68,7 @@ pub fn run() {
             let tray = false;
 
             app.manage(TrayPresence(tray));
+            app.manage(HiddenAt(std::sync::Mutex::new(None)));
 
             #[cfg(desktop)]
             register_toggle_shortcut(app.handle())?;
@@ -75,12 +91,40 @@ pub fn run() {
 /// concrete call from inside its callback would pin the whole plugin to one
 /// runtime and stop it satisfying its own signature.
 fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_always_on_top(true);
-        let _ = window.set_focus();
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+
+    let _ = window.show();
+    let _ = window.unminimize();
+
+    // Before anything else is asserted, and only if this window is coming back
+    // from having been hidden. See `HiddenAt`.
+    if let Some(state) = app.try_state::<HiddenAt>() {
+        if let Ok(mut hidden) = state.0.lock() {
+            if let Some(position) = hidden.take() {
+                let _ = window.set_position(position);
+            }
+        }
     }
+
+    let _ = window.set_always_on_top(true);
+    let _ = window.set_focus();
+}
+
+/// Puts the widget away, remembering where it stood.
+fn hide_to_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+
+    if let (Ok(position), Some(state)) = (window.outer_position(), app.try_state::<HiddenAt>()) {
+        if let Ok(mut hidden) = state.0.lock() {
+            *hidden = Some(position);
+        }
+    }
+
+    let _ = window.hide();
 }
 
 /// What the widget's close button does.
@@ -89,9 +133,9 @@ fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 /// back. Without one, hiding would be indistinguishable from losing the app,
 /// so it quits instead — which is what it has always done.
 #[tauri::command]
-fn dismiss(app: tauri::AppHandle, window: tauri::Window, tray: tauri::State<'_, TrayPresence>) {
+fn dismiss(app: tauri::AppHandle, tray: tauri::State<'_, TrayPresence>) {
     if tray.0 {
-        let _ = window.hide();
+        hide_to_tray(&app);
     } else {
         app.exit(0);
     }
@@ -155,6 +199,15 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
             "quit" => app.exit(0),
             _ => {}
         })
+        // A left click is a toggle: put it away if it is out, bring it back if
+        // it is not. One gesture for both directions, because "click to show"
+        // with no way back leaves the user hunting through a menu for the
+        // opposite of what they just did.
+        //
+        // Windows only. The AppIndicator protocol that Linux trays speak has
+        // no notion of a click on the icon — it offers a menu and nothing
+        // else — so this never fires there and the menu is the whole
+        // interface. See the note in the README.
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -162,7 +215,17 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
                 ..
             } = event
             {
-                surface(tray.app_handle());
+                let app = tray.app_handle();
+                let showing = app
+                    .get_webview_window("main")
+                    .and_then(|window| window.is_visible().ok())
+                    .unwrap_or(false);
+
+                if showing {
+                    hide_to_tray(app);
+                } else {
+                    surface(app);
+                }
             }
         })
         .build(app)?;
