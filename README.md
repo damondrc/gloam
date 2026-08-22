@@ -472,49 +472,23 @@ looked correct. Fifty milliseconds off the grid, and they mean something.
 
 | | Status |
 | --- | --- |
-| Windows 10/11 | Supported |
-| Linux (X11) | Supported |
-| Linux (Wayland) | Runs, but always-on-top is ignored |
+| Windows 10/11 | Supported — verified against 0.6.0 |
+| Linux · X11 | Supported — verified against 0.6.0 |
+| Linux · Wayland | Not tested |
+| macOS | Never run |
 
-The Wayland limitation is [upstream](https://github.com/tauri-apps/tao/issues/1134):
-the protocol gives clients no way to request that a surface stay above others.
-Running under XWayland restores it. A `gtk-layer-shell` surface would too, in
-principle, except that the protocol it depends on is one GNOME has declined to
-implement — so it would fix the smaller half of Wayland. Both are being looked
-at rather than promised.
+Linux packages are built inside an Ubuntu 22.04 container, and run on **Ubuntu
+22.04, Debian 12 and Mint 21** or newer. A `.deb`, and nothing else: the
+AppImage was withdrawn after two attempts at making it play sound, and a silent
+alarm looks exactly like a working one.
 
-macOS is not listed because it has never been run there. Nothing in the code is
-Windows- or Linux-specific by design, but a platform nobody has opened the app
-on is not one to claim.
-
-### Linux binaries
-
-Released Linux packages are built by CI inside an **Ubuntu 22.04** container,
-and therefore need **glibc 2.35 or newer** — Ubuntu 22.04+, Debian 12+, Mint
-21+, Fedora 36+. glibc is not backward compatible, so a binary built on a newer
-base will not start on an older one: the build environment is what decides how
-far a release reaches, and it is worth deciding on purpose.
-
-A container rather than a runner image of the right age, because runner images
-are retired on a schedule that has nothing to do with this project — the one
-that matched was already weeks from deprecation when this was set up. An image
-tag does not move underneath you.
-
-### No AppImage
-
-There was one, and it is gone. Built without a bundled media framework it
-started and played nothing: WebKitGTK routes all web audio through gstreamer,
-and the launcher Tauri generates empties the plugin search path, so it could
-not even fall back on the plugins the machine already had. A widget whose
-alarms are silent looks exactly like a working one, which is the worst shape a
-defect can take here. Built *with* the media framework bundled, it stopped
-starting at all.
-
-Two attempts, on the least used of the packages, at a problem that belongs to
-somebody else's packaging rather than to Gloam. The `.deb` was correct
-throughout. Shipping nothing is more honest than shipping either version of
-that, so a release carries a `.deb` and no AppImage until there is a reason to
-think a third attempt would end differently.
+The rows above say what somebody checked on a real machine, from
+[the checklist](docs/platform-testing.md) that gets run before a release.
+Where nobody has run it, they say that instead of guessing.
+[docs/platforms.md](docs/platforms.md) has the detail: what Wayland is expected
+to do and why nobody has watched it do it, how far back a Linux build reaches
+and what decides that, and the two things about dragging and resizing on Linux
+that are the window manager's rather than Gloam's.
 
 ## Roadmap
 
