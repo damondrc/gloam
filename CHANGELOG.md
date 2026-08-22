@@ -58,6 +58,13 @@ commit that made the change, and in the architecture notes.
 - The settings panel closes when the widget is locked. It was the one opaque
   part of the widget, so while everything else receded to a watermark the
   settings stayed at full strength, looking like the only thing on screen.
+- The AppImage plays sound. WebKitGTK routes all web audio through gstreamer,
+  which an AppImage carries only if the build was told to bundle it — and
+  without that, the generated launcher also empties the plugin search path, so
+  it could not fall back on the plugins the machine already had. Every
+  transition was being drawn and none of them played, which is the one failure
+  this widget cannot survive quietly: a silent alarm looks exactly like a
+  working one.
 - The widget comes back from the tray in one movement, rather than appearing
   where the window manager felt like putting it and jumping into place a frame
   later. It is positioned before it is shown.

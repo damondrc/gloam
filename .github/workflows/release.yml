@@ -107,6 +107,12 @@ jobs:
       # Before checkout, because a bare Ubuntu image has no git — without it
       # the checkout action silently falls back to downloading a tarball, and
       # anything that wants the tag or the history stops working.
+      #
+      # The gstreamer packages are here for the AppImage. WebKitGTK plays all
+      # web audio through gstreamer, and an AppImage bundles what the build
+      # machine has — so a build machine without them produces a widget whose
+      # alarms are silent, which is the one failure this app cannot survive
+      # quietly.
       - name: Container prerequisites
         run: |
           apt-get update
@@ -117,7 +123,11 @@ jobs:
             librsvg2-dev \
             libxdo-dev \
             libssl-dev \
-            patchelf
+            patchelf \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-pulseaudio \
+            gstreamer1.0-alsa
 
       - uses: actions/checkout@v4
 

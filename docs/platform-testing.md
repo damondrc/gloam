@@ -35,7 +35,7 @@ window behaves differently on Windows.
 
 ## Results
 
-Version: **0.6.0-rc.1** — Date: **2026-08-20**
+Version: **0.6.0-rc.1**, with the packaging rows re-checked on **rc.2** — Date: **2026-08-21**
 
 Windows: **Windows 11** — Linux: **Linux Mint 22, Cinnamon, X11**
 
@@ -127,10 +127,11 @@ Set one display to 100% and the other to 150% for these.
 | H2 | The SmartScreen warning appears and the published checksum matches the download | OK | — |
 | H3 | Uninstalling removes it | — | — |
 | H4 | The `.deb` installs, and the desktop entry launches it | — | OK |
-| H5 | The AppImage runs after `chmod +x` | — | NO |
-| H6 | The binary needs no glibc newer than 2.35 — see below | — | — |
+| H5 | The AppImage runs after `chmod +x` | — | OK |
+| H6 | The AppImage makes a sound — the transitions are audible, not just drawn | — | NO |
+| H7 | The binary needs no glibc newer than 2.35 — see below | — | — |
 
-**H6, without a virtual machine.** The Linux packages are built in an Ubuntu
+**H7, without a virtual machine.** The Linux packages are built in an Ubuntu
 22.04 container so that they reach back to Ubuntu 22.04, Debian 12 and Mint 21.
 Proving that normally means installing one of those. It can also be read
 straight off the binary:
@@ -179,12 +180,30 @@ Not fixable: the AppIndicator protocol that Linux trays speak has no notion of
 a click on an icon. The menu is the whole interface there, which is what makes
 `Show Gloam` restoring the position matter more than it looks.
 
-**H5 · Linux** — the AppImage does not start on Mint 22. Under diagnosis; the
-`.deb` from the same build installs and runs. The likeliest causes are the
-execute bit not surviving the download, the file manager refusing to run it
-regardless, or the missing `libfuse2` that every AppImage needs on a 24.04
-base. None of those would be a defect in Gloam, but the README should say
-which it is.
+**H5 · Linux** — resolved. The file arrives without the execute bit, which no
+download preserves and no file manager will supply, so `chmod +x` is required
+and always was. Documented in the README. Not a defect.
+
+**H6 · Linux** — the AppImage is silent. It draws every transition and plays
+none of them:
+
+```
+GStreamer element appsrc not found. Please install it
+GStreamer element autoaudiosink not found. Please install it
+```
+
+WebKitGTK plays all web audio through gstreamer, and an AppImage carries only
+what the build machine gave it. Worse, with Tauri's media framework bundling
+turned off the generated AppRun exports an *empty* gstreamer plugin path,
+which switches off the search for the host's own plugins as well — so the
+widget could not fall back on what the machine already had.
+
+This is the one failure Gloam cannot survive quietly: the sound is how a
+session tells you it ended, and a silent alarm looks exactly like a working
+one. **Fixed** — media framework bundling is on and the build container
+installs the plugins. Needs verifying on the next candidate; if the AppImage
+fails to build with it, the AppImage comes out of the release rather than
+shipping mute.
 
 **Not a checklist row, found anyway** — locking the widget with the settings
 panel open left the panel on screen at full strength. It is the one opaque

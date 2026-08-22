@@ -40,6 +40,11 @@
     "category": "Productivity",
     "shortDescription": "A floating, ambient focus timer.",
     "longDescription": "Gloam is a small always-on-top widget that runs configurable focus and break intervals. Its backdrop moves through dusk as your session elapses, so a glance tells you how much time is left without reading a number.",
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
