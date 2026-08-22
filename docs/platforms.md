@@ -4,9 +4,9 @@ What Gloam is known to do, on what, and how that is known.
 
 Every claim here comes from someone running
 [the checklist](platform-testing.md) on a real machine, and the date it was
-last run is at the bottom. Where nobody has run it, this file says so instead
-of guessing — a platform nobody has opened the app on is not a platform it
-supports.
+last run is at the bottom. Where it has not been run yet, this file says so
+rather than guessing, and the row stays on the list in
+[open threads](open.md) until it has been.
 
 ## Windows 10/11
 
@@ -73,15 +73,17 @@ else's packaging while the `.deb` was correct throughout. A silent alarm looks
 exactly like a working one; shipping nothing is more honest than shipping
 either of those.
 
-An `.rpm` would cover Fedora and openSUSE and costs one line of configuration.
-It is not here yet for the same reason the AppImage left: nobody has a machine
-to verify it on.
+An `.rpm` covers Fedora and openSUSE. It is published and **not yet verified**
+— nothing has installed it, so nothing is claimed about it beyond that it
+builds. Confirming it needs one virtual machine, and it is
+[on the list](open.md).
 
 ## Linux · Wayland
 
-**Not tested.** No session has been available to run the checklist on, so
-everything below is reasoning rather than knowledge, and it is written down
-that way on purpose.
+**Not tested yet.** The checklist has not been run against a Wayland session,
+so everything below is reasoning from the protocol rather than knowledge, and
+the two are kept apart on purpose. One session with the list would replace this
+whole section with facts, and it is [on the list](open.md).
 
 Always-on-top is expected not to work.
 [The protocol gives clients no way to ask for it](https://github.com/tauri-apps/tao/issues/1134),
@@ -91,19 +93,21 @@ arbitrary client grab keys. Remembering the window position will not work,
 because a client cannot place itself.
 
 Running under XWayland should restore all three, since the app is then an X11
-client. A `gtk-layer-shell` surface would restore the first, except that the
-protocol it needs is one GNOME has declined to implement — so it would fix the
-smaller half of Wayland at a cost that has to be paid for all of it.
+client — which is the first thing to try, and would turn this section from a
+limitation into a footnote. A `gtk-layer-shell` surface would restore the
+first, except that the protocol it needs is one GNOME has declined to
+implement, so it would fix the smaller half of Wayland at a cost paid for all
+of it. Both are open.
 
-None of this has been observed. It is what the documentation of the layers
-underneath says should happen.
+None of it has been observed. It is what the documentation of the layers
+underneath says should happen, and that is a weaker kind of claim.
 
 ## macOS
 
-**Never run.** Nothing in the code is written for one platform, and the whole
-window layer is the part that behaves differently everywhere, which is exactly
-the part that would decide it. Until somebody opens it on a Mac there is
-nothing to say.
+**Not run yet.** Nothing in the code is written for one platform, but the
+window layer is the part that behaves differently everywhere and is exactly
+what would decide it. Opening it on a Mac once is all it would take to have
+something to say, and it is [on the list](open.md).
 
 ---
 

@@ -485,6 +485,8 @@ alarm looks exactly like a working one.
 The rows above say what somebody checked on a real machine, from
 [the checklist](docs/platform-testing.md) that gets run before a release.
 Where nobody has run it, they say that instead of guessing.
+[docs/open.md](docs/open.md) lists what is still to be looked at, so nothing
+that was promised gets quietly dropped.
 [docs/platforms.md](docs/platforms.md) has the detail: what Wayland is expected
 to do and why nobody has watched it do it, how far back a Linux build reaches
 and what decides that, and the two things about dragging and resizing on Linux
