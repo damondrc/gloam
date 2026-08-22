@@ -99,20 +99,10 @@ jobs:
     container: ubuntu:22.04
     env:
       DEBIAN_FRONTEND: noninteractive
-      # linuxdeploy mounts the AppImage it is assembling, and there is no FUSE
-      # inside a container. Extracting instead of mounting is the supported way
-      # out and costs nothing but disk.
-      APPIMAGE_EXTRACT_AND_RUN: 1
     steps:
       # Before checkout, because a bare Ubuntu image has no git — without it
       # the checkout action silently falls back to downloading a tarball, and
       # anything that wants the tag or the history stops working.
-      #
-      # The gstreamer packages are here for the AppImage. WebKitGTK plays all
-      # web audio through gstreamer, and an AppImage bundles what the build
-      # machine has — so a build machine without them produces a widget whose
-      # alarms are silent, which is the one failure this app cannot survive
-      # quietly.
       - name: Container prerequisites
         run: |
           apt-get update
@@ -123,11 +113,7 @@ jobs:
             librsvg2-dev \
             libxdo-dev \
             libssl-dev \
-            patchelf \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            gstreamer1.0-pulseaudio \
-            gstreamer1.0-alsa
+            patchelf
 
       - uses: actions/checkout@v4
 
@@ -149,9 +135,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bundle-linux
-          path: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
+          path: src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: error
 
   publish:
@@ -170,7 +154,8 @@ jobs:
       # An artifact is rooted at the common ancestor of the files that went
       # into it, which means its shape depends on how many directories the
       # upload happened to match. Windows matched one and arrived flat; Linux
-      # matched deb/ and appimage/ and arrived with both still nested.
+      # matched only deb/ and arrived flat as well — but that is a property of
+      # how many directories the glob happened to hit, not a promise.
       #
       # Rather than teach this job that rule, everything is flattened here.
       # A release page wants one list of files anyway, and a step that does
@@ -179,7 +164,7 @@ jobs:
         run: |
           mkdir -p release
           find artifacts -type f \
-            \( -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' \) \
+            \( -name '*.exe' -o -name '*.deb' \) \
             -exec mv -t release/ {} +
           test -n "$(ls -A release)" || {
             echo "The builds produced no installers."

@@ -23,8 +23,9 @@ commit that made the change, and in the architecture notes.
   It is checked against the screens actually attached first: a position from a
   monitor that is no longer plugged in is discarded, and the window opens where
   it always did.
-- A tray icon, with `Show Gloam`, `Reset position` and `Quit`. Closing the
-  widget now hides it and the run carries on; the icon is the way back.
+- A tray icon, with an entry that shows or hides the widget, `Reset position`
+  and `Quit`. Closing the widget now hides it and the run carries on; the icon
+  is the way back.
   `Reset position` centres the window, which is the way out of having dragged
   it somewhere unreachable or left it on a monitor that is no longer there.
   Where no tray can be created — several Linux desktops ship without one —
@@ -58,13 +59,6 @@ commit that made the change, and in the architecture notes.
 - The settings panel closes when the widget is locked. It was the one opaque
   part of the widget, so while everything else receded to a watermark the
   settings stayed at full strength, looking like the only thing on screen.
-- The AppImage plays sound. WebKitGTK routes all web audio through gstreamer,
-  which an AppImage carries only if the build was told to bundle it — and
-  without that, the generated launcher also empties the plugin search path, so
-  it could not fall back on the plugins the machine already had. Every
-  transition was being drawn and none of them played, which is the one failure
-  this widget cannot survive quietly: a silent alarm looks exactly like a
-  working one.
 - The widget comes back from the tray in one movement, rather than appearing
   where the window manager felt like putting it and jumping into place a frame
   later. It is positioned before it is shown.
@@ -72,11 +66,24 @@ commit that made the change, and in the architecture notes.
   window on X11 is a remap, and a window manager places a remapped window
   wherever its own policy says — usually near the top left. The position is
   now written down on the way out and restored on the way in.
-- On Windows, a left click on the tray icon puts the widget away as well as
-  bringing it back, instead of only ever showing it.
+- Putting the widget away from the tray is possible, not only bringing it back.
+  The menu's first entry is a toggle that says which way it will go, and on
+  Windows a left click on the icon does the same without opening the menu. On
+  Linux the menu is the only interaction a tray icon has at all, so it had to
+  carry both directions.
+- The Linux package installs icons at every size a desktop asks for. It had
+  32, 128, 256 and 512, and no 48 — which is the size a desktop shortcut and a
+  file manager reach for first, so a shortcut showed a generic placeholder
+  while the same application showed correctly everywhere else.
 
 ### Removed
 
+- The AppImage. Without a bundled media framework it started and played
+  nothing — WebKitGTK routes web audio through gstreamer, and the generated
+  launcher empties the plugin search path, so it could not fall back on the
+  plugins already installed either. With one bundled it stopped starting at
+  all. A silent alarm looks exactly like a working one, and shipping nothing
+  is more honest than shipping either. Linux releases are a `.deb`.
 - The `S`, `R`, `L` and `0` shortcuts. A key is bound now only if what it does
   is reversible and reachable another way; skipping, resetting and locking are
   none of those, and all three have a button. Lock keeps `Ctrl+Alt+G`, which is

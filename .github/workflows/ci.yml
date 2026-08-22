@@ -107,11 +107,7 @@ jobs:
             patchelf \
             build-essential \
             file \
-            wget \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            gstreamer1.0-pulseaudio \
-            gstreamer1.0-alsa
+            wget
 
       - run: npm ci
 
@@ -126,13 +122,15 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      # Through npm rather than cargo directly, so that what runs here and what
+      # a person runs before pushing are the same string in the same file. Two
+      # definitions of "the Rust checks" drift, and the one that drifts is
+      # always the one nobody sees fail.
       - name: Rust formatting
-        working-directory: src-tauri
-        run: cargo fmt --check
+        run: npm run rust:fmt -- --check
 
       - name: Rust lints
-        working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: npm run rust:lint
 
       - name: Bundle
         run: npm run app:build
@@ -147,6 +145,5 @@ jobs:
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: ignore
           retention-days: 7

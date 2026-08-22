@@ -28,6 +28,15 @@ struct TrayPresence(bool);
 /// not move it.
 struct HiddenAt(std::sync::Mutex<Option<tauri::PhysicalPosition<i32>>>);
 
+/// The tray menu's first entry, kept so its wording can follow the window.
+///
+/// It says `Hide Gloam` while the widget is out and `Show Gloam` while it is
+/// away. A single entry that does both, rather than two entries of which one is
+/// always wrong — and on Linux it is the only way to put the widget away at
+/// all, since the AppIndicator protocol that Linux trays speak has no notion of
+/// a click on an icon.
+struct ToggleEntry(tauri::menu::MenuItem<tauri::Wry>);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
@@ -57,7 +66,10 @@ pub fn run() {
             // that closing goes back to meaning what it used to.
             #[cfg(desktop)]
             let tray = match build_tray(app.handle()) {
-                Ok(()) => true,
+                Ok(entry) => {
+                    app.manage(ToggleEntry(entry));
+                    true
+                }
                 Err(error) => {
                     eprintln!("gloam: no tray icon ({error}); closing will quit");
                     false
@@ -85,12 +97,7 @@ pub fn run() {
 /// and a second launch — so none of them can be subtly different from the
 /// others. Always-on-top is re-asserted because a window that has been hidden
 /// and shown again is, as far as some shells are concerned, a new one.
-///
-/// Generic over the runtime rather than taking the plain `AppHandle`, which is
-/// the concrete one. The single-instance plugin is built generically, so a
-/// concrete call from inside its callback would pin the whole plugin to one
-/// runtime and stop it satisfying its own signature.
-fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+fn surface(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -117,6 +124,34 @@ fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 
     let _ = window.set_always_on_top(true);
     let _ = window.set_focus();
+    set_toggle_entry(app, true);
+}
+
+/// Whether the widget is on screen at all — mapped, rather than in front.
+fn is_showing(app: &tauri::AppHandle) -> bool {
+    app.get_webview_window("main")
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(false)
+}
+
+/// One gesture for both directions: put it away if it is out, bring it back if
+/// it is not. Used by the menu entry and, where the platform reports one, by a
+/// click on the icon.
+fn toggle_window(app: &tauri::AppHandle) {
+    if is_showing(app) {
+        hide_to_tray(app);
+    } else {
+        surface(app);
+    }
+}
+
+/// Keeps the menu entry describing what it will do next.
+fn set_toggle_entry(app: &tauri::AppHandle, showing: bool) {
+    if let Some(entry) = app.try_state::<ToggleEntry>() {
+        let _ = entry
+            .0
+            .set_text(if showing { "Hide Gloam" } else { "Show Gloam" });
+    }
 }
 
 /// Reads and clears the position the window was last hidden from.
@@ -124,14 +159,12 @@ fn surface<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 /// Taken rather than read: it should only ever apply to a window actually
 /// coming back from being hidden. Surfacing one that was merely behind
 /// something else must not move it.
-fn take_hidden_position<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-) -> Option<tauri::PhysicalPosition<i32>> {
+fn take_hidden_position(app: &tauri::AppHandle) -> Option<tauri::PhysicalPosition<i32>> {
     app.try_state::<HiddenAt>()?.0.lock().ok()?.take()
 }
 
 /// Puts the widget away, remembering where it stood.
-fn hide_to_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+fn hide_to_tray(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -143,6 +176,7 @@ fn hide_to_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 
     let _ = window.hide();
+    set_toggle_entry(app, false);
 }
 
 /// What the widget's close button does.
@@ -181,17 +215,22 @@ fn tray_present(tray: tauri::State<'_, TrayPresence>) -> bool {
 /// Nothing else goes in here. The tray is an escape hatch, not a second copy
 /// of the interface — a start button in a menu would be a control with none of
 /// the widget's own language around it, in a place the widget cannot draw.
+///
+/// Returns the first entry so its wording can be kept in step with the window.
 #[cfg(desktop)]
-fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+fn build_tray(
+    app: &tauri::AppHandle,
+) -> Result<tauri::menu::MenuItem<tauri::Wry>, Box<dyn std::error::Error>> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
-    let show = MenuItem::with_id(app, "show", "Show Gloam", true, None::<&str>)?;
+    // Named for what it will do, and the window starts out on screen.
+    let toggle = MenuItem::with_id(app, "toggle", "Hide Gloam", true, None::<&str>)?;
     let recover = MenuItem::with_id(app, "recover", "Reset position", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
-    let menu = Menu::with_items(app, &[&show, &recover, &separator, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &recover, &separator, &quit])?;
 
     let icon = app
         .default_window_icon()
@@ -207,7 +246,7 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         // common case the slow one.
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
-            "show" => surface(app),
+            "toggle" => toggle_window(app),
             "recover" => {
                 surface(app);
                 if let Some(window) = app.get_webview_window("main") {
@@ -233,22 +272,12 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
                 ..
             } = event
             {
-                let app = tray.app_handle();
-                let showing = app
-                    .get_webview_window("main")
-                    .and_then(|window| window.is_visible().ok())
-                    .unwrap_or(false);
-
-                if showing {
-                    hide_to_tray(app);
-                } else {
-                    surface(app);
-                }
+                toggle_window(tray.app_handle());
             }
         })
         .build(app)?;
 
-    Ok(())
+    Ok(toggle)
 }
 
 /// Refuses to start a second copy.
@@ -260,7 +289,7 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 /// and therefore click-through, the user is left with a stack of windows, no
 /// visible close button and no working escape hatch.
 #[cfg(desktop)]
-fn single_instance_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+fn single_instance_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     tauri_plugin_single_instance::init(|app, _args, _cwd| {
         // Surface the copy that is already running instead of doing nothing,
         // so launching again reads as "here it is" rather than a failure. It

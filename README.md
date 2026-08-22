@@ -28,7 +28,7 @@ would need, which matters for something meant to stay open all day.
 
 Installers are on the
 [latest release](https://github.com/damondrc/gloam/releases/latest): an `.exe`
-for Windows, a `.deb` and an AppImage for Linux.
+for Windows and a `.deb` for Linux.
 
 Every release publishes a `SHA256SUMS.txt` beside them. Gloam is not
 code-signed — a certificate costs more per year than this project costs to run —
@@ -359,12 +359,14 @@ corner you can predict beats a position arithmetic chose for you.
 Closing the widget hides it. The run carries on, and the tray icon brings it
 back. Quitting for real is the last entry in its menu.
 
-On Windows a left click on the icon is a toggle: it puts the widget away if it
-is out and brings it back if it is not, so one gesture covers both directions.
-On Linux it does nothing, and that is not something Gloam can fix — the
+The menu's first entry is a toggle, and says which way it will go: `Hide Gloam`
+while the widget is out, `Show Gloam` while it is away. One entry rather than
+two, of which one would always be wrong.
+
+On Windows a left click on the icon does the same thing without opening the
+menu. On Linux it does nothing, and that is not something Gloam can fix — the
 AppIndicator protocol that Linux trays speak has no notion of a click on an
-icon. It offers a menu, and the menu is the whole interface. `Show Gloam` is
-the way back there.
+icon. It offers a menu, which is why the menu carries both directions.
 
 The middle entry is the reason the tray exists. A frameless window that stays
 on top can be dragged somewhere unhelpful, left on a monitor that is later
@@ -413,6 +415,19 @@ desktop shell.
 npm test           # once
 npm run test:watch # on every save
 ```
+
+Everything CI will run, before it runs it:
+
+```bash
+npm run check        # types, across TypeScript and Svelte
+npm test
+npm run rust:fmt     # add --check to ask rather than apply
+npm run rust:lint    # clippy, warnings are errors
+```
+
+The Rust ones go through npm rather than cargo so they can be run from the
+project root like everything else, and so that CI and a person about to push
+are running the same string out of the same file.
 
 The suite covers the parts where being wrong would be invisible: the plan
 builder, the duration formatter, the settings clamp, the timer engine, the
@@ -485,26 +500,21 @@ are retired on a schedule that has nothing to do with this project — the one
 that matched was already weeks from deprecation when this was set up. An image
 tag does not move underneath you.
 
-### Running the AppImage
+### No AppImage
 
-An AppImage is a file rather than an installed program: it arrives without the
-execute bit, and until it has one nothing happens when you open it.
+There was one, and it is gone. Built without a bundled media framework it
+started and played nothing: WebKitGTK routes all web audio through gstreamer,
+and the launcher Tauri generates empties the plugin search path, so it could
+not even fall back on the plugins the machine already had. A widget whose
+alarms are silent looks exactly like a working one, which is the worst shape a
+defect can take here. Built *with* the media framework bundled, it stopped
+starting at all.
 
-```bash
-chmod +x Gloam_0.5.0_amd64.AppImage
-./Gloam_0.5.0_amd64.AppImage
-```
-
-On a distribution newer than the one it was built on it prints a few lines
-about `libgvfscommon.so` and an undefined `g_task_set_static_name`, and on Mint
-one more about a missing `xapp-gtk3-module`. Neither stops it starting, and
-both are the other side of the trade above: the AppImage carries the GLib it
-was compiled against, the host's GIO modules were compiled against a newer one,
-and the two decline to load into each other. Building old is what lets the
-packages reach back to 2022, and this is what it costs. Gloam opens no files
-and mounts nothing, so there is nothing in gvfs for it to miss.
-
-The `.deb` carries none of this, and is the better choice wherever it fits.
+Two attempts, on the least used of the packages, at a problem that belongs to
+somebody else's packaging rather than to Gloam. The `.deb` was correct
+throughout. Shipping nothing is more honest than shipping either version of
+that, so a release carries a `.deb` and no AppImage until there is a reason to
+think a third attempt would end differently.
 
 ## Roadmap
 
