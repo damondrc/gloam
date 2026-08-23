@@ -45,6 +45,15 @@ export interface Prefs {
    * `placement.ts`.
    */
   position: { x: number; y: number } | null;
+  /**
+   * Whether the one-time hint has had its turn.
+   *
+   * The only preference here that is not a preference — nobody chose it and
+   * nothing in the panel sets it. It is remembered for the same reason the
+   * hint exists at all: saying something once is helpful and saying it every
+   * morning is nagging.
+   */
+  seenIntro: boolean;
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -55,6 +64,7 @@ export const DEFAULT_PREFS: Prefs = {
   ambience: "full",
   config: { ...DEFAULT_CONFIG },
   position: null,
+  seenIntro: false,
 };
 
 /**
@@ -156,6 +166,7 @@ export function loadPrefs(): Prefs {
       ),
       config: readConfig(value.config),
       position: readPosition(value.position),
+      seenIntro: value.seenIntro === true,
     };
   } catch {
     // Corrupt or unavailable storage should never keep the widget from opening.

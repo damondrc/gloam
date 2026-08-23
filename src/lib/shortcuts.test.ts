@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveShortcut } from "./shortcuts";
+import { resolveShortcut, SHORTCUTS } from "./shortcuts";
 import type { Action } from "./shortcuts";
 
 /**
@@ -108,5 +108,33 @@ describe("resolveShortcut", () => {
         expect(resolveShortcut(key, free)?.preventDefault).toBe(false);
       }
     );
+  });
+});
+
+describe("what the panel shows", () => {
+  // A shortcut nobody is told about may as well not exist, and the panel is
+  // the only place a reader meets these. Adding a binding without a row here
+  // should fail rather than ship a key that is a secret.
+  it("has a row for every action a key can produce", () => {
+    const bound = new Set(BOUND.map(([, action]) => action));
+    const shown = new Set(SHORTCUTS.flatMap((row) => row.actions));
+
+    expect([...shown].sort()).toEqual([...bound].sort());
+  });
+
+  // The one entry that is not one of these bindings at all: it is registered
+  // in Rust so that it works when the widget cannot be clicked.
+  it("includes the global shortcut, which belongs to nothing here", () => {
+    const global = SHORTCUTS.filter((row) => row.actions.length === 0);
+
+    expect(global).toHaveLength(1);
+    expect(global[0].keys).toBe("Ctrl+Alt+G");
+  });
+
+  it("says what each one does", () => {
+    for (const row of SHORTCUTS) {
+      expect(row.keys.length).toBeGreaterThan(0);
+      expect(row.does.length).toBeGreaterThan(0);
+    }
   });
 });

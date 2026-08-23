@@ -62,6 +62,7 @@ describe("round trip", () => {
       ambience: "light",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
       position: { x: 2400, y: 300 },
+      seenIntro: true,
     },
     {
       compact: false,
@@ -71,6 +72,7 @@ describe("round trip", () => {
       ambience: "calm",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
       position: { x: -1200, y: -80 },
+      seenIntro: false,
     },
   ];
 
@@ -248,6 +250,32 @@ describe("the window position", () => {
     write({ position });
 
     expect(loadPrefs().position).toBeNull();
+  });
+});
+
+describe("the one-time hint", () => {
+  it("has not been seen by someone opening Gloam for the first time", () => {
+    expect(loadPrefs().seenIntro).toBe(false);
+  });
+
+  it("stays seen once it has been", () => {
+    write({ seenIntro: true });
+
+    expect(loadPrefs().seenIntro).toBe(true);
+  });
+
+  // Anything other than a literal true means it has not been seen. Showing a
+  // hint twice is a small annoyance; never showing it at all defeats it, so
+  // the doubt is resolved towards saying it.
+  it.each([
+    ["a string", "yes"],
+    ["a number", 1],
+    ["null", null],
+    ["missing", undefined],
+  ])("treats %s as not seen", (_, seenIntro) => {
+    write({ seenIntro });
+
+    expect(loadPrefs().seenIntro).toBe(false);
   });
 });
 

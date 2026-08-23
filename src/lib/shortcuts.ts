@@ -92,3 +92,31 @@ export function resolveShortcut(key: string, context: Context): Shortcut | null 
 
   return { action, preventDefault: false };
 }
+
+/**
+ * The keys as a reader needs them, for the panel to show.
+ *
+ * A second table, and deliberately not derived from the first. `BINDINGS` maps
+ * a key to an intention and knows nothing about wording; this one is the
+ * wording, and includes `Ctrl+Alt+G`, which is registered in Rust and never
+ * reaches this module at all.
+ *
+ * What stops the two drifting is a test rather than a shared structure: every
+ * action the bindings can produce has to appear here, so adding a shortcut
+ * without documenting it fails rather than shipping a key nobody is told
+ * about.
+ */
+export interface ShownShortcut {
+  keys: string;
+  does: string;
+  /** Empty for the global shortcut, which is not one of these bindings. */
+  actions: readonly Action[];
+}
+
+export const SHORTCUTS: readonly ShownShortcut[] = [
+  { keys: "Space", does: "Start or pause", actions: ["toggleTimer"] },
+  { keys: "C", does: "Fold to compact", actions: ["toggleCompact"] },
+  { keys: ",", does: "Open settings", actions: ["togglePanel"] },
+  { keys: "+ / −", does: "Resize", actions: ["scaleUp", "scaleDown"] },
+  { keys: "Ctrl+Alt+G", does: "Lock, from anywhere", actions: [] },
+];

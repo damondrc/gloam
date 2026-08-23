@@ -13,6 +13,15 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+### Added
+
+- A tour on the very first run. Four steps below the widget, with arrows to
+  move between them and one click to skip the lot: what the sky is for, that
+  there is no title bar to grab, what the padlock actually does, and where
+  settings and the tray are. It never appears again on its own.
+- A **Keys** tab in the panel, listing every shortcut — and holding the way
+  back to the tour for anyone who wants it a second time.
+
 ## [0.6.0] — 2026-08-20
 
 ### Added

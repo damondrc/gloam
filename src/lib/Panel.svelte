@@ -12,16 +12,20 @@
   import type { Ambience } from "./ambience";
   import Stepper from "./Stepper.svelte";
   import Cycler from "./Cycler.svelte";
+  import { SHORTCUTS } from "./shortcuts";
 
   /**
-   * Two tabs, answering two questions: how long a run is, and what the widget
-   * is like to sit beside.
+   * Three tabs, answering three questions: how long a run is, what the widget
+   * is like to sit beside, and what can be pressed.
    *
-   * There were three. Sound and the backdrop were separated because they were
-   * built at different times, not because anyone choosing between them thinks
-   * of them as different — they are both the answer to "how much of itself
-   * should this thing make you aware of". Reuniting them costs one tab and
-   * makes the panel describe the widget rather than its history.
+   * Sound and the backdrop were once apart and are now together, because they
+   * were separated by the order they were built in rather than by anything a
+   * person choosing between them would notice — both answer "how much of
+   * itself should this thing make me aware of".
+   *
+   * Keys went the other way and earned a tab of its own, because it is not a
+   * setting at all. It is the only tab with nothing to change, and folding a
+   * reference table into a page of controls would have made both worse.
    *
    * Tabs at all, rather than one column, because stacked the sections run past
    * 280 design pixels, which at 180% scale is most of a laptop screen.
@@ -30,11 +34,12 @@
    * the backdrop's liveliness specifically, which is what it meant before this
    * tab took the broader name. Its row is labelled Backdrop for that reason.
    */
-  type Tab = "general" | "ambience";
+  type Tab = "general" | "ambience" | "keys";
 
   const TABS: readonly { id: Tab; label: string }[] = [
     { id: "general", label: "General" },
     { id: "ambience", label: "Ambience" },
+    { id: "keys", label: "Keys" },
   ];
 
   let tab = $state<Tab>("general");
@@ -52,6 +57,8 @@
     onSound: (value: SoundSet) => void;
     ambience: Ambience;
     onAmbience: (value: Ambience) => void;
+    /** Starts the first-run tour again, for anyone who wants it back. */
+    onTour: () => void;
   }
 
   let {
@@ -65,6 +72,7 @@
     onSound,
     ambience,
     onAmbience,
+    onTour,
   }: Props = $props();
 
   const AMBIENCE_OPTIONS = [
@@ -149,7 +157,7 @@
         onChange={(value) => set("focusSessions", value)}
       />
     </div>
-  {:else}
+  {:else if tab === "ambience"}
     <div class="rows">
       <label class="row">
         <span class="name">Volume</span>
@@ -186,12 +194,26 @@
 
       <p class="hint">{AMBIENCE_HINTS[ambience]}</p>
     </div>
+  {:else}
+    <!-- Reference rather than settings: the one tab with nothing to change.
+         Which is why it can hold the way back to the tour without that
+         reading as a setting either. -->
+    <dl class="keys">
+      {#each SHORTCUTS as row (row.keys)}
+        <dt>{row.keys}</dt>
+        <dd>{row.does}</dd>
+      {/each}
+    </dl>
+
+    <button class="again" onclick={onTour}>Show the tour again</button>
   {/if}
 </div>
 
 <style>
   .panel {
     height: 100%;
+    display: flex;
+    flex-direction: column;
     padding: 12rem 15rem;
     background: rgb(var(--ground));
     border-top: 1px solid rgb(var(--accent) / 0.16);
@@ -252,6 +274,52 @@
   /* Pulled up against the row it explains. With the list's own gap on both
      sides a hint sits equidistant between two rows and reads as belonging to
      neither, which matters now that there are two of them. */
+  .keys {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3rem 12rem;
+    margin: 0;
+    font-size: 10rem;
+  }
+
+  .keys dt {
+    color: rgb(var(--accent) / 0.85);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .keys dd {
+    margin: 0;
+    color: rgb(var(--ink) / 0.7);
+  }
+
+  /* A line of text rather than a button with a box around it. Nothing here is
+     a setting, and a filled control would look like one. */
+  .again {
+    align-self: flex-start;
+    margin-top: 10rem;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 9.5rem;
+    letter-spacing: 0.04em;
+    color: rgb(var(--ink) / 0.45);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.16s ease;
+  }
+
+  .again:hover {
+    color: rgb(var(--ink) / 0.8);
+  }
+
+  .again:focus-visible {
+    outline: 2px solid rgb(var(--accent) / 0.8);
+    outline-offset: 2px;
+  }
+
   .hint {
     margin: -3rem 0 0;
     font-size: 9.5rem;

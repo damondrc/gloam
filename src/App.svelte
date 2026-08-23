@@ -25,6 +25,8 @@
   import Padlock from "./lib/Padlock.svelte";
   import Grip from "./lib/Grip.svelte";
   import Panel from "./lib/Panel.svelte";
+  import Tour from "./lib/Tour.svelte";
+  import { TOUR } from "./lib/tour";
 
   /**
    * Layout sizes at scale 1. The window is these multiplied by the scale.
@@ -41,10 +43,18 @@
    *
    * One height for every tab, sized to the tallest — a panel that resized as
    * you moved between tabs would make the window jump under the pointer that
-   * was navigating it. Ambience is now the tall one: a slider, two choices and
-   * the line under each explaining what it is for.
+   * was navigating it. Keys is now the tall one: five rows and a way back to
+   * the tour.
    */
-  const PANEL_HEIGHT = 164;
+  const PANEL_HEIGHT = 176;
+
+  /**
+   * And how much taller for the tour, which unfolds in the same place.
+   *
+   * Shorter than the panel: three lines of text and a row of controls, with
+   * the controls pinned to the bottom so they do not move between steps.
+   */
+  const TOUR_HEIGHT = 116;
 
   const timer = new Timer();
   const lock = new LockController();
@@ -87,7 +97,42 @@
 
   /** How long the escape-hatch hint stays up after locking. */
   const HINT_MS = 4500;
-  let showHint = $state(false);
+
+  let showLockHint = $state(false);
+
+  // Null when the tour is not running; otherwise which step is up. Starts on
+  // the first step for anyone who has never seen it, and can be started again
+  // from the panel by anyone who has.
+  let seenIntro = $state(stored.seenIntro);
+  let tourStep = $state<number | null>(stored.seenIntro ? null : 0);
+  let tourFolded = $state(false);
+
+  // Suspended rather than ended, three ways over: locked, folded by the
+  // chevron, or folded into compact — where at 180 pixels wide the text would
+  // run to ten lines. All three are things the tour itself invites you to try,
+  // and an instruction you are not allowed to follow is worse than none. So
+  // it waits and picks up on the same step, and only Skip and the last arrow
+  // actually end it.
+  const tourOpen = $derived(
+    tourStep !== null && !lock.locked && !tourFolded && !compact
+  );
+  const spotlight = $derived(
+    tourOpen && tourStep !== null ? TOUR[tourStep].spotlight : "none"
+  );
+
+  function startTour(): void {
+    panelOpen = false;
+    tourFolded = false;
+    tourStep = 0;
+  }
+
+  // Marked as seen only when the tour is dismissed, so quitting half way
+  // through does not spend the one time it offers itself.
+  function endTour(): void {
+    tourStep = null;
+    tourFolded = false;
+    seenIntro = true;
+  }
 
   // Locking is a request for the widget to stop being in the way, and a panel
   // standing open is the least out-of-the-way it ever is: it is the one part
@@ -104,11 +149,11 @@
   // repeat and being stranded costs a lot.
   $effect(() => {
     if (!lock.locked) {
-      showHint = false;
+      showLockHint = false;
       return;
     }
-    showHint = true;
-    const timer = setTimeout(() => (showHint = false), HINT_MS);
+    showLockHint = true;
+    const timer = setTimeout(() => (showLockHint = false), HINT_MS);
     return () => clearTimeout(timer);
   });
 
@@ -120,7 +165,9 @@
 
   /** The stage is the timer; the panel grows the window beneath it. */
   const stageHeight = $derived(baseSize.height);
-  const panelHeight = $derived(panelOpen ? PANEL_HEIGHT : 0);
+  const panelHeight = $derived(
+    tourOpen ? TOUR_HEIGHT : panelOpen ? PANEL_HEIGHT : 0
+  );
   const frameHeight = $derived(baseSize.height + panelHeight);
 
   // The layout's own dimensions travel to CSS as custom properties so the
@@ -184,6 +231,7 @@
       ambience,
       config: timer.config,
       position,
+      seenIntro,
     });
   });
 
@@ -287,6 +335,18 @@
   function togglePanel(): void {
     if (lock.locked || compact) return;
     sound.press("reset");
+
+    // The chevron means "fold what is below away, and bring it back", and
+    // during the tour what is below is the tour. So it folds the tour rather
+    // than opening the settings underneath it — the gesture gets demonstrated
+    // on the thing that is actually there, and the introduction survives
+    // being experimented with, which is the entire point of a step that
+    // invites you to press something.
+    if (tourStep !== null) {
+      tourFolded = !tourFolded;
+      return;
+    }
+
     panelOpen = !panelOpen;
   }
 
@@ -353,7 +413,9 @@
   class:locked={lock.locked}
   class:compact
   class:hovering
-  class:open={panelOpen}
+  class:open={panelOpen || tourOpen}
+  class:spot-controls={spotlight === "controls"}
+  class:spot-away={spotlight === "away"}
   style={vars}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
@@ -423,6 +485,13 @@
       </div>
     </div>
 
+    <!-- Only while a step is pointing at something. The first two steps
+         describe the sky and the widget as a whole, and darkening the sky
+         while explaining the sky would work against the sentence. -->
+    {#if spotlight !== "none"}
+      <div class="shade"></div>
+    {/if}
+
     <!-- Transparent layer that makes the whole widget a window drag handle.
          Tauri only starts a drag when the event target itself carries the
          attribute, so interactive elements must sit above this. -->
@@ -446,7 +515,12 @@
 
     <!-- With the panel out the widget is in use, so the controls stay up even
          if the pointer wanders off. -->
-    <div class="ui" class:show={(hovering || panelOpen) && !lock.locked}>
+    <!-- Held up for the length of the tour, so the step describing the
+         chevron and the corner has something to point at. -->
+    <div
+      class="ui"
+      class:show={(hovering || panelOpen || tourOpen) && !lock.locked}
+    >
       <!-- Says which of the two things it is about to do. With a tray the run
            keeps going and the icon is the way back; without one there is
            nothing to hide into, so it quits. -->
@@ -512,13 +586,13 @@
       {/if}
     </div>
 
-    {#if showHint}
+    {#if showLockHint}
       <div class="hint">Ctrl<span>+</span>Alt<span>+</span>G to unlock</div>
     {/if}
 
     <!-- Outside .ui: the padlock has to stay reachable when everything else
          has faded out and stopped accepting clicks. -->
-    <div class="lock-slot" class:show={hovering || lock.locked}>
+    <div class="lock-slot" class:show={hovering || lock.locked || tourOpen}>
       <Padlock
         locked={lock.locked}
         hot={lock.hot}
@@ -529,7 +603,13 @@
     </div>
    </div>
 
-   {#if panelOpen}
+   {#if tourOpen && tourStep !== null}
+     <Tour
+       step={tourStep}
+       onStep={(next) => (tourStep = next)}
+       onDone={endTour}
+     />
+   {:else if panelOpen}
      <Panel
        config={timer.config}
        onConfig={(next) => timer.applyConfig(next)}
@@ -548,6 +628,7 @@
        }}
        {ambience}
        onAmbience={(next) => (ambience = next)}
+       onTour={startTour}
      />
    {/if}
   </div>
@@ -1053,6 +1134,57 @@
     }
   }
 
+  /* --- the tour's spotlight ------------------------------------------- */
+
+  /* A dark layer laid over the backdrop, not opacity applied to it.
+     The window is transparent, so fading the backdrop out does not darken it
+     — it reveals the desktop underneath, and over a bright wallpaper the
+     widget washes out instead of stepping back. Opacity is the right tool for
+     lock, which genuinely wants to be see-through; this wants the opposite.
+
+     Below the controls in the stacking order, so the thing being pointed at
+     stays at full strength while everything behind it goes down. */
+  .shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgb(8 6 16 / 0.42);
+    /* The tour always has the panel slot open, so the bottom corners belong
+       to what is below and only the top pair are rounded. */
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: shade-in 0.35s ease both;
+  }
+
+  @keyframes shade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* A slow breath rather than a flash. The rule about motion applies to a
+     tutorial as much as to the sky: anything quick in the corner of the eye
+     costs attention, and this is meant to say "over here" to somebody who is
+     already reading about it. */
+  @keyframes spotlight {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgb(var(--accent) / 0);
+    }
+    50% {
+      box-shadow: 0 0 0 5rem rgb(var(--accent) / 0.3);
+    }
+  }
+
+  .frame.spot-controls .disclose,
+  .frame.spot-controls :global(.grip),
+  .frame.spot-away .lock-slot :global(button),
+  .frame.spot-away .close {
+    animation: spotlight 2.4s ease-in-out infinite;
+  }
+
   .progress {
     position: absolute;
     left: 0;
@@ -1075,6 +1207,16 @@
   @media (prefers-reduced-motion: reduce) {
     .haze {
       animation: none;
+    }
+
+    /* Still marked, just not moving. Losing the pulse must not lose the
+       pointing, or the step stops making sense. */
+    .frame.spot-controls .disclose,
+    .frame.spot-controls :global(.grip),
+    .frame.spot-away .lock-slot :global(button),
+    .frame.spot-away .close {
+      animation: none;
+      box-shadow: 0 0 0 4rem rgb(var(--accent) / 0.3);
     }
   }
 </style>

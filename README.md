@@ -70,8 +70,8 @@ trailing break has nothing to resume into, so it is dead time.
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
-- A settings panel that unfolds below the horizon, in two tabs: the cycle, and
-  everything about what the widget is like to sit beside
+- A settings panel that unfolds below the horizon, in three tabs: the cycle,
+  what the widget is like to sit beside, and the keys
 - Soft synthesised sound throughout — no audio assets, no jump scares
 - A tray icon, so the widget can be put away without stopping the run — and
   found again if it ever ends up somewhere you cannot reach
@@ -529,9 +529,9 @@ laptop it was built on.
 
 **0.7.0 — polish, if it earns its place**
 
-- [ ] A one-time hint on first run, so dragging and the compact toggle are
+- [x] A one-time tour on first run, so the sky, dragging and the padlock are
       discovered rather than read about
-- [ ] The shortcuts listed inside the app
+- [x] The shortcuts listed inside the app
 - [ ] Launch on startup, as a preference
 - [ ] An alternative horizon or two — a city skyline whose windows light up as
       the sun goes down — as one row in the backdrop tab
