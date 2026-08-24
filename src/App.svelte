@@ -16,6 +16,8 @@
   import { resolveShortcut } from "./lib/shortcuts";
   import type { Action } from "./lib/shortcuts";
   import { ambienceSettings } from "./lib/ambience";
+  import Horizon from "./lib/Horizon.svelte";
+  import { HORIZON_SHARE } from "./lib/horizon";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
   import Birds from "./lib/Birds.svelte";
@@ -61,6 +63,7 @@
   let volume = $state(stored.volume);
   let soundSet = $state(stored.sound);
   let ambience = $state(stored.ambience);
+  let horizon = $state(stored.horizon);
   let position = $state(stored.position);
 
   const backdrop = $derived(ambienceSettings(ambience));
@@ -163,6 +166,11 @@
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
+      // How much of the frame the horizon gets, whichever one is picked. The
+      // water band, the silhouettes and the reflection all read it, so the
+      // three cannot drift out of tune with one another — and a proportion
+      // rather than a length is what carries all of it into compact.
+      `--horizon: ${(HORIZON_SHARE * 100).toFixed(3)}%`,
     ].join("; ")
   );
 
@@ -207,6 +215,7 @@
       volume,
       sound: soundSet,
       ambience,
+      horizon,
       config: timer.config,
       position,
       seenIntro,
@@ -428,7 +437,12 @@
         <div class="haze haze-b"></div>
       {/if}
 
-      <div class="ground"></div>
+      <!-- Water. The other horizons are not drawn on top of this: they take
+           its place, so the bottom of the frame is one mass with a silhouette
+           for a top edge rather than a band with something standing on it. -->
+      {#if horizon === "water"}
+        <div class="ground"></div>
+      {/if}
 
       <!-- After the ground, because its reflection has to land on the water
            rather than behind it, and before the grain so it shares the same
@@ -439,8 +453,21 @@
           night={sky.stars}
           width={baseSize.width}
           height={baseSize.height}
+          water={horizon === "water" ? HORIZON_SHARE : 0}
         />
       {/if}
+
+      <!-- Last of the backdrop, which is how the occlusion comes out right for
+           free: where a city or a ridge has replaced the water there is
+           nothing left for a reflection to fall into, and drawing the mass
+           over it hides the glint while leaving the streak climbing out from
+           behind the skyline.
+
+           In compact too. It is sized as a proportion of the frame, so it
+           follows the widget down to a low profile rather than being dropped —
+           a setting that silently stops applying in one of the two modes is
+           worse than one that was never offered. -->
+      <Horizon kind={horizon} />
 
       <Grain />
 
@@ -606,6 +633,8 @@
        }}
        {ambience}
        onAmbience={(next) => (ambience = next)}
+       {horizon}
+       onHorizon={(next) => (horizon = next)}
        onTour={startTour}
      />
    {/if}
@@ -770,13 +799,17 @@
     }
   }
 
-  /* The horizon the sun sets behind. */
+  /* The horizon the sun sets behind, when the horizon is water.
+     Its height is `--horizon`, the same share of the frame the silhouettes
+     take, so switching between the three does not move the skyline up and
+     down. It used to be 30% against their 25%, which made water read as the
+     heavy one. Compact needs no rule of its own for the same reason. */
   .ground {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 30%;
+    height: var(--horizon);
     background: linear-gradient(
       to bottom,
       rgb(var(--ground) / 0.72),
@@ -876,10 +909,6 @@
   .frame.compact .time {
     margin-top: 0;
     font-size: 28rem;
-  }
-
-  .frame.compact .ground {
-    height: 26%;
   }
 
   /* Pull the sun off the right edge so it clears the readout without sitting

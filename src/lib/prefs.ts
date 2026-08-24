@@ -17,6 +17,8 @@ import { SOUND_SETS } from "./sound";
 import type { SoundSet } from "./sound";
 import { AMBIENCE_MODES } from "./ambience";
 import type { Ambience } from "./ambience";
+import { HORIZONS } from "./horizon";
+import type { Horizon } from "./horizon";
 
 const KEY = "gloam.prefs.v1";
 
@@ -35,6 +37,8 @@ export interface Prefs {
   volume: number;
   sound: SoundSet;
   ambience: Ambience;
+  /** What stands on the far shore: nothing, a city, or a ridge. */
+  horizon: Horizon;
   config: TimerConfig;
   /**
    * Where the window was left, in physical desktop pixels, or null if it has
@@ -71,6 +75,9 @@ export const DEFAULT_PREFS: Prefs = {
   volume: 0.6,
   sound: "bowl",
   ambience: "full",
+  // Water, because it is what Gloam has always looked like and an empty
+  // horizon is the one that says nothing about where you are.
+  horizon: "water",
   config: { ...DEFAULT_CONFIG },
   position: null,
   seenIntro: false,
@@ -173,6 +180,7 @@ export function loadPrefs(): Prefs {
         AMBIENCE_MODES,
         DEFAULT_PREFS.ambience
       ),
+      horizon: readOption(value.horizon, HORIZONS, DEFAULT_PREFS.horizon),
       config: readConfig(value.config),
       position: readPosition(value.position),
       seenIntro: value.seenIntro === true,

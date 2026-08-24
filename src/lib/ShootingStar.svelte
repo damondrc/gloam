@@ -18,9 +18,18 @@
     /** Stage size in design pixels, which sets how far there is to travel. */
     width: number;
     height: number;
+    /**
+     * How much of the frame is water, 0..1, or zero where there is none.
+     *
+     * The reflection is the one part of this that belongs to the surface
+     * rather than to the sky. Where a city or a ridge has taken the water's
+     * place there is nothing for a streak to smear along, so it is not drawn —
+     * and where there is water, this is also how far down it may reach.
+     */
+    water: number;
   }
 
-  let { night, width, height }: Props = $props();
+  let { night, width, height, water }: Props = $props();
 
   /** One roll of the dice every half minute of darkness. */
   const CHECK_MS = 30_000;
@@ -36,8 +45,7 @@
   const TAIL = 210;
   const SPEED = 0.19;
 
-  /** Fraction of the water band the reflection may descend through. */
-  const WATER = 0.3;
+  /** How much of the water band the reflection may descend through. */
   const WATER_USE = 0.55;
 
   interface Flight {
@@ -80,7 +88,7 @@
     // mirror is halved, and then held to whatever there is room for.
     const wish = -angle * 0.5;
     const room =
-      (Math.atan((height * WATER * WATER_USE) / horizontal) * 180) / Math.PI;
+      (Math.atan((height * water * WATER_USE) / horizontal) * 180) / Math.PI;
     const mirror = Math.min(wish, room);
     const mirrorCos = Math.cos(radians(mirror));
 
@@ -90,7 +98,10 @@
       mirror,
       left,
       top: between(34, 48),
-      glintTop: 78,
+      // A little way into the water rather than right at its edge, measured
+      // from the edge so it stays there if the band's share of the frame
+      // changes.
+      glintTop: (1 - water) * 100 + water * 27,
       travel,
       // Both are measured by the ground they cover rather than by the length of
       // their own path, since they ride differently tilted axes. Matching the
@@ -144,19 +155,24 @@
       <i class="head"></i>
     </div>
 
-    <div
-      class="streak glint"
-      style="
-        left: {flight.left}rem;
-        top: {flight.glintTop}%;
-        --angle: {flight.mirror.toFixed(2)}deg;
-        --travel: {flight.glintTravel.toFixed(1)}rem;
-        --dur: {flight.durationMs.toFixed(0)}ms;
-      "
-      aria-hidden="true"
-    >
-      <i class="smear" style="width: {flight.glintLength.toFixed(1)}rem"></i>
-    </div>
+    <!-- Only where there is a surface to smear along. A city or a ridge has
+         taken the water's place, and a glow rising out of a rooftop is not a
+         reflection of anything. -->
+    {#if water > 0}
+      <div
+        class="streak glint"
+        style="
+          left: {flight.left}rem;
+          top: {flight.glintTop.toFixed(2)}%;
+          --angle: {flight.mirror.toFixed(2)}deg;
+          --travel: {flight.glintTravel.toFixed(1)}rem;
+          --dur: {flight.durationMs.toFixed(0)}ms;
+        "
+        aria-hidden="true"
+      >
+        <i class="smear" style="width: {flight.glintLength.toFixed(1)}rem"></i>
+      </div>
+    {/if}
   {/key}
 {/if}
 

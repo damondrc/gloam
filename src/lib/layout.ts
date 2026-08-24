@@ -22,9 +22,11 @@ export const COMPACT_SIZE = { width: 180, height: 58 } as const;
  *
  * One height for every tab, sized to the tallest — a panel that resized as you
  * moved between tabs would make the window jump under the pointer that was
- * navigating it. Keys is the tall one: five rows and a way back to the tour.
+ * navigating it. Ambience is the tall one, and became so when the horizon
+ * moved in beside the sound and the backdrop: a slider, three cyclers and the
+ * two lines that say what the less obvious names are for.
  */
-export const PANEL_HEIGHT = 176;
+export const PANEL_HEIGHT = 190;
 
 /**
  * And with the tour unfolded, which uses the same place.

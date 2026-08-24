@@ -29,6 +29,36 @@ commit that made the change, and in the architecture notes.
   what they chose.
 - A **Keys** tab in the panel, listing every shortcut — and holding the way
   back to the tour for anyone who wants it a second time.
+- A choice of horizon, in the Ambience tab. It replaces the bottom of the
+  widget rather than standing on it, so what you get is one mass with a
+  silhouette for a top edge — and the whole of it stays inside the last
+  quarter of the frame, because the sky is the clock and the sky is what
+  should dominate. **Water** is the flat band Gloam has always had.
+  **Skyline** is a city whose windows come on as the sky darkens and go out
+  again when the sun comes back up for the next session — the same clock the
+  sun is keeping, read a second way. Each window switches rather than fades,
+  at its own brightness; about a fifth never light at all and one in eight
+  never goes out, because that is what a city looks like. **Ridge** is three
+  ranges at three distances, the far one tallest and palest, every one of them
+  opaque — the sun and the moon set behind them.
+  Both shapes are generated from a fixed seed rather than drawn, so they are
+  the same view at every launch, and neither animates: the lights are one
+  comparison in the stylesheet, which is why they stay even in the lightest
+  backdrop mode. Compact keeps whichever was picked, as a low profile in a
+  shorter frame.
+
+### Changed
+
+- The water band is the same height as the other two horizons — the last
+  quarter of the widget rather than the last third — so switching between them
+  does not move the skyline up and down, and there is a little more sky.
+
+### Fixed
+
+- The shooting star's reflection only appears where there is water. It belongs
+  to the surface rather than to the sky, and a glow rising out of a rooftop is
+  a reflection of nothing. The streak itself still crosses whichever horizon
+  is up.
 
 ## [0.6.0] — 2026-08-20
 

@@ -319,6 +319,67 @@ coherent thing to want rather than a point on a slider.
 The sky, the horizon and the grain are never touched by any of them. They are
 the widget's face rather than its ambience.
 
+## The horizon
+
+**Horizon**, in the same tab, chooses what the bottom of the widget *is* —
+not something standing on the flat band, but the band itself.
+
+| | |
+| --- | --- |
+| **Water** | A flat band. What Gloam has always looked like. |
+| **Skyline** | A city, lighting up as the sky goes dark. |
+| **Ridge** | Three ranges at three distances. |
+
+Replacing rather than covering is half of it. A silhouette drawn above the
+band with the band still showing underneath reads as two pictures stacked; the
+mass has to reach the bottom edge of the frame and have the silhouette for its
+top edge, with no line across it, before it reads as one place.
+
+The other half is that all of it — ground and silhouette together — stays
+inside the last quarter of the frame. The sky is the clock, so the sky is what
+has to dominate; a horizon reaching halfway up is a landscape with a countdown
+in it rather than a countdown with a horizon. Everything else is carved out of
+that quarter: how tall a tower may be, how much relief a range gets. Compact
+keeps whichever horizon was picked, at the same proportion of a shorter frame,
+which turns the city into a low profile rather than dropping it.
+
+All three take the same quarter, from one number the widget publishes to the
+stylesheet, so switching between them does not move the skyline up and down.
+The water band used to be taller than the other two, which made it read as the
+heavy option rather than as the plain one.
+
+The shooting star's reflection belongs to the water and goes with it. A streak
+crossing the sky is the sky's; the smear it leaves along the surface below is
+the surface's, and a glow rising out of a rooftop is a reflection of nothing.
+The streak still crosses whichever horizon is up.
+
+The ranges are opaque, and their distance is a colour the sky mixes rather
+than a transparency. Fading a far ridge instead is cheaper and looks
+plausible until the moon rises behind it — a mountain you can see the moon
+through is not a mountain.
+
+The city is the one that does something. Each window carries a threshold and
+comes on when the night passes it, so the lights appear across a focus
+session as the sun goes down, fill in through a break, and go out again when
+the sun comes back up for the next one. The same clock the sky is already
+keeping, read a second way, and it costs nothing: one comparison in the
+stylesheet against a custom property the sky publishes anyway. Nothing here
+animates, which is why it stays even in **Light**.
+
+A window switches rather than fades, at its own brightness — somebody reached
+for a lamp. An earlier version eased each one in over a sixth of the run,
+which looked less like a city coming on than like a dimmer being turned up on
+all of it at once. About a fifth never light at all and roughly one in eight
+burns day and night, because a grid that fills in completely stops being a
+city and becomes a spreadsheet, and a city with every light off at dusk is one
+nobody lives in. The whole facade is glazed, roof to pavement: lights gathered
+near the roofs read as a strip rather than as buildings.
+
+Neither shape is drawn. Both are generated from a fixed seed at build time —
+a skyline that rearranged itself between launches would be the opposite of
+ambient, so the seed is authorship rather than variety, and the repository
+carries no artwork it would otherwise have to license.
+
 ## Compact mode
 
 Double-clicking collapses the widget to a single row: the readout, the play
@@ -597,6 +658,7 @@ src/
     scale.svelte.ts   the scale factor and its drag interaction
     sky.ts            the palette, keyframes and interpolation
     ambience.ts       what each backdrop mode switches off
+    horizon.ts        the skyline and the ridge, generated from a seed
     sound.ts          instruments and phrases, all synthesised
     prefs.ts          persisted preferences, validated on the way in
     window.ts         guarded wrappers over the Tauri window API
@@ -604,6 +666,7 @@ src/
     Clouds.svelte     drifting banks
     Birds.svelte      the flock, and when it flies
     birdFrames.ts     its twelve silhouettes, generated
+    Horizon.svelte    what stands on the far shore
     Grain.svelte      generated film grain
     Controls.svelte   transport buttons
     Padlock.svelte    the animated lock

@@ -60,6 +60,7 @@ describe("round trip", () => {
       volume: 0,
       sound: "bell",
       ambience: "light",
+      horizon: "skyline",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
       position: { x: 2400, y: 300 },
       seenIntro: true,
@@ -70,6 +71,7 @@ describe("round trip", () => {
       volume: 1,
       sound: "felt",
       ambience: "calm",
+      horizon: "ridge",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
       position: { x: -1200, y: -80 },
       seenIntro: false,
@@ -94,7 +96,7 @@ describe("nonsense in storage", () => {
     '{"scale":"large","volume":"loud"}',
     '{"config":"none"}',
     '{"config":{"focusMinutes":null}}',
-    '{"compact":"yes","ambience":42,"sound":[]}',
+    '{"compact":"yes","ambience":42,"sound":[],"horizon":{}}',
   ];
 
   // The bar is not "recovers gracefully". It is "the widget opens", which
@@ -112,6 +114,7 @@ describe("nonsense in storage", () => {
     expect(typeof prefs.compact).toBe("boolean");
     expect(["bowl", "bell", "felt"]).toContain(prefs.sound);
     expect(["full", "calm", "light"]).toContain(prefs.ambience);
+    expect(["water", "skyline", "ridge"]).toContain(prefs.horizon);
     expect(Number.isFinite(prefs.config.focusMinutes)).toBe(true);
   });
 
@@ -168,6 +171,7 @@ describe("values out of range", () => {
   it.each([
     ["sound", "trombone"],
     ["ambience", "cinematic"],
+    ["horizon", "desert"],
   ] as const)("falls back when %s is a value it does not offer", (key, stored) => {
     write({ [key]: stored });
 

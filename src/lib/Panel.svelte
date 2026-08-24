@@ -10,6 +10,7 @@
   import type { TimerConfig } from "./plan";
   import type { SoundSet } from "./sound";
   import type { Ambience } from "./ambience";
+  import type { Horizon } from "./horizon";
   import Stepper from "./Stepper.svelte";
   import Cycler from "./Cycler.svelte";
   import { SHORTCUTS } from "./shortcuts";
@@ -57,6 +58,8 @@
     onSound: (value: SoundSet) => void;
     ambience: Ambience;
     onAmbience: (value: Ambience) => void;
+    horizon: Horizon;
+    onHorizon: (value: Horizon) => void;
     /** Starts the first-run tour again, for anyone who wants it back. */
     onTour: () => void;
   }
@@ -72,6 +75,8 @@
     onSound,
     ambience,
     onAmbience,
+    horizon,
+    onHorizon,
     onTour,
   }: Props = $props();
 
@@ -87,6 +92,20 @@
     calm: "Clouds only. Nothing crosses quickly.",
     light: "A flat sky, for a modest machine.",
   };
+
+  /**
+   * No hint line under this one, unlike the two above it.
+   *
+   * Those exist because "Calm" and "Felt" are a degree and a material, and
+   * neither says on its own what it is good for. These are three nouns naming
+   * three things, and a line explaining that Skyline is a skyline would be
+   * furniture.
+   */
+  const HORIZON_OPTIONS = [
+    { value: "water", label: "Water" },
+    { value: "skyline", label: "Skyline" },
+    { value: "ridge", label: "Ridge" },
+  ] as const satisfies readonly { value: Horizon; label: string }[];
 
   const SOUND_OPTIONS = [
     { value: "bowl", label: "Bowl" },
@@ -193,6 +212,16 @@
       />
 
       <p class="hint">{AMBIENCE_HINTS[ambience]}</p>
+
+      <!-- How much of the backdrop moves, then what the backdrop is of. Last
+           because it is the one that changes least often: a horizon is picked
+           once and lived with, where the other two get adjusted by mood. -->
+      <Cycler
+        label="Horizon"
+        value={horizon}
+        options={HORIZON_OPTIONS}
+        onChange={onHorizon}
+      />
     </div>
   {:else}
     <!-- Reference rather than settings: the one tab with nothing to change.

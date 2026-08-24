@@ -171,6 +171,20 @@ export function skyFor(
 
 const css = (c: Rgb): string => `${c[0]} ${c[1]} ${c[2]}`;
 
+/**
+ * Aerial perspective: distance, as a colour rather than as a transparency.
+ *
+ * Air between you and a far ridge scatters light into it, so it drifts toward
+ * the colour of the sky around it — pale and warm at dusk, near-invisible at
+ * midnight, all without anyone deciding it should be. Which is why the target
+ * is the sky's own middle stop rather than a fixed grey.
+ *
+ * The distinction matters more than it sounds. Fading a distant range instead
+ * would let the moon show straight through the mountain in front of it, and a
+ * mountain you can see the moon through is not a mountain.
+ */
+const distant = (s: SkyState, far: number): Rgb => lerpRgb(s.ground, s.mid, far);
+
 /** Flattens a SkyState into the CSS custom properties the markup consumes. */
 export function skyVars(s: SkyState): string {
   return [
@@ -178,6 +192,8 @@ export function skyVars(s: SkyState): string {
     `--sky-mid: ${css(s.mid)}`,
     `--sky-bottom: ${css(s.bottom)}`,
     `--ground: ${css(s.ground)}`,
+    `--ground-mid: ${css(distant(s, 0.26))}`,
+    `--ground-far: ${css(distant(s, 0.52))}`,
     `--body: ${css(s.body)}`,
     `--body-y: ${(s.bodyY * 100).toFixed(2)}%`,
     // rem so the sun scales with the rest of the widget; see app.css.
