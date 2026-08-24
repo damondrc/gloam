@@ -27,34 +27,12 @@
   import Panel from "./lib/Panel.svelte";
   import Tour from "./lib/Tour.svelte";
   import { TOUR } from "./lib/tour";
-
-  /**
-   * Layout sizes at scale 1. The window is these multiplied by the scale.
-   *
-   * There is no margin around the widget any more: it existed only to give a
-   * drop shadow room to fade out, and without one it was a band of invisible
-   * window that caught the pointer without showing anything.
-   */
-  const NORMAL_SIZE = { width: 320, height: 132 };
-  const COMPACT_SIZE = { width: 180, height: 58 };
-
-  /**
-   * How much taller the window gets when the panel is open.
-   *
-   * One height for every tab, sized to the tallest — a panel that resized as
-   * you moved between tabs would make the window jump under the pointer that
-   * was navigating it. Keys is now the tall one: five rows and a way back to
-   * the tour.
-   */
-  const PANEL_HEIGHT = 176;
-
-  /**
-   * And how much taller for the tour, which unfolds in the same place.
-   *
-   * Shorter than the panel: three lines of text and a row of controls, with
-   * the controls pinned to the bottom so they do not move between steps.
-   */
-  const TOUR_HEIGHT = 116;
+  import {
+    COMPACT_SIZE,
+    NORMAL_SIZE,
+    PANEL_HEIGHT,
+    TOUR_HEIGHT,
+  } from "./lib/layout";
 
   const timer = new Timer();
   const lock = new LockController();

@@ -27,6 +27,11 @@ export interface Rect {
   height: number;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
 /**
  * How much of the widget has to be on a screen, in each direction, for the
  * position to count as usable.
@@ -62,4 +67,41 @@ export function isReachable(
     const { x, y } = overlap(window, monitor);
     return x >= margin && y >= margin;
   });
+}
+
+/** How far a resting widget keeps from the edges of the space it is given. */
+export const RESTING_MARGIN_PX = 24;
+
+/**
+ * Where the widget goes the very first time, before anyone has moved it.
+ *
+ * Bottom right, near the tray, because that is where a thing you glance at
+ * belongs and it is the corner least likely to have something under it. Inside
+ * the *work area* rather than the screen, so it sits above the taskbar instead
+ * of behind it, and inset from the edges, because a window flush against a
+ * corner reads as stuck there rather than placed.
+ *
+ * The height asked for is the widget **with the panel unfolded**, not as it
+ * stands. Everything grows downward from here — the settings, and on the very
+ * first run the tour, which is the one thing that absolutely must be readable
+ * before anybody has learned anything. Placing by the resting height would put
+ * the introduction under the taskbar.
+ *
+ * Which does leave the widget floating a little high with nothing open. That
+ * is the trade, and it is only the starting position: the moment it is dragged
+ * anywhere, that is what gets remembered instead.
+ *
+ * Everything here is in physical pixels, which is what a work area is measured
+ * in. Clamped to the work area's own corner so that a screen too small for the
+ * widget puts it somewhere visible rather than off the top.
+ */
+export function restingPlace(
+  work: Rect,
+  unfolded: { width: number; height: number },
+  margin: number = RESTING_MARGIN_PX
+): Point {
+  return {
+    x: Math.max(work.x, work.x + work.width - unfolded.width - margin),
+    y: Math.max(work.y, work.y + work.height - unfolded.height - margin),
+  };
 }

@@ -336,7 +336,13 @@ decides how much the widget shows, the other how big it is.</em></p>
 
 ## Where it lives
 
-Gloam remembers where you left it. The position is written down once the
+The first time it opens, Gloam settles into the bottom right of the screen at
+150%, inside the usable area rather than behind the taskbar and with room below
+for the panel to unfold into. Big enough to read at a glance from across the
+desk, which is the whole point of it, and well inside the scale range either
+way.
+
+After that it remembers where you left it. The position is written down once the
 window has been still for a moment — a drag reports every step of the pointer,
 and the places it passed through are not where it was left — and applied again
 at the next launch before anything has been drawn into the window, so the

@@ -58,7 +58,16 @@ export interface Prefs {
 
 export const DEFAULT_PREFS: Prefs = {
   compact: false,
-  scale: 1,
+  // Not 1. At 100% on a modern display the readout is small enough to have to
+  // look at rather than glance at, and glancing is the entire proposition.
+  // 150% is where the widget stops being a detail on the desktop and starts
+  // being something you can read from across the desk, which is the size the
+  // whole idea is written for. Still well inside the range, so the first
+  // instinct to resize has room in both directions.
+  //
+  // Only ever seen by somebody opening Gloam for the first time — anyone with
+  // a stored scale keeps theirs.
+  scale: 1.5,
   volume: 0.6,
   sound: "bowl",
   ambience: "full",

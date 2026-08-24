@@ -19,6 +19,14 @@ commit that made the change, and in the architecture notes.
   move between them and one click to skip the lot: what the sky is for, that
   there is no title bar to grab, what the padlock actually does, and where
   settings and the tray are. It never appears again on its own.
+- A resting place. The very first time Gloam opens it settles into the bottom
+  right of the screen — inside the usable area, so it sits beside the taskbar
+  rather than behind it, inset from both edges, and high enough that the panel
+  has somewhere to unfold. It starts at 150% too: at 100% on a modern display
+  the readout is small enough to have to look at rather than glance at, and
+  glancing is the whole proposition. Both only ever apply to somebody opening
+  it for the first time — anyone who has set a size or moved the window keeps
+  what they chose.
 - A **Keys** tab in the panel, listing every shortcut — and holding the way
   back to the tour for anyone who wants it a second time.
 

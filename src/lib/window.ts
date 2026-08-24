@@ -142,6 +142,36 @@ export async function listMonitors(): Promise<Rect[]> {
 }
 
 /**
+ * The primary screen's usable area, and how many physical pixels it has to a
+ * logical one.
+ *
+ * The work area rather than the screen: it is the monitor minus the taskbar,
+ * the dock, and whatever else the desktop has reserved along an edge. Placing
+ * a window by the screen's corner puts it behind those; placing it by the work
+ * area's corner puts it beside them.
+ *
+ * The scale factor comes back with it because the two are always needed
+ * together — the rectangle is in physical pixels and the widget's size is in
+ * logical ones, so neither is usable without the other.
+ */
+export async function primaryWorkArea(): Promise<{
+  rect: Rect;
+  scaleFactor: number;
+} | null> {
+  const m = await api();
+  if (!m) return null;
+
+  const monitor = await m.primaryMonitor();
+  if (!monitor) return null;
+
+  const { position, size } = monitor.workArea;
+  return {
+    rect: { x: position.x, y: position.y, width: size.width, height: size.height },
+    scaleFactor: monitor.scaleFactor,
+  };
+}
+
+/**
  * Fires while the window is being dragged, and whenever anything else moves
  * it. Returns an unlisten function.
  */
