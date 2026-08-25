@@ -30,6 +30,28 @@ export interface SkyState {
   glow: number;
   /** Star field visibility, 0..1. */
   stars: number;
+  /**
+   * How far the evening has come on, 0..1.
+   *
+   * The city lights up against this and never against `stars`, which is the
+   * mistake the first version made. Star visibility only ever rises, so a city
+   * tied to it only ever lit up: by the end of a break every window that was
+   * ever going to be on was on, and the place read as busier at two in the
+   * morning than at sunset. This one rises through a focus session and then
+   * stays where it is.
+   */
+  evening: number;
+  /**
+   * How much of the city is still up, 0..1.
+   *
+   * Holds at 1 while the sun is going down and falls through the break, which
+   * is what turns the lights back off: windows go out roughly in the order
+   * their occupants went to bed, some of them never do, and what is left at
+   * the end is the handful that burn all night. Two properties rather than one
+   * because a single number cannot say whether it is on its way up or down,
+   * and the two halves of an evening are not each other's reverse.
+   */
+  awake: number;
   /** Cloud colour: what the light of the moment does to them. */
   cloud: Rgb;
   /** Cloud visibility, 0..1. */
@@ -52,6 +74,8 @@ const FOCUS_START: SkyState = {
   bodyR: 26,
   glow: 0.85,
   stars: 0,
+  evening: 0,
+  awake: 1,
   cloud: [255, 216, 190],
   clouds: 0.5,
   birds: 0.85,
@@ -69,6 +93,8 @@ const FOCUS_END: SkyState = {
   bodyR: 30,
   glow: 0.45,
   stars: 0.35,
+  evening: 1,
+  awake: 1,
   cloud: [122, 84, 112],
   clouds: 0.44,
   birds: 1,
@@ -86,6 +112,8 @@ const BREAK_START: SkyState = {
   bodyR: 17,
   glow: 0.3,
   stars: 0.55,
+  evening: 1,
+  awake: 1,
   cloud: [48, 55, 90],
   clouds: 0.3,
   birds: 0.12,
@@ -103,6 +131,8 @@ const BREAK_END: SkyState = {
   bodyR: 15,
   glow: 0.5,
   stars: 1,
+  evening: 1,
+  awake: 0.22,
   cloud: [34, 40, 72],
   clouds: 0.2,
   birds: 0,
@@ -120,6 +150,8 @@ const DONE: SkyState = {
   bodyR: 16,
   glow: 0.65,
   stars: 0.9,
+  evening: 1,
+  awake: 0.45,
   cloud: [178, 150, 202],
   clouds: 0.4,
   birds: 0,
@@ -151,6 +183,8 @@ function mix(a: SkyState, b: SkyState, t: number): SkyState {
     bodyR: lerp(a.bodyR, b.bodyR, e),
     glow: lerp(a.glow, b.glow, e),
     stars: lerp(a.stars, b.stars, e),
+    evening: lerp(a.evening, b.evening, e),
+    awake: lerp(a.awake, b.awake, e),
     clouds: lerp(a.clouds, b.clouds, e),
     birds: lerp(a.birds, b.birds, e),
     accent: lerpRgb(a.accent, b.accent, e),
@@ -200,6 +234,8 @@ export function skyVars(s: SkyState): string {
     `--body-r: ${s.bodyR.toFixed(1)}rem`,
     `--glow: ${s.glow.toFixed(3)}`,
     `--stars: ${s.stars.toFixed(3)}`,
+    `--evening: ${s.evening.toFixed(3)}`,
+    `--awake: ${s.awake.toFixed(3)}`,
     `--cloud: ${css(s.cloud)}`,
     `--accent: ${css(s.accent)}`,
     `--ink: ${css(s.ink)}`,

@@ -46,10 +46,27 @@ export const LIMITS = {
 
 export type SettingKey = keyof typeof LIMITS;
 
-/** Snaps a value into range and onto the setting's step. */
-export function clampSetting(key: SettingKey, value: number): number {
+/**
+ * Snaps a value into range and onto the setting's step.
+ *
+ * `floor` is an optional extra stop below the range, and it is matched
+ * exactly rather than snapped to. That is the whole difference between an
+ * extra stop and a wider range: a stored 1 is a stored 1 and still comes back
+ * as the real minimum, whether or not the build reading it happens to also
+ * offer half a minute. Only a value that is exactly the stop is the stop.
+ *
+ * Nothing in the app passes one in a release build — see `dev.ts` — so this
+ * argument is how a stored test duration stops being legal the moment it is
+ * read by a shipped Gloam.
+ */
+export function clampSetting(
+  key: SettingKey,
+  value: number,
+  floor?: number
+): number {
   const { min, max, step } = LIMITS[key];
   if (!Number.isFinite(value)) return DEFAULT_CONFIG[key];
+  if (floor !== undefined && floor < min && value === floor) return floor;
   const snapped = Math.round(value / step) * step;
   return Math.min(max, Math.max(min, snapped));
 }
@@ -78,6 +95,11 @@ function atLeast(value: number, floor: number): number {
  * panel lets a field be briefly empty or nonsensical while it is being typed
  * into, and the engine's job is to be unbreakable by whatever arrives — not to
  * assume the caller already cleaned up.
+ *
+ * Durations are minutes and nothing here requires them to be whole ones, which
+ * is what lets the half-minute stop in `dev.ts` work without a special case:
+ * 0.5 is thirty thousand milliseconds by the same multiplication as every
+ * other value.
  */
 export function buildPlan(config: TimerConfig): Segment[] {
   const sessions = atLeast(Math.floor(config.focusSessions), 1);

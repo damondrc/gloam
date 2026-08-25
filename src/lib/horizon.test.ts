@@ -5,7 +5,11 @@ import {
   buildSkyline,
   HORIZON_SHARE,
   RIDGE,
+  RIDGE_SEED,
+  RIDGE_SEEDS,
   SKYLINE,
+  SKYLINE_SEED,
+  SKYLINE_SEEDS,
   WINDOW,
 } from "./horizon";
 import type { Building } from "./horizon";
@@ -14,20 +18,16 @@ import { NORMAL_SIZE } from "./layout";
 /**
  * These are generated shapes, so there is nothing to check them against by
  * eye at review time. What is worth pinning is the handful of properties that
- * make the difference between a city and a pile of rectangles — and the one
- * that matters most, which is that it is the *same* city every time.
- */
-
-const SEEDS = [7, 377_342, 1, 90_001];
-
-/**
- * The constraint the whole thing is carved out of, and the one an edit is
- * most likely to give away a pixel at a time.
+ * make the difference between a city and a pile of rectangles.
  *
- * Asserted against the widget's real height rather than against a number
- * repeated here, so that growing the frame does not quietly grow the horizon
- * with it.
+ * It used to also pin that it was the *same* city every time. It is not any
+ * more: one is drawn from a short cast at launch. So the seeds under test are
+ * no longer a few chosen for the test — they are every seed the app can
+ * actually show, and each of them has to hold up on its own. A cast member
+ * that fails here is one somebody would eventually have opened the widget and
+ * found.
  */
+
 describe("the budget", () => {
   it("keeps the whole horizon inside the last quarter of the widget", () => {
     expect(HORIZON_SHARE).toBeLessThanOrEqual(0.25);
@@ -48,11 +48,53 @@ describe("the budget", () => {
   });
 });
 
+/**
+ * The cast is authorship, so it is small, deliberate, and rolled exactly once.
+ */
+describe("the cast", () => {
+  it.each([
+    ["skyline", SKYLINE_SEEDS],
+    ["ridge", RIDGE_SEEDS],
+  ])("keeps the %s list short enough to have been looked at", (_, seeds) => {
+    expect(seeds.length).toBeGreaterThan(1);
+    expect(seeds.length).toBeLessThanOrEqual(8);
+  });
+
+  it.each([
+    ["skyline", SKYLINE_SEEDS],
+    ["ridge", RIDGE_SEEDS],
+  ])("has no %s seed twice", (_, seeds) => {
+    expect(new Set(seeds).size).toBe(seeds.length);
+  });
+
+  it("draws the city from the cast rather than from the whole range", () => {
+    expect(SKYLINE_SEEDS).toContain(SKYLINE_SEED);
+  });
+
+  it("draws the range from the cast rather than from the whole range", () => {
+    expect(RIDGE_SEEDS).toContain(RIDGE_SEED);
+  });
+
+  /**
+   * The roll happens at import and the result is held. The horizon is switched
+   * in the panel and switched back, and the component mounts and unmounts with
+   * it; if either of these were a getter the city would change under somebody
+   * in the middle of choosing it.
+   */
+  it("holds the city it drew rather than rolling again", () => {
+    expect(SKYLINE).toEqual(buildSkyline(SKYLINE_SEED));
+    expect(SKYLINE).toEqual(SKYLINE);
+  });
+
+  it("holds the range it drew rather than rolling again", () => {
+    expect(RIDGE).toEqual(buildRidge(RIDGE_SEED));
+  });
+});
+
 describe("buildSkyline", () => {
-  // The whole reason for a seeded generator rather than a random one. A
-  // skyline that rearranged itself between launches would be the opposite of
-  // ambient, and this is the test that keeps it from ever doing so.
-  it.each(SEEDS)("gives the same city every time for seed %i", (seed) => {
+  // Still the reason for a seeded generator rather than a random one: what a
+  // seed names has to be one city, not a family of them.
+  it.each(SKYLINE_SEEDS)("gives the same city every time for seed %i", (seed) => {
     expect(buildSkyline(seed)).toEqual(buildSkyline(seed));
   });
 
@@ -60,154 +102,294 @@ describe("buildSkyline", () => {
     expect(buildSkyline(7)).not.toEqual(buildSkyline(8));
   });
 
-  it("is the seed in the module, not something rolled at import", () => {
-    expect(SKYLINE).toEqual(buildSkyline(7));
-  });
+  describe.each(SKYLINE_SEEDS)("seed %i", (seed) => {
+    const city = buildSkyline(seed);
+    const planes = city.planes;
+    const all: readonly Building[] = planes.flat();
 
-  describe.each(SEEDS)("seed %i", (seed) => {
-    const city: readonly Building[] = buildSkyline(seed);
-
-    // Cut off at both edges rather than ending on them: a skyline whose last
-    // building finishes flush with the frame reads as a diagram of a city.
-    it("runs past both edges of the frame", () => {
-      expect(city[0].x).toBeLessThan(0);
-      const last = city[city.length - 1];
-      expect(last.x + last.width).toBeGreaterThan(BOX.width);
+    // One silhouette is a shape; three at three distances is depth, and depth
+    // is the only thing that made this stop reading as a jagged border.
+    it("is drawn in three planes", () => {
+      expect(planes).toHaveLength(3);
     });
 
-    it("leaves no gap the frame could show through", () => {
-      for (let i = 1; i < city.length; i += 1) {
-        expect(city[i].x).toBeGreaterThanOrEqual(
-          city[i - 1].x + city[i - 1].width
+    describe.each(planes.map((p, i) => [i, p] as const))(
+      "plane %i",
+      (_, blocks) => {
+        // Cut off at both edges rather than ending on them: a skyline whose
+        // last building finishes flush with the frame reads as a diagram.
+        it("runs past both edges of the frame", () => {
+          expect(blocks[0].x).toBeLessThan(0);
+          const last = blocks[blocks.length - 1];
+          expect(last.x + last.width).toBeGreaterThan(BOX.width);
+        });
+
+        it("does not lay one block over its own neighbour", () => {
+          for (let i = 1; i < blocks.length; i += 1) {
+            expect(blocks[i].x).toBeGreaterThanOrEqual(
+              blocks[i - 1].x + blocks[i - 1].width
+            );
+          }
+        });
+
+        // Which is a quarter of the widget and no more. The sky is the clock,
+        // so the sky is what has to dominate the frame.
+        it("keeps every roof inside the box and above the street", () => {
+          for (const b of blocks) {
+            expect(b.y).toBeGreaterThanOrEqual(0);
+            expect(b.y).toBeLessThan(BOX.base);
+            expect(b.width).toBeGreaterThan(0);
+          }
+        });
+
+        // Not one height, and not a staircase. A row of equal roofs is a fence.
+        it("varies in height", () => {
+          const roofs = blocks.map((b) => b.y);
+          expect(Math.max(...roofs) - Math.min(...roofs)).toBeGreaterThan(3);
+        });
+
+        it("hangs every mast off the roof it belongs to", () => {
+          for (const b of blocks) {
+            if (!b.mast) continue;
+            expect(b.mast.y).toBeLessThan(b.y);
+            expect(b.mast.x).toBeGreaterThan(b.x);
+            expect(b.mast.x + b.mast.width).toBeLessThan(b.x + b.width);
+            expect(b.mast.y).toBeGreaterThanOrEqual(0);
+          }
+        });
+
+        // Whole windows, not windows whose right-hand edge is on the sky. The
+        // size is not stored per window, so the check has to bring it along.
+        it("keeps every window inside the building it belongs to", () => {
+          for (const b of blocks) {
+            for (const w of b.windows) {
+              expect(w.x).toBeGreaterThan(b.x);
+              expect(w.x + WINDOW.width).toBeLessThan(b.x + b.width);
+              expect(w.y).toBeGreaterThan(b.y);
+              expect(w.y + WINDOW.height).toBeLessThan(BOX.height);
+            }
+          }
+        });
+
+        it("does not stack one window on another", () => {
+          for (const b of blocks) {
+            const seen = new Set<string>();
+            for (const w of b.windows) {
+              const cell = `${w.x.toFixed(2)}:${w.y.toFixed(2)}`;
+              expect(seen.has(cell)).toBe(false);
+              seen.add(cell);
+            }
+          }
+        });
+      }
+    );
+
+    /**
+     * Depth, stated as the arrangement that produces it rather than as the
+     * colours that show it. Planes that crossed would read as noise however
+     * they were painted.
+     */
+    describe("the arrangement", () => {
+      it("puts the far plane above the near ones", () => {
+        const highest = planes.map((p) => Math.min(...p.map((b) => b.y)));
+        expect(highest[0]).toBeLessThan(highest[1]);
+        expect(highest[1]).toBeLessThan(highest[2]);
+      });
+
+      // Distance is not only colour: a far plane is narrower and more crowded
+      // per inch of frame, which is most of why it reads as far.
+      it("makes the near blocks the wide ones", () => {
+        const widest = planes.map(
+          (p) => p.reduce((sum, b) => sum + b.width, 0) / p.length
         );
-      }
-    });
+        expect(widest[0]).toBeLessThan(widest[1]);
+        expect(widest[1]).toBeLessThan(widest[2]);
+      });
 
-    // Which is a quarter of the widget and no more. The sky is the clock, so
-    // the sky is what has to dominate the frame.
-    it("keeps every roof inside the box", () => {
-      for (const b of city) {
-        expect(b.y).toBeGreaterThanOrEqual(0);
-        expect(b.y).toBeLessThan(BOX.base);
-        expect(b.width).toBeGreaterThan(0);
-      }
-    });
-
-    // Taller than they are wide, or the city is a row of sheds.
-    it("stands the blocks up rather than laying them out", () => {
-      const upright = city.filter((b) => BOX.height - b.y > b.width);
-      expect(upright.length).toBeGreaterThan(city.length / 2);
-    });
-
-    // Not one height, and not a staircase. A row of equal towers is a fence.
-    it("varies in height", () => {
-      const heights = city.map((b) => BOX.height - b.y);
-      expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(8);
-    });
-
-    // Whole windows, not windows whose right-hand edge is on the sky. The
-    // size is not stored per window, so the check has to bring it along.
-    it("keeps every window inside the building it belongs to", () => {
-      for (const b of city) {
-        for (const w of b.windows) {
-          expect(w.x).toBeGreaterThan(b.x);
-          expect(w.x + WINDOW.width).toBeLessThan(b.x + b.width);
-          expect(w.y).toBeGreaterThan(b.y);
+      // The two behind stand up rather than lying down; the near plane is
+      // exempt on purpose, because a block filling the bottom of the frame is
+      // the near side of the street rather than a shed.
+      it("stands the distant blocks up rather than laying them out", () => {
+        for (const blocks of planes.slice(0, 2)) {
+          const upright = blocks.filter((b) => BOX.height - b.y > b.width);
+          expect(upright.length).toBeGreaterThan(blocks.length / 2);
         }
-      }
-    });
+      });
 
-    // The whole facade is glazed, roof to pavement, so a lit block reads as a
-    // building rather than as a strip of lights near its roof.
-    it("glazes the facade all the way down", () => {
-      for (const b of city) {
-        for (const w of b.windows) {
-          expect(w.y + WINDOW.height).toBeLessThan(BOX.height);
-        }
-      }
-
-      // The bottom row of the tallest block sits near the pavement, not a
-      // third of the way up it. One row's worth of margin, no more.
-      const tallest = [...city].sort((a, b) => a.y - b.y)[0];
-      const lowest = Math.max(...tallest.windows.map((w) => w.y));
-      expect(BOX.height - lowest).toBeLessThan(2 * WINDOW.pitchY);
-    });
-
-    it("does not stack one window on another", () => {
-      for (const b of city) {
-        const seen = new Set<string>();
-        for (const w of b.windows) {
-          const cell = `${w.x.toFixed(2)}:${w.y.toFixed(2)}`;
-          expect(seen.has(cell)).toBe(false);
-          seen.add(cell);
-        }
-      }
-    });
-
-    it("hangs every mast off the roof it belongs to", () => {
-      for (const b of city) {
-        if (!b.mast) continue;
-        expect(b.mast.y).toBeLessThan(b.y);
-        expect(b.mast.x).toBeGreaterThan(b.x);
-        expect(b.mast.x + b.mast.width).toBeLessThan(b.x + b.width);
-        expect(b.mast.y).toBeGreaterThanOrEqual(0);
-      }
+      // Whole-silhouette relief, which is what someone actually sees. Each
+      // plane on its own is allowed to be a narrow band of roofs.
+      it("gives the silhouette real relief", () => {
+        const heights = all.map((b) => BOX.height - b.y);
+        expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(8);
+      });
     });
 
     /**
-     * The three facts the lighting depends on, stated as behaviour rather than
-     * as numbers, because the numbers are a look and the behaviour is the
-     * idea: a city is never entirely dark, never entirely lit, and fills in
-     * between the two as the sky does.
+     * The culling contract. Whatever draws this should be able to walk the
+     * windows and trust that every one of them is visible, so the invariant
+     * belongs here rather than in the component.
      */
-    describe("the lights", () => {
-      const thresholds = city.flatMap((b) => b.windows.map((w) => w.threshold));
-
-      const litAt = (night: number): number =>
-        thresholds.filter((t) => t < night).length;
-
-      it("has some already burning in full daylight", () => {
-        expect(litAt(0)).toBeGreaterThan(0);
+    describe("the windows that were kept", () => {
+      it("leaves none of them buried under the street", () => {
+        for (const blocks of planes.slice(0, -1)) {
+          for (const b of blocks) {
+            for (const w of b.windows) {
+              expect(w.y + WINDOW.height).toBeLessThanOrEqual(BOX.base);
+            }
+          }
+        }
       });
 
-      it("still has some dark at the darkest the sky gets", () => {
-        expect(litAt(1)).toBeLessThan(thresholds.length);
+      it("leaves none of them behind a block in front", () => {
+        planes.forEach((blocks, i) => {
+          const nearer = planes.slice(i + 1).flat();
+          for (const b of blocks) {
+            for (const w of b.windows) {
+              for (const front of nearer) {
+                const overlapsX =
+                  w.x + WINDOW.width > front.x && w.x < front.x + front.width;
+                expect(overlapsX && w.y + WINDOW.height > front.y).toBe(false);
+              }
+            }
+          }
+        });
+      });
+
+      /**
+       * The near plane is the one nothing stands in front of, so it is the one
+       * that has to be glazed roof to pavement: a lit block whose lights stop
+       * a third of the way up reads as a strip of light rather than a
+       * building.
+       */
+      it("glazes the near facades all the way down", () => {
+        const near = planes[planes.length - 1];
+        const tallest = [...near].sort((a, b) => a.y - b.y)[0];
+        const lowest = Math.max(...tallest.windows.map((w) => w.y));
+        expect(BOX.height - lowest).toBeLessThan(2 * WINDOW.pitchY);
+      });
+    });
+
+    /**
+     * The shape of an evening, stated as behaviour rather than as numbers,
+     * because the numbers are a look and the behaviour is the idea: a city
+     * fills in while the sun goes down, is at its fullest when it has just
+     * gone, and empties through the night down to the few that never go out.
+     *
+     * The version before this one compared a single threshold against the star
+     * field. Stars only ever get brighter, so the city only ever got busier
+     * and was at its most awake at the very end of a break. These are the
+     * tests that would have caught it.
+     */
+    describe("the evening", () => {
+      const windows = all.flatMap((b) => b.windows);
+
+      /** How many are lit at a given point of the sky's two curves. */
+      const lit = (evening: number, awake: number): number =>
+        windows.filter((w) => evening >= w.wakes && awake >= w.sleeps).length;
+
+      /** Sunset, from the sun still up to the moment it has gone. */
+      const dusk = (evening: number): number => lit(evening, 1);
+
+      /** The break, from the top of the night to the end of it. */
+      const night = (awake: number): number => lit(1, awake);
+
+      it("has some already burning in full daylight", () => {
+        expect(dusk(0)).toBeGreaterThan(0);
       });
 
       it("fills in rather than switching on at once", () => {
-        expect(litAt(0.35)).toBeGreaterThan(litAt(0));
-        expect(litAt(0.7)).toBeGreaterThan(litAt(0.35));
-        expect(litAt(1)).toBeGreaterThan(litAt(0.7));
+        expect(dusk(0.35)).toBeGreaterThan(dusk(0));
+        expect(dusk(0.7)).toBeGreaterThan(dusk(0.35));
+        expect(dusk(1)).toBeGreaterThan(dusk(0.7));
+      });
+
+      it("still has some dark when the sun has gone", () => {
+        expect(dusk(1)).toBeLessThan(windows.length);
+      });
+
+      // The whole point of the change. Anything later than this is the city
+      // going to bed, and a peak anywhere else means it is running backwards.
+      it("is at its fullest the moment the sun has set", () => {
+        const peak = dusk(1);
+        for (const e of [0, 0.25, 0.5, 0.75, 1]) expect(dusk(e)).toBeLessThanOrEqual(peak);
+        for (const a of [1, 0.75, 0.5, 0.25, 0]) expect(night(a)).toBeLessThanOrEqual(peak);
+      });
+
+      it("empties rather than switching off at once", () => {
+        expect(night(0.6)).toBeLessThan(night(1));
+        expect(night(0.35)).toBeLessThan(night(0.6));
+        expect(night(0.22)).toBeLessThan(night(0.35));
+      });
+
+      // A break ends on a city that is asleep, not on one that was abandoned.
+      it("leaves a handful burning at the end of a break", () => {
+        expect(night(0.22)).toBeGreaterThan(windows.length / 12);
+        expect(night(0.22)).toBeLessThan(night(1) / 2);
+      });
+
+      // Nothing goes out. The last frame of a break is still a city.
+      it("keeps some lit however far the night runs", () => {
+        expect(night(0)).toBeGreaterThan(0);
+      });
+
+      /**
+       * The two halves of an evening are not each other's reverse. If a
+       * bedtime were derived from a switch-on the night would replay the
+       * sunset backwards, which is a rewind rather than a city.
+       */
+      it("does not put them to bed in the order they woke", () => {
+        const woke = windows.filter((w) => w.wakes > 0 && w.sleeps > 0);
+        const mean = (xs: number[]): number =>
+          xs.reduce((a, b) => a + b, 0) / xs.length;
+
+        const ws = woke.map((w) => w.wakes);
+        const ss = woke.map((w) => w.sleeps);
+        const mw = mean(ws);
+        const ms = mean(ss);
+
+        const cov = mean(woke.map((_, i) => (ws[i] - mw) * (ss[i] - ms)));
+        const sd = (xs: number[], m: number): number =>
+          Math.sqrt(mean(xs.map((x) => (x - m) ** 2)));
+
+        expect(Math.abs(cov / (sd(ws, mw) * sd(ss, ms)))).toBeLessThan(0.25);
       });
 
       // Enough to read as a city rather than as a few dots, few enough that
-      // the frame is not carrying a thousand nodes it does not need.
+      // the frame is not carrying a thousand nodes it does not need. Three
+      // glazed planes generate roughly twice this; the rest are culled.
       it("is a sensible number of windows", () => {
-        expect(thresholds.length).toBeGreaterThan(80);
-        expect(thresholds.length).toBeLessThan(320);
+        expect(windows.length).toBeGreaterThan(80);
+        expect(windows.length).toBeLessThan(320);
       });
 
       // A lit facade where every square is the same strength is a grid. The
       // brightness is most of what stops it being one, so it has to actually
       // vary — and never fall to something too faint to have been drawn.
       it("burns at a spread of brightnesses, none of them invisible", () => {
-        const burn = city.flatMap((b) => b.windows.map((w) => w.burn));
+        const burn = windows.map((w) => w.burn);
 
         expect(Math.min(...burn)).toBeGreaterThan(0.2);
         expect(Math.max(...burn)).toBeLessThanOrEqual(1);
         expect(Math.max(...burn) - Math.min(...burn)).toBeGreaterThan(0.3);
+      });
+
+      // Distance takes the lights with it, or the depth the colours bought is
+      // handed straight back: brightness reads as nearness more strongly than
+      // hue does.
+      it("dims with distance", () => {
+        const brightest = planes.map((p) =>
+          Math.max(...p.flatMap((b) => b.windows.map((w) => w.burn)))
+        );
+        expect(brightest[0]).toBeLessThan(brightest[1]);
+        expect(brightest[1]).toBeLessThan(brightest[2]);
       });
     });
   });
 });
 
 describe("buildRidge", () => {
-  it.each(SEEDS)("gives the same range every time for seed %i", (seed) => {
+  it.each(RIDGE_SEEDS)("gives the same range every time for seed %i", (seed) => {
     expect(buildRidge(seed)).toEqual(buildRidge(seed));
-  });
-
-  it("is the seed in the module, not something rolled at import", () => {
-    expect(RIDGE).toEqual(buildRidge(377_342));
   });
 
   // Depth is the point: one silhouette is a jagged border, three at different
@@ -216,7 +398,7 @@ describe("buildRidge", () => {
     expect(RIDGE.layers).toHaveLength(3);
   });
 
-  describe.each(SEEDS)("seed %i", (seed) => {
+  describe.each(RIDGE_SEEDS)("seed %i", (seed) => {
     const layers = buildRidge(seed).layers;
 
     const parse = (points: string): { x: number; y: number }[] =>

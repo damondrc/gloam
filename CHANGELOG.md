@@ -34,18 +34,24 @@ commit that made the change, and in the architecture notes.
   silhouette for a top edge — and the whole of it stays inside the last
   quarter of the frame, because the sky is the clock and the sky is what
   should dominate. **Water** is the flat band Gloam has always had.
-  **Skyline** is a city whose windows come on as the sky darkens and go out
-  again when the sun comes back up for the next session — the same clock the
-  sun is keeping, read a second way. Each window switches rather than fades,
-  at its own brightness; about a fifth never light at all and one in eight
-  never goes out, because that is what a city looks like. **Ridge** is three
-  ranges at three distances, the far one tallest and palest, every one of them
-  opaque — the sun and the moon set behind them.
-  Both shapes are generated from a fixed seed rather than drawn, so they are
-  the same view at every launch, and neither animates: the lights are one
-  comparison in the stylesheet, which is why they stay even in the lightest
-  backdrop mode. Compact keeps whichever was picked, as a low profile in a
-  shorter frame.
+  **Skyline** is a city, drawn in three planes at three distances so the near
+  blocks cut off the base of the towers behind them. Its windows fill in
+  through the sunset, are at their fullest the moment the sun has gone, and go
+  out again through the break as the place turns in for the night — the same
+  clock the sun is keeping, read a second way. Each window switches rather
+  than fades, at its own brightness and at its own hour: about a quarter never
+  light at all, one in eight is already on before the sun is down, and one in
+  six is still burning when the break ends. **Ridge** is three ranges at three
+  distances, the far one tallest and palest, every one of them opaque — the
+  sun and the moon set behind them.
+  Both shapes are generated rather than drawn, and each launch draws one from
+  a short cast of seeds that were rendered and looked at first. Whichever it
+  drew stays put for as long as the window is open — switching horizons and
+  switching back gets the same view — so what changes is which city or which
+  range you find the next time you open Gloam, never the one you are working
+  in front of. Neither animates: the lights are one comparison in the
+  stylesheet, which is why they stay even in the lightest backdrop mode.
+  Compact keeps whichever was picked, as a low profile in a shorter frame.
 
 ### Changed
 

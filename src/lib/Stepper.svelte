@@ -14,6 +14,16 @@
     min: number;
     max: number;
     step: number;
+    /**
+     * One extra stop below `min`, or nothing.
+     *
+     * Not a lower minimum: the range keeps its own grid and this sits under
+     * it, so the first press down from `min` lands here and the first press up
+     * from here lands back on `min`. Nothing in between is reachable, which is
+     * what stops an unusual low value from knocking every ordinary one off its
+     * step on the way back up.
+     */
+    floor?: number;
     suffix?: string;
     disabled?: boolean;
     onChange: (value: number) => void;
@@ -25,16 +35,28 @@
     min,
     max,
     step,
+    floor,
     suffix = "",
     disabled = false,
     onChange,
   }: Props = $props();
 
-  const canGoDown = $derived(!disabled && value > min);
+  /** The lowest reachable value, which is the extra stop when there is one. */
+  const bottom = $derived(floor !== undefined && floor < min ? floor : min);
+
+  const canGoDown = $derived(!disabled && value > bottom);
   const canGoUp = $derived(!disabled && value < max);
 
   function nudge(direction: number): void {
-    onChange(Math.min(max, Math.max(min, value + direction * step)));
+    if (direction < 0) {
+      // Off the bottom of the grid lands on the extra stop rather than
+      // stopping at the minimum; there is nowhere below that.
+      onChange(value > min ? Math.max(min, value - step) : bottom);
+      return;
+    }
+    // And back up from the extra stop lands on the minimum rather than a step
+    // above it, which would leave every later value half a step off.
+    onChange(value < min ? min : Math.min(max, value + step));
   }
 </script>
 
@@ -57,7 +79,7 @@
     tabindex="-1"
     aria-label={label}
     aria-valuenow={value}
-    aria-valuemin={min}
+    aria-valuemin={bottom}
     aria-valuemax={max}
   >
     {value}{suffix}

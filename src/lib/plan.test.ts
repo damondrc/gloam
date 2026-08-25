@@ -96,6 +96,65 @@ describe("clampSetting", () => {
   it.each(keys)("ships a default that its own limits allow (%s)", (key) => {
     expect(clampSetting(key, DEFAULT_CONFIG[key])).toBe(DEFAULT_CONFIG[key]);
   });
+
+  /**
+   * The extra stop a test build offers below the range — see `dev.ts`.
+   *
+   * The behaviour worth pinning is not that half a minute is allowed. It is
+   * that allowing it changes nothing else: a stop is one exact value, not a
+   * lower minimum, and it only exists for whoever passes it in.
+   */
+  describe("an extra stop below the range", () => {
+    const STOP = 0.5;
+
+    it("keeps a value that is exactly the stop", () => {
+      expect(clampSetting("focusMinutes", STOP, STOP)).toBe(STOP);
+      expect(clampSetting("breakMinutes", STOP, STOP)).toBe(STOP);
+    });
+
+    // The stop is not a widened range. Everything between it and the minimum
+    // is as illegal as it was before, so a hand-edited 1 is still a 1 that
+    // never happened.
+    it("still sends everything else below the minimum up to it", () => {
+      const { min } = LIMITS.focusMinutes;
+
+      expect(clampSetting("focusMinutes", 1, STOP)).toBe(min);
+      expect(clampSetting("focusMinutes", 0, STOP)).toBe(min);
+      expect(clampSetting("focusMinutes", -4, STOP)).toBe(min);
+      expect(clampSetting("focusMinutes", min - 0.5, STOP)).toBe(min);
+    });
+
+    /**
+     * The one that matters most. A release build passes no stop, so a duration
+     * left behind in localStorage by a test build stops being a legal value
+     * the first time a shipped Gloam reads its preferences — nothing has to
+     * remember to clean it up.
+     */
+    it.each(keys)("is not legal for %s when nobody offers one", (key) => {
+      expect(clampSetting(key, STOP)).toBe(LIMITS[key].min);
+    });
+
+    it("ignores a stop that is not actually below the range", () => {
+      const { min } = LIMITS.focusMinutes;
+
+      expect(clampSetting("focusMinutes", min, min)).toBe(min);
+      expect(clampSetting("focusMinutes", min + 1, min + 1)).toBe(min);
+    });
+
+    // Which is the whole point of it: a segment you can watch end.
+    it("is thirty seconds of an actual plan", () => {
+      const plan = buildPlan({
+        focusMinutes: STOP,
+        breakMinutes: STOP,
+        focusSessions: 2,
+      });
+
+      expect(plan.map((segment) => segment.durationMs)).toEqual([
+        30_000, 30_000, 30_000,
+      ]);
+      expect(formatDuration(plan[0].durationMs)).toBe("00:30");
+    });
+  });
 });
 
 describe("formatDuration", () => {

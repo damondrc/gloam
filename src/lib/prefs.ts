@@ -10,6 +10,7 @@
  * notice. If a reason ever appears, this is still the seam.
  */
 
+import { TEST_FLOOR } from "./dev";
 import { clampSetting, DEFAULT_CONFIG } from "./plan";
 import type { TimerConfig } from "./plan";
 import { MAX_SCALE, MIN_SCALE } from "./scale.svelte";
@@ -153,8 +154,19 @@ function readConfig(value: unknown): TimerConfig {
 
   const stored = value as Partial<TimerConfig>;
   return {
-    focusMinutes: clampSetting("focusMinutes", Number(stored.focusMinutes)),
-    breakMinutes: clampSetting("breakMinutes", Number(stored.breakMinutes)),
+    // The extra stop is passed through so a duration set for testing survives
+    // a restart of the dev build. It is absent in a release build, which is
+    // what sends such a value back up to the real minimum.
+    focusMinutes: clampSetting(
+      "focusMinutes",
+      Number(stored.focusMinutes),
+      TEST_FLOOR.focusMinutes
+    ),
+    breakMinutes: clampSetting(
+      "breakMinutes",
+      Number(stored.breakMinutes),
+      TEST_FLOOR.breakMinutes
+    ),
     focusSessions: clampSetting("focusSessions", Number(stored.focusSessions)),
   };
 }

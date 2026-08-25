@@ -13,14 +13,16 @@
    *
    * Every shape is opaque. Distance is drawn as a colour the sky mixes, not as
    * a transparency, because a translucent range would let the sun and the moon
-   * pass straight through the mountain in front of them.
+   * pass straight through the mountain in front of them. Both horizons are
+   * drawn in three planes for the same reason: one silhouette is a shape, and
+   * three at three distances is a place.
    *
-   * Nothing here animates. The city lights out of one custom property the sky
-   * already publishes, compared against a threshold carried on each window,
-   * which is why two hundred lit squares cost a repaint rather than a frame
-   * loop. That is also why this is drawn in every ambience mode, and in
-   * compact: Light exists to stop per-frame work and blurred surfaces, and
-   * static geometry is neither.
+   * Nothing here animates. The city lights out of two custom properties the
+   * sky already publishes, compared against a pair of thresholds carried on
+   * each window, which is why two hundred lit squares cost a repaint rather
+   * than a frame loop. That is also why this is drawn in every ambience mode,
+   * and in compact: Light exists to stop per-frame work and blurred surfaces,
+   * and static geometry is neither.
    */
   import { BOX, RIDGE, SKYLINE, WINDOW } from "./horizon";
   import type { Horizon } from "./horizon";
@@ -30,6 +32,9 @@
   }
 
   let { kind }: Props = $props();
+
+  const planes = SKYLINE.planes;
+  const nearest = planes.length - 1;
 </script>
 
 <!-- Water draws nothing at all: the band stays as it was, and the option
@@ -42,46 +47,63 @@
     aria-hidden="true"
   >
     {#if kind === "skyline"}
-      <!-- The street between the blocks. Drawn first, and low, because it is a
-           floor for the gaps rather than a band for the rest to stand on. -->
-      <rect x="0" y={BOX.base} width={BOX.width} height={BOX.height - BOX.base} />
-
-      <!-- Every silhouette, then every window. Drawn building by building, a
-           mast would fall behind the neighbour it leans past. Each block runs
-           the full way down to the bottom edge of the frame: they are the same
-           mass as the ground, not something resting on top of it. -->
-      {#each SKYLINE as building, i (i)}
-        <rect
-          x={building.x}
-          y={building.y}
-          width={building.width}
-          height={BOX.height - building.y}
-        />
-        {#if building.mast}
+      {#each planes as blocks, plane (plane)}
+        <!-- The street between the blocks, painted *between* the distant
+             planes and the near one rather than under all of them. That is
+             the whole trick: the near mass cuts off the base of the towers
+             behind it, and a tower with its base cut off is a tower further
+             away. Painted first instead, the distant blocks would sit on top
+             of the street and float. -->
+        {#if plane === nearest}
           <rect
-            x={building.mast.x}
-            y={building.mast.y}
-            width={building.mast.width}
-            height={building.y - building.mast.y}
+            class="street"
+            x="0"
+            y={BOX.base}
+            width={BOX.width}
+            height={BOX.height - BOX.base}
           />
         {/if}
-      {/each}
 
-      {#each SKYLINE as building, i (i)}
-        {#each building.windows as light, j (j)}
+        <!-- Every silhouette in this plane, then every window in it. Drawn
+             building by building, a mast would fall behind the neighbour it
+             leans past. Each block runs the full way down to the bottom edge
+             of the frame: they are the same mass as the ground, not something
+             resting on top of it. -->
+        {#each blocks as building, i (i)}
           <rect
-            class="lit"
-            x={light.x}
-            y={light.y}
-            width={WINDOW.width}
-            height={WINDOW.height}
-            style="--threshold: {light.threshold}; --burn: {light.burn}"
+            class="block plane-{plane}"
+            x={building.x}
+            y={building.y}
+            width={building.width}
+            height={BOX.height - building.y}
           />
+          {#if building.mast}
+            <rect
+              class="block plane-{plane}"
+              x={building.mast.x}
+              y={building.mast.y}
+              width={building.mast.width}
+              height={building.y - building.mast.y}
+            />
+          {/if}
+        {/each}
+
+        {#each blocks as building, i (i)}
+          {#each building.windows as light, j (j)}
+            <rect
+              class="lit"
+              x={light.x}
+              y={light.y}
+              width={WINDOW.width}
+              height={WINDOW.height}
+              style="--wakes: {light.wakes}; --sleeps: {light.sleeps}; --burn: {light.burn}"
+            />
+          {/each}
         {/each}
       {/each}
     {:else}
       {#each RIDGE.layers as points, i (i)}
-        <polygon {points} class="range range-{i}" />
+        <polygon {points} class="range plane-{i}" />
       {/each}
     {/if}
   </svg>
@@ -113,20 +135,21 @@
     pointer-events: none;
   }
 
-  rect {
-    fill: rgb(var(--ground));
-  }
-
-  /* Three distances, three opaque colours the sky mixes as it goes. */
-  .range-0 {
+  /*
+   * Three distances, three opaque colours the sky mixes as it goes, shared by
+   * the city and the range so that switching between them is a change of
+   * subject rather than a change of palette.
+   */
+  .plane-0 {
     fill: rgb(var(--ground-far));
   }
 
-  .range-1 {
+  .plane-1 {
     fill: rgb(var(--ground-mid));
   }
 
-  .range-2 {
+  .plane-2,
+  .street {
     fill: rgb(var(--ground));
   }
 
@@ -134,15 +157,28 @@
    * A window is either on or off, at its own brightness.
    *
    * `opacity` does the switching and `fill-opacity` the brightness, and the
-   * two multiply. The multiplier on the switch is large enough that a window
-   * crosses from dark to lit in about a second of a session rather than over
-   * a quarter of it: somebody reached for a lamp. Values outside 0..1 are
-   * clamped by opacity itself, which is what lets a threshold below zero mean
-   * "always on" and one above one mean "never" without either needing a rule.
+   * two multiply. Values outside 0..1 are clamped by opacity itself, which is
+   * what lets a threshold below zero mean "always" and one above one mean
+   * "never" without either needing a rule.
    *
-   * An earlier version eased each window in over a sixth of the run, which
-   * looked less like a city coming on than like a dimmer being turned up on
-   * all of it at once.
+   * `min()` of two comparisons rather than one, because an evening has two
+   * halves. `--evening` rises while the sun goes down and then stays where it
+   * is, so the first term is what switches a window on and never turns it back
+   * off. `--awake` holds at 1 until the break and then falls, so the second
+   * term is what puts it out. A window is lit while both agree — which means
+   * the city fills in through the sunset, sits full through the top of the
+   * night, and empties as the break runs down to the few that burn until
+   * morning.
+   *
+   * The first version compared one threshold against the star field. Stars
+   * only ever get brighter, so the city only ever got busier: it was at its
+   * most awake at the very end of a break, which is exactly backwards.
+   *
+   * The multiplier is large enough that a window crosses from dark to lit in
+   * about a second of a session rather than over a quarter of it: somebody
+   * reached for a lamp. An earlier version eased each window in over a sixth
+   * of the run, which looked less like a city coming on than like a dimmer
+   * being turned up on all of it at once.
    *
    * The colour is the accent rather than a fixed amber, so the lights belong
    * to the same palette as everything else — warm while the sun is going
@@ -151,6 +187,22 @@
   .lit {
     fill: rgb(var(--accent));
     fill-opacity: var(--burn);
-    opacity: calc((var(--stars) - var(--threshold)) * 1000);
+    opacity: min(
+      (var(--evening) - var(--wakes)) * 1000,
+      (var(--awake) - var(--sleeps)) * 1000
+    );
+    /* Long enough to read as a switch being thrown rather than as a cut, short
+       enough that it is over before you have looked. It also covers the one
+       moment the whole city changes at once — the start of a focus session,
+       when the sun goes back up and the evening starts again — which without
+       it is a hard blackout. Two bursts of compositing an hour, and nothing
+       between them. */
+    transition: opacity 0.45s linear;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lit {
+      transition: none;
+    }
   }
 </style>

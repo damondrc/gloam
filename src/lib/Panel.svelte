@@ -6,6 +6,7 @@
    * where the machinery lives. Controls laid over the gradient would be hard
    * to read and would break the one idea the backdrop is carrying.
    */
+  import { TEST_FLOOR } from "./dev";
   import { LIMITS } from "./plan";
   import type { TimerConfig } from "./plan";
   import type { SoundSet } from "./sound";
@@ -156,6 +157,7 @@
         label="Focus"
         value={config.focusMinutes}
         {...LIMITS.focusMinutes}
+        floor={TEST_FLOOR.focusMinutes}
         suffix=" min"
         disabled={frozen}
         onChange={(value) => set("focusMinutes", value)}
@@ -164,6 +166,7 @@
         label="Break"
         value={config.breakMinutes}
         {...LIMITS.breakMinutes}
+        floor={TEST_FLOOR.breakMinutes}
         suffix=" min"
         disabled={frozen}
         onChange={(value) => set("breakMinutes", value)}
