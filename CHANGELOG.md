@@ -29,6 +29,18 @@ commit that made the change, and in the architecture notes.
   what they chose.
 - A **Keys** tab in the panel, listing every shortcut — and holding the way
   back to the tour for anyone who wants it a second time.
+- **Launch at login**, under a Startup heading in the General tab. Gloam
+  registers itself with the session and starts *in the tray* rather than on
+  screen: a widget is something you reach for, and a session manager is not a
+  person reaching. The tray icon or `Ctrl+Alt+G` brings it out. On a desktop
+  with no tray it opens on screen instead, because starting hidden with
+  nothing to bring it back is starting lost, and the line under the switch
+  says which of the two you will get.
+  The setting is not stored with the others. It lives in the operating system
+  — a registry value on Windows, a `.desktop` file in `~/.config/autostart` on
+  Linux — where Task Manager or a startup applications dialogue can change it
+  without Gloam knowing, so the panel asks rather than remembers, and the
+  switch only moves once the platform confirms it did.
 - A choice of horizon, in the Ambience tab. It replaces the bottom of the
   widget rather than standing on it, so what you get is one mass with a
   silhouette for a top edge — and the whole of it stays inside the last

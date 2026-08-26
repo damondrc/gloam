@@ -22,11 +22,15 @@ export const COMPACT_SIZE = { width: 180, height: 58 } as const;
  *
  * One height for every tab, sized to the tallest — a panel that resized as you
  * moved between tabs would make the window jump under the pointer that was
- * navigating it. Ambience is the tall one, and became so when the horizon
- * moved in beside the sound and the backdrop: a slider, three cyclers and the
- * two lines that say what the less obvious names are for.
+ * navigating it. General is the tall one now, at two headings: the cycle's
+ * three durations, and whether the machine opens Gloam by itself.
+ *
+ * The cost of this being a single number is that the shortest tab carries the
+ * tallest one's height, and Keys has the emptiest bottom edge of the four.
+ * That is the trade, and the alternative was measured and rejected rather than
+ * overlooked.
  */
-export const PANEL_HEIGHT = 190;
+export const PANEL_HEIGHT = 214;
 
 /**
  * And with the tour unfolded, which uses the same place.

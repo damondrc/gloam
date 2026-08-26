@@ -102,13 +102,13 @@ describe("restingPlace", () => {
   const WORK: Rect = { x: 0, y: 0, width: 1920, height: 1032 };
 
   /** The widget at its opening scale of 150%, with the panel's height in. */
-  const UNFOLDED = { width: 480, height: 483 };
+  const UNFOLDED = { width: 480, height: 519 };
 
   it("sits in the bottom right, inset from both edges", () => {
     const at = restingPlace(WORK, UNFOLDED);
 
     expect(at.x).toBe(1920 - 480 - RESTING_MARGIN_PX);
-    expect(at.y).toBe(1032 - 483 - RESTING_MARGIN_PX);
+    expect(at.y).toBe(1032 - 519 - RESTING_MARGIN_PX);
   });
 
   // The taskbar is the whole reason this takes a work area rather than a
@@ -145,7 +145,7 @@ describe("restingPlace", () => {
     const at = restingPlace(offset, UNFOLDED);
 
     expect(at.x).toBe(1920 + 2560 - 480 - RESTING_MARGIN_PX);
-    expect(at.y).toBe(-200 + 1400 - 483 - RESTING_MARGIN_PX);
+    expect(at.y).toBe(-200 + 1400 - 519 - RESTING_MARGIN_PX);
   });
 
   // Asserted as behaviour rather than as a number, so that setting the margin

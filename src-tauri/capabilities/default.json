@@ -23,6 +23,7 @@
     "core:window:allow-cursor-position",
     "core:window:allow-set-ignore-cursor-events",
     "core:event:allow-listen",
-    "core:event:allow-unlisten"
+    "core:event:allow-unlisten",
+    "autostart:default"
   ]
 }

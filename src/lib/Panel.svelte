@@ -13,6 +13,7 @@
   import type { Ambience } from "./ambience";
   import type { Horizon } from "./horizon";
   import Stepper from "./Stepper.svelte";
+  import Toggle from "./Toggle.svelte";
   import Cycler from "./Cycler.svelte";
   import { SHORTCUTS } from "./shortcuts";
 
@@ -61,6 +62,16 @@
     onAmbience: (value: Ambience) => void;
     horizon: Horizon;
     onHorizon: (value: Horizon) => void;
+    /** Whether the session's startup list has an entry for Gloam. */
+    atLogin: boolean;
+    onAtLogin: (value: boolean) => void;
+    /** False while the answer is still being read back from the platform. */
+    atLoginKnown: boolean;
+    /**
+     * Whether there is a tray to start into, which decides what launching at
+     * login actually looks like — and so what the line under it should say.
+     */
+    tray: boolean;
     /** Starts the first-run tour again, for anyone who wants it back. */
     onTour: () => void;
   }
@@ -78,8 +89,23 @@
     onAmbience,
     horizon,
     onHorizon,
+    atLogin,
+    onAtLogin,
+    atLoginKnown,
+    tray,
     onTour,
   }: Props = $props();
+
+  /**
+   * What launching at login will actually do, which is not obvious and is
+   * exactly the sort of thing somebody discovers by rebooting and concluding
+   * the setting is broken.
+   */
+  const startupHint = $derived(
+    tray
+      ? "Gloam waits in the tray. Ctrl+Alt+G brings it out."
+      : "Gloam opens on screen: this desktop has no tray to wait in."
+  );
 
   const AMBIENCE_OPTIONS = [
     { value: "full", label: "Full" },
@@ -178,6 +204,23 @@
         disabled={frozen}
         onChange={(value) => set("focusSessions", value)}
       />
+    </div>
+
+    <!-- A second heading rather than a fourth row under Cycle. How long a run
+         is and whether the machine opens Gloam by itself are not the same
+         question, and a run of controls with no seam between them invites the
+         reader to assume they are. -->
+    <p class="section apart">Startup</p>
+
+    <div class="rows">
+      <Toggle
+        label="Launch at login"
+        checked={atLogin}
+        pending={!atLoginKnown}
+        onChange={onAtLogin}
+      />
+
+      <p class="hint">{startupHint}</p>
     </div>
   {:else if tab === "ambience"}
     <div class="rows">
@@ -368,6 +411,13 @@
     font-weight: 600;
     letter-spacing: 0.2em;
     color: rgb(var(--accent) / 0.85);
+  }
+
+  /* Room above a heading that follows a group, so the seam between two groups
+     is wider than the gap between the rows inside either of them. Without it
+     the second heading reads as a label on the row above it. */
+  .section.apart {
+    margin-top: 14rem;
   }
 
   /* Says out loud what a change is about to cost, rather than letting the user

@@ -207,8 +207,31 @@ would break the one idea the backdrop carries.
 </p>
 
 It is split into two tabs, answering two questions: **General** is how long a
-run is, **Ambience** is what the widget is like to sit beside — its volume, the
-material it sounds like, and how alive the sky is.
+run is and whether the machine opens Gloam by itself, **Ambience** is what the
+widget is like to sit beside — its volume, the material it sounds like, how
+alive the sky is and what the horizon is.
+
+### Launch at login
+
+Under Startup, in General. Gloam registers itself with the session and starts
+**in the tray** rather than on screen. A widget is something you reach for, and
+a session manager is not a person reaching: arriving on top of a desktop that
+is still assembling itself is an interruption, which is the one thing this app
+exists in order not to be. The tray icon or `Ctrl+Alt+G` brings it out.
+
+Where no tray could be created it opens on screen instead, because starting
+hidden with nothing to bring it back is starting lost. The line under the
+switch says which of the two this machine will do, rather than leaving it to be
+discovered by rebooting.
+
+This is the only setting Gloam does not store with the others, and it is
+deliberate: it does not belong to Gloam. It is a registry value under `Run` on
+Windows and a `.desktop` file in `~/.config/autostart` on Linux, and either can
+be removed by Task Manager or a startup applications dialogue while the widget
+is running. A remembered copy would eventually be a switch that is confidently
+wrong, so the panel asks the platform at launch — and after a change, reads
+back what actually happened rather than assuming the write succeeded. A managed
+machine that refuses it leaves the switch where it was.
 
 There were three for a while, with sound and the backdrop kept apart. They were
 apart because they were built at different times, not because anyone choosing
@@ -599,8 +622,9 @@ laptop it was built on.
 - [x] A one-time tour on first run, so the sky, dragging and the padlock are
       discovered rather than read about
 - [x] The shortcuts listed inside the app
-- [ ] Launch on startup, as a preference
-- [ ] An alternative horizon or two — a city skyline whose windows light up as
+- [x] Launch on startup — into the tray, and read from the system rather than
+      remembered
+- [x] An alternative horizon or two — a city skyline whose windows light up as
       the sun goes down — as one row in the backdrop tab
 
 **1.0.0 — the declaration**
@@ -674,6 +698,8 @@ src/
     Panel.svelte      the settings panel below the horizon
     Stepper.svelte    minus/value/plus row
     Cycler.svelte     one-of-a-short-list row
+    Toggle.svelte     on/off row
+    autostart.ts      the startup entry, asked for rather than remembered
 src-tauri/            Rust shell, window configuration, global shortcut
 scripts/              version and changelog checks, used by CI
 .github/workflows/    checks on every push, a release on every tag

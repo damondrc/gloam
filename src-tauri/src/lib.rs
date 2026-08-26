@@ -5,6 +5,20 @@ use tauri::Manager;
 /// guaranteed way back in if hit-testing the padlock ever fails.
 const TOGGLE_LOCK_EVENT: &str = "gloam://toggle-lock";
 
+/// The argument the session's startup entry is registered with.
+///
+/// It is what tells one launch from another. Somebody double-clicking Gloam
+/// wants to see it; the session manager starting it at login is doing so
+/// before that person has decided to look at anything, and a widget that puts
+/// itself in front of a desktop still assembling itself is an interruption
+/// rather than an ambience.
+const HIDDEN_FLAG: &str = "--hidden";
+
+/// Whether this launch came from the startup entry rather than from a person.
+fn launched_hidden() -> bool {
+    std::env::args().any(|arg| arg == HIDDEN_FLAG)
+}
+
 /// Whether a tray icon actually exists.
 ///
 /// It usually does, and on a desktop that has no tray — or has one turned off,
@@ -49,6 +63,9 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(global_shortcut_plugin());
 
+    #[cfg(desktop)]
+    let builder = builder.plugin(autostart_plugin());
+
     builder
         .invoke_handler(tauri::generate_handler![dismiss, tray_present])
         .setup(|app| {
@@ -82,6 +99,24 @@ pub fn run() {
             app.manage(TrayPresence(tray));
             app.manage(HiddenAt(std::sync::Mutex::new(None)));
 
+            // Started by the session, and there is somewhere to be started
+            // into. Both halves matter: on a desktop with no tray, hiding at
+            // login would leave a running widget with nothing to bring it
+            // back, so the flag is ignored and it opens on screen. A setting
+            // that loses the app is worse than a setting that does less.
+            //
+            // Hidden directly rather than through `hide_to_tray`, which writes
+            // down where the window was standing. Nothing has placed it yet —
+            // the frontend does that before it paints, and this runs first —
+            // so what would be recorded is the position in the config file.
+            #[cfg(desktop)]
+            if tray && launched_hidden() {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+                set_toggle_entry(app.handle(), false);
+            }
+
             #[cfg(desktop)]
             register_toggle_shortcut(app.handle())?;
 
@@ -107,7 +142,13 @@ fn surface(app: &tauri::AppHandle) {
     // like the widget stumbling into place: it appears wherever the manager
     // felt like putting it and then jumps, a frame later, to where it was
     // actually left.
-    let hidden = take_hidden_position(app);
+    //
+    // Falling back to where the window already believes it is, for the one
+    // path that never went through `hide_to_tray`: a launch at login, hidden
+    // before the frontend had placed it. By the time anyone asks for it the
+    // position is set and only the map is missing, and without this the window
+    // manager would choose the corner instead.
+    let hidden = take_hidden_position(app).or_else(|| window.outer_position().ok());
     if let Some(position) = hidden {
         let _ = window.set_position(position);
     }
@@ -278,6 +319,27 @@ fn build_tray(
         .build(app)?;
 
     Ok(toggle)
+}
+
+/// Registers the app with whatever the platform uses for a startup list.
+///
+/// The entry is registered with `--hidden`, which is the whole reason this is
+/// worth having: Gloam launched at login goes to the tray and waits, rather
+/// than arriving on top of a desktop that is still finding its feet. A widget
+/// is something you reach for, and a session manager is not a person reaching.
+///
+/// Whether it is registered lives in the operating system and nowhere else —
+/// deliberately not in `gloam.prefs.v1`. Two records of one fact is two
+/// records that can disagree, and this one can be changed from outside the app
+/// entirely: Task Manager on Windows, a startup applications dialogue on
+/// Linux. The panel asks the plugin every time it opens rather than
+/// remembering an answer that may have stopped being true.
+#[cfg(desktop)]
+fn autostart_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        Some(vec![HIDDEN_FLAG]),
+    )
 }
 
 /// Refuses to start a second copy.

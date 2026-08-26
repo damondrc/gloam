@@ -18,6 +18,7 @@
   import { ambienceSettings } from "./lib/ambience";
   import Horizon from "./lib/Horizon.svelte";
   import { HORIZON_SHARE } from "./lib/horizon";
+  import { launchesAtLogin, setLaunchAtLogin } from "./lib/autostart";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
   import Birds from "./lib/Birds.svelte";
@@ -55,6 +56,39 @@
   // than after.
   let tray = $state(false);
   void hasTray().then((present) => (tray = present));
+
+  /**
+   * Whether Gloam is in the session's startup list — asked, never remembered.
+   *
+   * It is the one setting that lives outside `gloam.prefs.v1`, because it
+   * lives outside Gloam: it is a registry value or a file in an autostart
+   * directory, and it can be removed by Task Manager or a startup applications
+   * dialogue while the widget is running. Storing our own copy would mean
+   * showing a switch that is confidently wrong.
+   *
+   * Read once at launch rather than every time the panel opens, which is the
+   * compromise: a change made from outside during a single run is rare enough
+   * to live with, and polling for it would be a background task in an app that
+   * has no others.
+   */
+  let atLogin = $state(false);
+  let atLoginKnown = $state(false);
+  void launchesAtLogin().then((value) => {
+    atLogin = value;
+    atLoginKnown = true;
+  });
+
+  /**
+   * Trusts what the platform reports afterwards rather than what was asked
+   * for. Writing to a registry or a config directory is exactly the kind of
+   * thing a managed machine declines, and a switch that flips itself on when
+   * nothing happened is a lie told in the one place the user goes to check.
+   */
+  async function setAtLogin(value: boolean): Promise<void> {
+    atLoginKnown = false;
+    atLogin = await setLaunchAtLogin(value);
+    atLoginKnown = true;
+  }
 
   const stored = loadPrefs();
   let compact = $state(stored.compact);
@@ -635,6 +669,10 @@
        onAmbience={(next) => (ambience = next)}
        {horizon}
        onHorizon={(next) => (horizon = next)}
+       {atLogin}
+       {atLoginKnown}
+       {tray}
+       onAtLogin={setAtLogin}
        onTour={startTour}
      />
    {/if}
