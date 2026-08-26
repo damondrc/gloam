@@ -67,6 +67,14 @@ commit that made the change, and in the architecture notes.
 
 ### Changed
 
+- `Reset position` brings the widget back to the corner it lives in rather than
+  centring it. The middle of the screen is the most intrusive place on it, so
+  the old behaviour was a rescue you then had to undo; the corner is where
+  Gloam starts on a fresh install and where it is out of the way, whether you
+  leave it there locked or put it straight back in the tray. The spot is worked
+  out from the screen's usable area at the moment you ask for it, so it is as
+  certain to exist as the centre was — and it is the same call a first launch
+  makes, so the two cannot end up disagreeing.
 - The water band is the same height as the other two horizons — the last
   quarter of the widget rather than the last third — so switching between them
   does not move the skyline up and down, and there is a little more sky.

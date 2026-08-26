@@ -461,11 +461,18 @@ icon. It offers a menu, which is why the menu carries both directions.
 The middle entry is the reason the tray exists. A frameless window that stays
 on top can be dragged somewhere unhelpful, left on a monitor that is later
 unplugged, or hidden behind its own lock mode, and none of those has a way out
-from inside the widget. `Reset position` is the way out. It centres the window
-rather than returning it to the corner it starts in, because that corner is
-itself a position which may no longer exist — a changed monitor layout is the
-whole failure being recovered from, and the middle of the primary display is
-the one place that is always there.
+from inside the widget. `Reset position` is the way out. It brings the widget
+back to the corner it lives in — the same one a fresh install puts it in, and
+the same call that does it.
+
+That corner is not remembered; it is worked out from the primary screen's
+usable area at the moment it is asked for, so it is as certain to exist as any
+other spot. This used to centre the window, on the reasoning that a changed
+monitor layout is the failure being recovered from and the middle of the
+display is always there. True, and beside the point: the middle of the screen
+is the most intrusive place on it, and a rescue you then have to undo is half a
+rescue. Down in the corner it is out of the way whether you leave it locked at
+watermark strength or put it straight back in the tray.
 
 Nothing else goes in the menu. The tray is an escape hatch, not a second copy
 of the interface: a start button in there would be a control with none of the
@@ -677,6 +684,7 @@ src/
     timer.svelte.ts   the reactive state and the countdown
     shortcuts.ts      what each key means, and who else claims it
     placement.ts      whether a remembered position is still reachable
+    home.ts           where the widget belongs, asked once and used twice
     lock.svelte.ts    click-through and cursor hit-testing
     hitbox.ts         CSS pixels to desktop pixels, for the padlock
     scale.svelte.ts   the scale factor and its drag interaction

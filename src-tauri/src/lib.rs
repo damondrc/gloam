@@ -5,6 +5,16 @@ use tauri::Manager;
 /// guaranteed way back in if hit-testing the padlock ever fails.
 const TOGGLE_LOCK_EVENT: &str = "gloam://toggle-lock";
 
+/// Emitted when the tray is asked to fetch the widget back to where it lives.
+///
+/// Rust surfaces the window and then says so, rather than moving it: where the
+/// widget belongs is a question about the work area, the user's scale and
+/// whether the widget is folded, and all three of those are the frontend's to
+/// answer. It already answers them on the very first launch. Answering them
+/// twice, in two languages, is how the tray entry and a fresh install would
+/// eventually stop agreeing.
+const RECOVER_EVENT: &str = "gloam://recover";
+
 /// The argument the session's startup entry is registered with.
 ///
 /// It is what tells one launch from another. Somebody double-clicking Gloam
@@ -248,10 +258,12 @@ fn tray_present(tray: tauri::State<'_, TrayPresence>) -> bool {
 /// way out, and it is what makes remembering the window's position safe to
 /// build next.
 ///
-/// It centres rather than returning to the configured corner, because the
-/// corner is itself a position that may no longer exist: the whole failure
-/// being recovered from is a monitor layout that changed. The middle of the
-/// primary display is the one place that is always there.
+/// It returns the widget to the corner it lives in, which is the same place a
+/// fresh install puts it. That corner is recomputed from the primary screen's
+/// work area at the moment it is asked for, not recalled from anywhere, so it
+/// is as certain to exist as the middle of the display — which is what this
+/// used to do, and what it stopped doing: the centre of the screen is the most
+/// intrusive spot on it, and a rescue should not have to be undone.
 ///
 /// Nothing else goes in here. The tray is an escape hatch, not a second copy
 /// of the interface — a start button in a menu would be a control with none of
@@ -264,6 +276,7 @@ fn build_tray(
 ) -> Result<tauri::menu::MenuItem<tauri::Wry>, Box<dyn std::error::Error>> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+    use tauri::Emitter;
 
     // Named for what it will do, and the window starts out on screen.
     let toggle = MenuItem::with_id(app, "toggle", "Hide Gloam", true, None::<&str>)?;
@@ -288,11 +301,13 @@ fn build_tray(
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "toggle" => toggle_window(app),
+            // Surfaced first, then told to go home, so the widget is on
+            // screen for the move rather than arriving already moved. An
+            // explicit rescue is one of the few places where watching it
+            // happen is the confirmation that it happened.
             "recover" => {
                 surface(app);
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.center();
-                }
+                let _ = app.emit(RECOVER_EVENT, ());
             }
             "quit" => app.exit(0),
             _ => {}

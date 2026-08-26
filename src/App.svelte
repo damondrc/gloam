@@ -19,6 +19,7 @@
   import Horizon from "./lib/Horizon.svelte";
   import { HORIZON_SHARE } from "./lib/horizon";
   import { launchesAtLogin, setLaunchAtLogin } from "./lib/autostart";
+  import { goHome } from "./lib/home";
   import Stars from "./lib/Stars.svelte";
   import Clouds from "./lib/Clouds.svelte";
   import Birds from "./lib/Birds.svelte";
@@ -300,19 +301,33 @@
     return () => document.removeEventListener("visibilitychange", onVisibility);
   });
 
-  // The global shortcut is the way back in if hit-testing ever fails.
+  /**
+   * The two ways in from outside the window.
+   *
+   * The shortcut is the way back if hit-testing the padlock ever fails. The
+   * other is the tray asking for the widget to be fetched home — Rust surfaces
+   * it and says so, and the answer to *where* is computed here, because it
+   * depends on the work area, the current scale and whether the widget is
+   * folded. The same call the very first launch makes, so a rescue and a fresh
+   * install cannot end up disagreeing about where Gloam lives.
+   */
   $effect(() => {
-    let dispose: (() => void) | null = null;
+    let dispose: (() => void)[] = [];
     let cancelled = false;
 
-    void onBackendEvent("gloam://toggle-lock", () => toggleLock()).then((fn) => {
-      if (cancelled) fn();
-      else dispose = fn;
-    });
+    const subscribe = (name: string, handler: () => void): void => {
+      void onBackendEvent(name, handler).then((fn) => {
+        if (cancelled) fn();
+        else dispose.push(fn);
+      });
+    };
+
+    subscribe("gloam://toggle-lock", () => toggleLock());
+    subscribe("gloam://recover", () => void goHome(scale.value, compact));
 
     return () => {
       cancelled = true;
-      dispose?.();
+      for (const fn of dispose) fn();
     };
   });
 

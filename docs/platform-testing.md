@@ -96,8 +96,10 @@ about it is inference, and the README says so.
 | E2 | The close button hides the widget, and the run carries on | OK | OK |
 | E3 | Left-clicking the icon toggles the widget away and back | OK | NO |
 | E4 | The menu's first entry toggles, and says which way it will go | OK | OK |
-| E5 | `Reset position` recovers a widget dragged off-screen | OK | OK |
+| E5 | `Reset position` recovers a widget dragged off-screen, into the bottom-right corner | | |
 | E6 | `Reset position` works while the widget is locked | OK | OK |
+| E6b | `Reset position` lands in the same spot a fresh install does, and clear of the taskbar | | |
+| E6c | `Reset position` on a compact widget puts it in the corner too, not where an unfolded one would go | | |
 | E7 | `Quit` really ends the process — check Task Manager or `ps aux \| grep gloam` | OK | OK |
 
 ### F · The timer under interruption
