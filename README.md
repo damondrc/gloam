@@ -574,10 +574,13 @@ looked correct. Fifty milliseconds off the grid, and they mean something.
 | Linux · Wayland | Not tested |
 | macOS | Never run |
 
-Linux packages are built inside an Ubuntu 22.04 container, and run on **Ubuntu
-22.04, Debian 12 and Mint 21** or newer. A `.deb`, and nothing else: the
-AppImage was withdrawn after two attempts at making it play sound, and a silent
-alarm looks exactly like a working one.
+Linux packages are built inside an Ubuntu 22.04 container and are expected to
+run on **Ubuntu 22.04, Debian 12 and Mint 21** or newer — expected rather than
+observed, and [platforms.md](docs/platforms.md) says which half of that was
+measured and which was deduced. A `.deb`, and nothing else: the AppImage was
+withdrawn after two attempts at making it play sound, and a silent alarm looks
+exactly like a working one. Fedora, openSUSE and Arch have no package yet, and
+[getting one to them](docs/open.md) is on the list rather than half-done.
 
 The rows above say what somebody checked on a real machine, from
 [the checklist](docs/platform-testing.md) that gets run before a release.

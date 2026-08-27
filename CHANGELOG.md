@@ -81,6 +81,16 @@ commit that made the change, and in the architecture notes.
 
 ### Fixed
 
+- The platform notes no longer claim an `.rpm` that was never built. They said
+  one was published and unverified; the bundle targets have only ever been the
+  Windows installer and the `.deb`. The claim is withdrawn rather than made
+  true by adding the target, because publishing a package nobody has installed
+  is what the withdrawn AppImage was. Fedora, openSUSE and Arch are on the
+  open list, with an `.rpm` and a Flatpak as the two routes.
+- The same notes now say which half of Gloam's Linux floor was measured and
+  which was deduced. That the binary needs nothing newer than glibc 2.34 was
+  read out of its own symbols; that it therefore runs on Ubuntu 22.04, Debian
+  12 and Mint 21 follows from a dependency and has not been watched happen.
 - The shooting star's reflection only appears where there is water. It belongs
   to the surface rather than to the sky, and a glow rising out of a rooftop is
   a reflection of nothing. The streak itself still crosses whichever horizon

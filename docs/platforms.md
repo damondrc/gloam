@@ -39,14 +39,21 @@ window at its largest size for the length of a drag.
 ### How far back a Linux release reaches
 
 Packages are built by CI inside an **Ubuntu 22.04 container**, and the oldest
-releases they run on are **Ubuntu 22.04, Debian 12 and Mint 21**.
+releases they are expected to run on are **Ubuntu 22.04, Debian 12 and
+Mint 21**.
 
-Two things set that floor, and only one of them is the obvious one. The binary
-itself asks for nothing newer than **glibc 2.34** — measured, not assumed, by
-reading the versioned symbols out of it — which is older than the container it
-was built in. What actually decides the limit is `libwebkit2gtk-4.1`, which the
-`.deb` depends on and which first appears in those releases. Building somewhere
-older would not widen the range.
+*Expected*, and the word is doing real work. Half of that floor is measured:
+the binary asks for nothing newer than **glibc 2.34**, read out of its own
+versioned symbols, which is older than the container it was built in. The other
+half is deduced — what actually decides the limit is `libwebkit2gtk-4.1`, which
+the `.deb` depends on and which first appears in those releases. Building
+somewhere older would not widen the range.
+
+Deduced from a dependency is a good deal stronger than a guess and still weaker
+than having watched it start. This is the one claim on this page that did not
+come from a real machine, and it is a promise already published beside the
+downloads, so it is [on the list](open.md): one Ubuntu 22.04 virtual machine
+turns the sentence into an observation.
 
 The container is still what keeps that true. glibc is not backward compatible,
 so a build on a newer base would raise the requirement above what any of those
@@ -73,10 +80,19 @@ else's packaging while the `.deb` was correct throughout. A silent alarm looks
 exactly like a working one; shipping nothing is more honest than shipping
 either of those.
 
-An `.rpm` covers Fedora and openSUSE. It is published and **not yet verified**
-— nothing has installed it, so nothing is claimed about it beyond that it
-builds. Confirming it needs one virtual machine, and it is
-[on the list](open.md).
+There is no `.rpm` either, and an earlier version of this page said there was.
+It said the package was published and unverified, while `tauri.conf.json` had
+only ever listed `nsis` and `deb` — so Fedora and openSUSE have no package at
+all, rather than one nobody had installed. The claim is withdrawn here rather
+than made true by adding the target, because adding it would mean publishing a
+package nobody has installed, which is the exact thing the AppImage taught this
+project not to do. How to reach those distributions is
+[on the list](open.md), with an `.rpm` and a Flatpak as the two routes.
+
+A document whose whole purpose is to say only what somebody checked is the
+worst place for a sentence nobody checked. Recorded rather than quietly
+deleted, because the lesson is the useful part: this one survived two releases
+by being plausible.
 
 ## Linux · Wayland
 
