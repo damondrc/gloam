@@ -67,6 +67,8 @@ trailing break has nothing to resume into, so it is dead time.
 - An ambient sky whose state encodes progress
 - Clouds that drift across it, a flock that crosses once in a long while, and
   a shooting star on a rare night
+- A choice of horizon: open water, a city whose windows light up as the sky
+  goes dark, or a mountain ridge — generated rather than drawn
 - Lock mode: dims the widget and lets clicks pass through to the window beneath
 - Compact mode: double-click to shrink to the readout, play control and padlock
 - Resizable from 80% to 180% by dragging the corner grip
@@ -75,6 +77,9 @@ trailing break has nothing to resume into, so it is dead time.
 - Soft synthesised sound throughout — no audio assets, no jump scares
 - A tray icon, so the widget can be put away without stopping the run — and
   found again if it ever ends up somewhere you cannot reach
+- Launches with the session if you ask it to, into the tray rather than onto
+  your screen
+- A one-time tour on the very first run, four steps, gone for good afterwards
 - Controls stay hidden until you hover, so the widget reads as scenery
 
 <p align="center">
@@ -203,13 +208,40 @@ would break the one idea the backdrop carries.
 
 <p align="center">
   <img src="docs/media/settings.gif" width="640"
-       alt="The chevron unfolds a panel below the horizon; stepping the focus and break durations on the general tab, then moving through the sound and backdrop tabs">
+       alt="The chevron unfolds a panel below the horizon; stepping the focus and break durations, then moving between the tabs">
 </p>
 
-It is split into two tabs, answering two questions: **General** is how long a
-run is and whether the machine opens Gloam by itself, **Ambience** is what the
-widget is like to sit beside — its volume, the material it sounds like, how
-alive the sky is and what the horizon is.
+Three tabs, answering three questions:
+
+| | |
+| --- | --- |
+| **General** | How long a run is, and whether the machine opens Gloam by itself. |
+| **Ambience** | What the widget is like to sit beside: its volume, the material it sounds like, how alive the sky is, and what the horizon is. |
+| **Keys** | Every shortcut, and the way back to the tour. |
+
+**Keys** is the odd one and earned its place by being odd: it is the only tab
+with nothing to change. Folding a reference table in among controls would have
+made it look like a setting and made the controls harder to scan, so it is kept
+apart — which is also why it can hold *Show the tour again* without that
+reading as a preference either.
+
+The other two were three for a while, with sound and the backdrop apart. They
+were apart because they were built at different times, not because anyone
+choosing between them thinks of them as different: both answer how much of
+itself the widget should make you aware of. Reuniting them left the panel
+describing the widget instead of its own history — and the tab that replaced
+theirs is the one that is not a setting at all.
+
+Tabs rather than one column, because stacked the sections run past 280 design
+pixels — at 180% scale, most of a laptop screen. The tab is navigation rather
+than preference, so it is not remembered.
+
+Durations are steppers rather than number fields. At this size a form input
+looks borrowed from another application, and more usefully a stepper cannot
+produce an invalid value — there is no empty state and nothing to mistype. They
+freeze while the timer runs, so a stray click cannot discard a session; when
+the run is paused part-way the panel says that applying a change will restart
+it, rather than letting the cost be discovered.
 
 ### Launch at login
 
@@ -232,23 +264,6 @@ is running. A remembered copy would eventually be a switch that is confidently
 wrong, so the panel asks the platform at launch — and after a change, reads
 back what actually happened rather than assuming the write succeeded. A managed
 machine that refuses it leaves the switch where it was.
-
-There were three for a while, with sound and the backdrop kept apart. They were
-apart because they were built at different times, not because anyone choosing
-between them thinks of them as different: both are the answer to how much of
-itself the widget should make you aware of. Reuniting them cost one tab and
-left the panel describing the widget instead of its history.
-
-Tabs at all, rather than one column, because stacked the sections run past 280
-design pixels — at 180% scale, most of a laptop screen. The tab is navigation
-rather than preference, so it is not remembered.
-
-Durations are steppers rather than number fields. At this size a form input
-looks borrowed from another application, and more usefully a stepper cannot
-produce an invalid value — there is no empty state and nothing to mistype. They
-freeze while the timer runs, so a stray click cannot discard a session; when
-the run is paused part-way the panel says that applying a change will restart
-it, rather than letting the cost be discovered.
 
 ### Sound
 
@@ -342,7 +357,7 @@ coherent thing to want rather than a point on a slider.
 The sky, the horizon and the grain are never touched by any of them. They are
 the widget's face rather than its ambience.
 
-## The horizon
+### The horizon
 
 **Horizon**, in the same tab, chooses what the bottom of the widget *is* —
 not something standing on the flat band, but the band itself.
@@ -381,27 +396,37 @@ than a transparency. Fading a far ridge instead is cheaper and looks
 plausible until the moon rises behind it — a mountain you can see the moon
 through is not a mountain.
 
-The city is the one that does something. Each window carries a threshold and
-comes on when the night passes it, so the lights appear across a focus
-session as the sun goes down, fill in through a break, and go out again when
-the sun comes back up for the next one. The same clock the sky is already
-keeping, read a second way, and it costs nothing: one comparison in the
-stylesheet against a custom property the sky publishes anyway. Nothing here
-animates, which is why it stays even in **Light**.
+The city is the one that does something. It fills in through the sunset, is at
+its fullest the moment the sun has gone, and empties again through the break as
+the place turns in for the night. The same clock the sky is already keeping,
+read a second way, and it costs nothing: two comparisons in the stylesheet
+against custom properties the sky publishes anyway. Nothing here animates,
+which is why it stays even in **Light**.
+
+An evening has two halves and they are not each other's reverse, so a window
+carries a bedtime as well as a switch-on and the two are drawn independently —
+the office that lit up first is not the one that goes dark first. An earlier
+version had a single number and could only ever get busier, which put the city
+at its most awake at the end of a break: exactly backwards.
 
 A window switches rather than fades, at its own brightness — somebody reached
-for a lamp. An earlier version eased each one in over a sixth of the run,
-which looked less like a city coming on than like a dimmer being turned up on
-all of it at once. About a fifth never light at all and roughly one in eight
-burns day and night, because a grid that fills in completely stops being a
-city and becomes a spreadsheet, and a city with every light off at dusk is one
-nobody lives in. The whole facade is glazed, roof to pavement: lights gathered
-near the roofs read as a strip rather than as buildings.
+for a lamp. An earlier version eased each one in over a sixth of the run, which
+looked less like a city coming on than like a dimmer being turned up on all of
+it at once. About a quarter never light at all, one in eight is already on
+before the sun is down, and one in six is still burning when the break ends,
+because a grid that fills in completely stops being a city and becomes a
+spreadsheet, and a city with every light off at dusk is one nobody lives in.
+The whole facade is glazed, roof to pavement: lights gathered near the roofs
+read as a strip rather than as buildings.
 
-Neither shape is drawn. Both are generated from a fixed seed at build time —
-a skyline that rearranged itself between launches would be the opposite of
-ambient, so the seed is authorship rather than variety, and the repository
-carries no artwork it would otherwise have to license.
+Neither shape is drawn. Both are generated, and each launch draws one from a
+short cast of seeds that were rendered and looked at first — so "picked at
+random" means one of a handful known to hold together, not whatever comes out.
+Whichever it drew stays put for as long as the window is open: switching
+horizons and switching back gets the same view. What changes is which city or
+which range you find the next time you open Gloam, never the one you are
+working in front of. That distinction is the whole of it — what breaks ambience
+is not variety, it is something changing while you are looking at it.
 
 ## Compact mode
 
@@ -425,6 +450,21 @@ The first time it opens, Gloam settles into the bottom right of the screen at
 for the panel to unfold into. Big enough to read at a glance from across the
 desk, which is the whole point of it, and well inside the scale range either
 way.
+
+And it introduces itself, once. Four steps unfold below the widget — what the
+sky is for, that there is no title bar so you drag it from anywhere, how to
+fold it small, and how to make it disappear. They are a ladder, and the rungs
+are how far out of your way Gloam will get, each one answering the objection
+the last might have raised.
+
+Everything described can be done while it is being described, which is why the
+tour unfolds *below* the widget rather than over it: a card covering the thing
+it is talking about could only describe what the reader had stopped being able
+to see. Locking, folding to compact or opening the settings suspends it and
+returns to the same step rather than ending it — an instruction you are not
+allowed to follow is worse than no instruction. Only `Skip` and the last arrow
+finish it, and after that it never appears on its own again. **Keys → Show the
+tour again** is the way back for anyone who wants it.
 
 After that it remembers where you left it. The position is written down once the
 window has been still for a moment — a drag reports every step of the pointer,
@@ -486,7 +526,7 @@ to do.
 
 ## Running it
 
-Requires [Node.js](https://nodejs.org) 18+ and the
+Requires [Node.js](https://nodejs.org) 20 or newer and the
 [Rust toolchain](https://rustup.rs). On Windows you also need the
 **Desktop development with C++** workload from the Visual Studio Build Tools.
 
@@ -505,6 +545,21 @@ npm run dev        # then open http://localhost:1420
 
 All Tauri calls are guarded, so the widget degrades gracefully outside the
 desktop shell.
+
+Two things a development build does that a shipped one cannot. The durations
+offer a **half-minute stop** below their real minimum, because the sky takes a
+whole session to get from afternoon to dark and the city takes a whole break to
+fall asleep — checking the order any of that happens in would otherwise cost
+forty minutes per adjustment. And the flock and the shooting star are scheduled
+far more often, so they can be looked at at all. Both live behind
+`import.meta.env.DEV`, which the release bundler resolves to `false` and then
+removes: they are not hidden settings in a shipped Gloam, they are absent.
+
+One trap that follows from the same difference. **Turning on *Launch at login*
+in a development build registers the debug binary**, which only works while
+Vite is running — and since Gloam refuses second copies, your next `npm run
+app` will surface that broken instance instead of starting a new one and look
+like the app is broken. Turn the switch off again before you finish.
 
 ### Tests
 
@@ -529,8 +584,10 @@ are running the same string out of the same file.
 The suite covers the parts where being wrong would be invisible: the plan
 builder, the duration formatter, the settings clamp, the timer engine, the
 validation applied to stored preferences, the keyboard bindings, whether a
-remembered window position is still on a screen, and the arithmetic that
-decides whether the cursor is over the padlock.
+remembered window position is still on a screen, the arithmetic that decides
+whether the cursor is over the padlock, and the generated horizons — which are
+checked as shapes rather than as coordinates, since there is nothing to compare
+a generated skyline against by eye at review time.
 
 A misplaced button is obvious. A seven-session run with six breaks instead of
 five is not. Neither is a pause that loses forty milliseconds, a transition
@@ -622,9 +679,9 @@ laptop it was built on.
       exits, so the widget cannot be lost by clicking the wrong thing.
 - [x] The window position remembered between runs, and checked against the
       monitors that actually exist at startup rather than the ones that did
-- [ ] The countdown correct while the window is hidden, not only while it is
+- [x] The countdown correct while the window is hidden, not only while it is
       being watched
-- [ ] The timer engine, the preference validation and the hit-test arithmetic
+- [x] The timer engine, the preference validation and the hit-test arithmetic
       under test — the places where being wrong would be invisible
 
 **0.7.0 — polish, if it earns its place**
@@ -680,11 +737,14 @@ them work.
 
 ```
 src/
+  main.ts             places the window, then mounts the app into it
   App.svelte          composition and layout of every visual layer
+  app.css             the one rule that makes rem mean a scaled design pixel
   lib/
-    plan.ts           the timer's pure logic, and the only tested code
-    plan.test.ts      its rules, asserted across many configurations
+    plan.ts           the timer's pure logic
     timer.svelte.ts   the reactive state and the countdown
+    layout.ts         how big the widget is, before the scale is applied
+    dev.ts            what a development build may do and a release may not
     shortcuts.ts      what each key means, and who else claims it
     placement.ts      whether a remembered position is still reachable
     home.ts           where the widget belongs, asked once and used twice
@@ -701,7 +761,8 @@ src/
     Clouds.svelte     drifting banks
     Birds.svelte      the flock, and when it flies
     birdFrames.ts     its twelve silhouettes, generated
-    Horizon.svelte    what stands on the far shore
+    ShootingStar.svelte  the rarest thing in the widget
+    Horizon.svelte    what the bottom of the frame is
     Grain.svelte      generated film grain
     Controls.svelte   transport buttons
     Padlock.svelte    the animated lock
@@ -711,9 +772,13 @@ src/
     Cycler.svelte     one-of-a-short-list row
     Toggle.svelte     on/off row
     autostart.ts      the startup entry, asked for rather than remembered
+    tour.ts           the four steps, and what each one points at
+    Tour.svelte       the card they are read from
+    *.test.ts         beside what they test, seven files
 src-tauri/            Rust shell, window configuration, global shortcut
 scripts/              version and changelog checks, used by CI
 .github/workflows/    checks on every push, a release on every tag
+docs/                 the platform checklist, what it found, and what is open
 docs/media/           the stills and GIFs in this file
 ```
 
