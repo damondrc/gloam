@@ -4,16 +4,16 @@ All notable changes to Gloam are recorded here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Until 1.0 a minor release may change the shape of stored preferences; from 1.0
-onward, anything that would invalidate `gloam.prefs.v1` needs a migration or a
-major version.
+From 1.0 onward, anything that would invalidate `gloam.prefs.v1` needs a
+migration or a major version. Adding a field does not: preferences are
+validated on the way in and anything missing falls back to its default.
 
 Entries describe what changed for someone using Gloam. Reasoning lives in the
 commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
-## [0.7.0] — 2026-08-31
+## [1.0.0] — 2026-09-04
 
 ### Added
 
@@ -311,8 +311,8 @@ commit that made the change, and in the architecture notes.
 - Fixed 30/10 focus and break cycles.
 - An ambient sky whose state encodes progress, and chimes on each transition.
 
-[Unreleased]: https://github.com/damondrc/gloam/compare/v0.7.0...HEAD
-[0.7.0]: https://github.com/damondrc/gloam/compare/v0.6.0...v0.7.0
+[Unreleased]: https://github.com/damondrc/gloam/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/damondrc/gloam/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/damondrc/gloam/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/damondrc/gloam/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/damondrc/gloam/compare/v0.3.1...v0.4.0

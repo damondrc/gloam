@@ -247,7 +247,7 @@ ask about a `.deb`, and the Wayland column is absent rather than empty — there
 is no session to run it on, which `docs/platforms.md` says in the only place a
 reader would look.
 
-The blank rows below that are the ones 0.7.0 added, plus F2, F4 and F5, which
+The blank rows below that are the ones 1.0.0 added, plus F2, F4 and F5, which
 were rewritten and no longer mean what the old marks were given for. A mark
 that was earned by a different question is not a mark.
 

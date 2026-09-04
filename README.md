@@ -679,8 +679,8 @@ Anything new arrives as something you expand into, so a Gloam with every
 setting turned on still looks like the screenshot above until you ask it for
 more. Growth goes into disclosure, not into the resting state.
 
-What is left before 1.0 is mostly not features. The timer works; what Gloam has
-been missing is everything around it — remembering where it lives, being
+What was left before 1.0 was mostly not features. The timer worked; what Gloam
+had been missing was everything around it — remembering where it lives, being
 impossible to lose, and being verifiable by someone who is not holding the
 laptop it was built on.
 
@@ -707,7 +707,13 @@ laptop it was built on.
 - [x] The timer engine, the preference validation and the hit-test arithmetic
       under test — the places where being wrong would be invisible
 
-**0.7.0 — polish, if it earns its place**
+**1.0.0 — polish, and the declaration**
+
+These were two releases on this list for a while, and became one when it turned
+out the second contained no code. A 0.7.0 and a 1.0.0 would have shipped
+identical binaries and needed the platform checklist run twice, on two
+machines, for the same program. Release candidates are the rehearsal; a whole
+version number is not.
 
 - [x] A one-time tour on first run, so the sky, dragging and the padlock are
       discovered rather than read about
@@ -716,14 +722,16 @@ laptop it was built on.
       remembered
 - [x] An alternative horizon or two — a city skyline whose windows light up as
       the sun goes down — as one row in the backdrop tab
+- [x] A place to arrive: a corner, a readable size, and a `Reset position` that
+      returns there rather than dropping the widget in the middle of the screen
+- [ ] The README split into documentation that suits someone using Gloam and
+      documentation that suits someone reading it
+- [ ] A contributing guide that states the bar a feature has to clear, and a
+      security policy that says what Gloam does not do
+- [ ] A platform checklist that has actually been run rather than assumed
 
-**1.0.0 — the declaration**
-
-No new code. The README split into documentation that suits someone using
-Gloam and documentation that suits someone reading it, a contributing guide
-that states the bar a feature has to clear, a security policy, and a platform
-checklist that has actually been run rather than assumed. The version people
-judge a project by should be the one with the least left to go wrong.
+The version people judge a project by should be the one with the least left to
+go wrong.
 
 ### Deliberately not on this list
 
