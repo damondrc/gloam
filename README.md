@@ -3,8 +3,8 @@
 A floating, ambient focus timer that lives in the corner of your screen.
 
 <p align="center">
-  <img src="docs/media/hero.png" width="640"
-       alt="The Gloam widget resting on a desktop: a dusk sky with the sun still high, the readout showing 35:00, and three session dots below the horizon">
+  <img src="docs/media/portrait.gif" width="600"
+       alt="The widget at rest over a dusk sky: clouds drifting across a mountain ridge, a flock crossing once, the readout holding at 30:00">
 </p>
 
 <p align="center">
@@ -83,13 +83,16 @@ trailing break has nothing to resume into, so it is dead time.
 - Controls stay hidden until you hover, so the widget reads as scenery
 
 <p align="center">
-  <img src="docs/media/controls.gif" width="640"
-       alt="Hovering over the widget fades the transport controls in; play, skip to the break, reset, then the padlock dims the whole thing to a watermark">
+  <img src="docs/media/evening.gif" width="600"
+       alt="A whole evening in twelve seconds: the sun descends and the city lights come on through the focus session, then the moon rises through the break while the windows go out, and the horizon changes from water to skyline to ridge">
 </p>
 
-<p align="center"><em>The controls only exist while the pointer is over the
-widget. Skipping to a break swaps the sun for the moon; the padlock drops it to
-44% and hands the clicks to whatever is underneath.</em></p>
+<p align="center"><em>A focus session and the break after it, at about two
+hundred times speed — the only way to watch in one glance what normally takes
+forty-five minutes. The clock is the only thing hurrying: the clouds, the
+flock and the twinkle run at the speed they really run at, which is the
+distance between an ambient backdrop and a busy one. Rendered from the app's
+own palette, silhouettes and flight cycle rather than recorded.</em></p>
 
 ### Keyboard
 
@@ -119,6 +122,15 @@ a single one, where it covers the document you are reading and intercepts
 clicks meant for it. Clicking the padlock turns the whole window click-through,
 so the mouse passes straight to whatever is underneath, and drops the widget to
 44% opacity so it reads as a watermark.
+
+<p align="center">
+  <img src="docs/media/lock.gif" width="600"
+       alt="Clicking the padlock dims the widget to a watermark and passes clicks through to the text underneath, which stays selectable; the hint reads Ctrl+Alt+G to unlock">
+</p>
+
+<p align="center"><em>The text underneath is being selected through the widget.
+That is the whole feature: the padlock is the one hole left in an otherwise
+pass-through surface.</em></p>
 
 The interesting part is getting back out. Click-through is a whole-window
 property — no platform exposes "pass everything through except this button" —
@@ -207,8 +219,8 @@ machinery lives. Controls laid over the gradient would be hard to read and
 would break the one idea the backdrop carries.
 
 <p align="center">
-  <img src="docs/media/settings.gif" width="640"
-       alt="The chevron unfolds a panel below the horizon; stepping the focus and break durations, then moving between the tabs">
+  <img src="docs/media/settings.gif" width="460"
+       alt="The chevron unfolds a panel below the horizon showing the general tab: the focus, break and session steppers, and the launch-at-login switch">
 </p>
 
 Three tabs, answering three questions:
@@ -368,6 +380,11 @@ not something standing on the flat band, but the band itself.
 | **Skyline** | A city, lighting up as the sky goes dark. |
 | **Ridge** | Three ranges at three distances. |
 
+<p align="center">
+  <img src="docs/media/horizon.gif" width="460"
+       alt="The ambience tab: volume, the sound the widget speaks in, how alive the backdrop is, and the horizon cycling to Ridge">
+</p>
+
 Replacing rather than covering is half of it. A silhouette drawn above the
 band with the band still showing underneath reads as two pictures stacked; the
 mass has to reach the bottom edge of the frame and have the silhouette for its
@@ -436,12 +453,9 @@ below about 24px a button stops being worth aiming at — and stay available on
 the keyboard. Double-clicking again restores the full widget.
 
 <p align="center">
-  <img src="docs/media/compact.gif" width="640"
-       alt="Double-clicking collapses the widget to a single row and back; the corner grip then drags it through its scale range, from 80% up to 180%">
+  <img src="docs/media/compact.gif" width="600"
+       alt="Double-clicking collapses the widget to a single row holding the readout, the play control and the padlock, and double-clicking again restores it">
 </p>
-
-<p align="center"><em>Compact mode and the scale range are separate axes: one
-decides how much the widget shows, the other how big it is.</em></p>
 
 ## Where it lives
 
@@ -488,6 +502,15 @@ corner you can predict beats a position arithmetic chose for you.
 
 Closing the widget hides it. The run carries on, and the tray icon brings it
 back. Quitting for real is the last entry in its menu.
+
+<p align="center">
+  <img src="docs/media/tray.gif" width="600"
+       alt="Closing the widget hides it and a notice says the run carries on in the tray; the tray menu then offers Show Gloam and Reset position, and the widget comes back with the clock still counting">
+</p>
+
+<p align="center"><em>The clock is the thing to watch. It reads 35:00 before
+the widget is put away and 34:43 when it comes back — the run never stopped,
+it was only out of sight.</em></p>
 
 The menu's first entry is a toggle, and says which way it will go: `Hide Gloam`
 while the widget is out, `Show Gloam` while it is away. One entry rather than
@@ -779,7 +802,7 @@ src-tauri/            Rust shell, window configuration, global shortcut
 scripts/              version and changelog checks, used by CI
 .github/workflows/    checks on every push, a release on every tag
 docs/                 the platform checklist, what it found, and what is open
-docs/media/           the stills and GIFs in this file
+docs/media/           the GIFs in this file
 ```
 
 ## License
