@@ -217,8 +217,8 @@ thing to do to a laptop.
 
 | | Status |
 | --- | --- |
-| Windows 10/11 | Supported — verified against 0.6.0 |
-| Linux · X11 | Supported — verified against 0.6.0 |
+| Windows 10/11 | Supported — verified against 1.0.0 |
+| Linux · X11 | Supported — verified against 1.0.0 |
 | Linux · Wayland | Not tested |
 | macOS | Never run |
 

@@ -13,7 +13,7 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
-## [1.0.0] — 2026-09-04
+## [1.0.0] — 2026-09-14
 
 ### Added
 
@@ -80,6 +80,12 @@ commit that made the change, and in the architecture notes.
 - The water band is the same height as the other two horizons — the last
   quarter of the widget rather than the last third — so switching between them
   does not move the skyline up and down, and there is a little more sky.
+- The documentation is split by who is reading it. The README is a page about
+  the app — what it is, how to get it, what the settings do, which platforms it
+  is known to work on — and everything about *why* it works the way it does
+  moved to [docs/architecture.md](docs/architecture.md). A contributing guide
+  and a security policy join them. 810 lines were serving two readers and
+  serving the second one better.
 
 ### Fixed
 

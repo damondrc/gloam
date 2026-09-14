@@ -19,6 +19,16 @@ decisions that were deliberately deferred, and each says what would unblock it.
       nobody has watched it happen. It is the only claim in that document that
       did not come from a real machine, and it is a promise already published
       beside the downloads. One Ubuntu 22.04 virtual machine settles it.
+- [ ] **Watch a run end while knowing it was running.** On Linux, an
+      unattended laptop announced the end of a run at a moment nobody was
+      expecting, with the lid shut. Every part of that is consistent with the
+      engine working — the end sound cannot fire unless a run is in progress,
+      and the countdown is held against an absolute deadline, so a run spanning
+      a suspend finishes the instant the machine returns rather than drifting.
+      But that is an explanation, and the row wants an observation. Start a run
+      with a known length, leave, and note what the widget says when the sound
+      arrives: `DONE` closes this. Recorded as a caveat on F5 until somebody
+      has.
 - [ ] **Run the checklist under Wayland.** Everything the project says about
       Wayland is currently reasoning from the protocol rather than observation,
       and the two are kept apart on purpose. One session with the checklist

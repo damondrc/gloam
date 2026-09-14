@@ -10,7 +10,7 @@ rather than guessing, and the row stays on the list in
 
 ## Windows 10/11
 
-**Supported.** Verified against 0.6.0 on Windows 11, single monitor and dual,
+**Supported.** Verified against 1.0.0 on Windows 11, single monitor and dual,
 with one display at 100% and the other at 150%.
 
 Everything in the checklist passes. The installer is NSIS, and it is not code
@@ -19,10 +19,19 @@ beside the download is the answer to that, and the README says how to check it.
 
 ## Linux · X11
 
-**Supported.** Verified against 0.6.0 on Linux Mint 22 (Cinnamon, X11), single
+**Supported.** Verified against 1.0.0 on Linux Mint 22 (Cinnamon, X11), single
 monitor and dual.
 
-Everything in the checklist passes, with two things worth knowing.
+Everything in the checklist passes, with three things worth knowing.
+
+**A run left going will announce its end whenever it reaches it**, including
+with the lid shut on a machine set not to suspend, and including at the instant
+a suspended machine comes back. Both are the countdown working: it is held
+against an absolute deadline rather than accumulated ticks, which is what makes
+it right across a sleep instead of drifting by however long the sleep lasted.
+From across a room it sounds like a chime out of nowhere. Nobody has yet
+watched it happen while knowing a run was in progress, so the row is a caveat
+rather than a pass, and it is [on the list](open.md).
 
 **Dragging can feel sticky.** The window resists screen edges and the edges of
 other windows. That is not Gloam — dragging is handed to the window manager,
@@ -127,4 +136,5 @@ something to say, and it is [on the list](open.md).
 
 ---
 
-Last verified: **0.6.0**, on Windows 11 and Linux Mint 22 (Cinnamon, X11).
+Last verified: **1.0.0**, on Windows 11 and Linux Mint 22 (Cinnamon, X11) —
+the full sixty-four rows, on both.

@@ -38,7 +38,7 @@ window behaves differently on Windows.
 
 ## Results
 
-Version: **0.6.0-rc.5** — Date: **2026-08-22**
+Version: **1.0.0-rc.1** — Date: **2026-09-14**
 
 Windows: **Windows 11** — Linux: **Linux Mint 22, Cinnamon, X11**
 
@@ -55,12 +55,12 @@ about it is inference, and the README says so.
 | A4 | With that monitor disconnected, it opens **visibly** in the default corner instead of vanishing | OK | OK |
 | A5 | Dragged until almost entirely off-screen, then reopened — the position is discarded and it opens in the corner | OK | OK |
 | A6 | Launching Gloam a second time surfaces the running copy rather than starting another | OK | OK |
-| A7 | On a first run — no stored preferences — it opens in the **bottom right**, inside the usable area and clear of the taskbar or dock | | |
-| A8 | On that first run it opens at **150%**, not 100% | | |
-| A9 | The tour appears on that first run, unfolded below the widget and entirely on screen | | |
-| A10 | Its four steps move forward and back, and `Skip` ends it | | |
-| A11 | Locking, folding to compact or closing the panel **suspends** the tour and returns to the same step; only `Skip` and the last arrow end it | | |
-| A12 | It does not appear on the next launch, and **Keys → Show the tour again** brings it back | | |
+| A7 | On a first run — no stored preferences — it opens in the **bottom right**, inside the usable area and clear of the taskbar or dock | OK | OK |
+| A8 | On that first run it opens at **150%**, not 100% | OK | OK |
+| A9 | The tour appears on that first run, unfolded below the widget and entirely on screen | OK | OK |
+| A10 | Its four steps move forward and back, and `Skip` ends it | OK | OK |
+| A11 | Locking, folding to compact or closing the panel **suspends** the tour and returns to the same step; only `Skip` and the last arrow end it | OK | OK |
+| A12 | It does not appear on the next launch, and **Keys → Show the tour again** brings it back | OK | OK |
 
 **A7 to A12 are the exception to the release-build rule at the top**, and it is
 worth saying why rather than leaving it to be worked out. A first run means no
@@ -110,10 +110,10 @@ reading A7.
 | D5 | No resize border or resize cursor appears around the widget | OK | OK |
 | D6 | The bottom corners stay rounded with the panel open and closed | OK | OK |
 | D7 | Locking with the panel open closes the panel, leaving only the dimmed backdrop | OK | OK |
-| D8 | All three tabs fit the panel without clipping at the bottom — at 80% and at 180% | | |
-| D9 | Each of the three horizons draws: Water, Skyline, Ridge | | |
-| D10 | The choice survives a restart, and the same city or range comes back while the window stays open | | |
-| D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | | |
+| D8 | All three tabs fit the panel without clipping at the bottom — at 80% and at 180% | OK | OK |
+| D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
+| D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
+| D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |
 
 **D8 is the one to look at first.** The panel is one height for every tab,
 sized to the tallest, and that height is a constant somebody has to keep in
@@ -128,15 +128,15 @@ the bottom edge where nothing else draws.
 | E2 | The close button hides the widget, and the run carries on | OK | OK |
 | E3 | Left-clicking the icon toggles the widget away and back | OK | NO |
 | E4 | The menu's first entry toggles, and says which way it will go | OK | OK |
-| E5 | `Reset position` recovers a widget dragged off-screen, into the bottom-right corner | | |
+| E5 | `Reset position` recovers a widget dragged off-screen, into the bottom-right corner | OK | OK |
 | E6 | `Reset position` works while the widget is locked | OK | OK |
 | E7 | `Quit` really ends the process — check Task Manager or `ps aux \| grep gloam` | OK | OK |
-| E8 | `Reset position` lands in the same spot a fresh install does, and clear of the taskbar | | |
-| E9 | `Reset position` on a compact widget puts it in the corner too, not where an unfolded one would go | | |
-| E10 | Turning **Launch at login** on creates the startup entry, and it carries `--hidden` | | |
-| E11 | Turning it off removes the entry again | | |
-| E12 | After a real log out and back in, Gloam is running and **in the tray**, not on screen | | |
-| E13 | The switch shows the truth after the entry is removed from outside the app and Gloam is restarted | | |
+| E8 | `Reset position` lands in the same spot a fresh install does, and clear of the taskbar | OK | OK |
+| E9 | `Reset position` on a compact widget puts it in the corner too, not where an unfolded one would go | OK | OK |
+| E10 | Turning **Launch at login** on creates the startup entry, and it carries `--hidden` | OK | OK |
+| E11 | Turning it off removes the entry again | OK | OK |
+| E12 | After a real log out and back in, Gloam is running and **in the tray**, not on screen | OK | OK |
+| E13 | The switch shows the truth after the entry is removed from outside the app and Gloam is restarted | OK | OK |
 
 **E10 and E11, where to look.** On Windows,
 `reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v Gloam`. On
@@ -158,11 +158,11 @@ the row; opening the widget afterwards is not.
 | # | Check | Win 11 | Linux |
 | --- | --- | --- | --- |
 | F1 | A full run completes with exactly one sound per transition | OK | OK |
-| F2 | Hidden to the tray across a boundary: the sound arrives **at the boundary**, while it is still hidden — not on the way back, and not at all late | | |
+| F2 | Hidden to the tray across a boundary: the sound arrives **at the boundary**, while it is still hidden — not on the way back, and not at all late | OK | OK |
 | F3 | And on returning: the state is right and there was no burst | OK | OK |
-| F4 | Minimised rather than hidden, for longer than a segment: both halves again | | |
-| F5 | Machine suspended mid-run — lid closed or sleep — correct state on waking, and **one** sound for where it arrived rather than one per boundary it slept through | | |
-| F6 | The end-of-run sound arrives on time with the widget hidden, the same as a transition | | |
+| F4 | Minimised rather than hidden, for longer than a segment: both halves again | OK | OK |
+| F5 | Machine suspended mid-run — lid closed or sleep — correct state on waking, and **one** sound for where it arrived rather than one per boundary it slept through | OK | CAVEAT |
+| F6 | The end-of-run sound arrives on time with the widget hidden, the same as a transition | OK | OK |
 | F7 | Session locked mid-run: correct state on unlocking | OK | OK |
 
 **Why F2 was split.** It used to read *"correct state on return, one sound, not
@@ -214,9 +214,9 @@ and the highest one is the oldest system it can start on. **2.35 or below
 passes.** Anything higher means the build escaped its container and the claim
 in the README is wrong.
 
-Measured on 0.6.0: `GLIBC_2.32`, `GLIBC_2.33`, `GLIBC_2.34`. The binary asks
-for nothing newer than **2.34**, which is a year older than the container it
-was built in and comfortably inside the claim.
+Measured again on 1.0.0: `GLIBC_2.32`, `GLIBC_2.33`, `GLIBC_2.34`. The binary
+asks for nothing newer than **2.34**, which is a year older than the container
+it was built in and comfortably inside the claim — unchanged since 0.6.0.
 
 Which means glibc is not what decides the floor. The `.deb` also depends on
 `libwebkit2gtk-4.1`, and that package first appears in Ubuntu 22.04 and Debian
@@ -236,20 +236,29 @@ Not fixable: the AppIndicator protocol that Linux trays speak has no notion of
 a click on an icon. E4 exists because of it — the menu had to learn to do both
 directions, since on Linux it is the only interaction a tray has.
 
+**F5 · Linux** — a run left going on an unattended laptop announced its end at
+a moment nobody expected, with the lid shut. Everything about that is
+consistent with the engine working: the end-of-run sound cannot fire unless a
+run is in progress, and the countdown is held against an absolute deadline
+rather than accumulated ticks, so a run that spans a suspend completes at the
+instant the machine comes back rather than drifting by however long it slept.
+That is the row passing, and it is also what it sounds like from across a
+room. It is marked CAVEAT rather than OK because nobody has yet watched it
+happen while knowing a run was going, which is the difference between an
+explanation and an observation. On the list, with what would settle it.
+
 **Dragging feels sticky on Linux** — not a row, and not Gloam. The window
 resists screen edges and other windows' edges because Muffin does that to every
 window. The screen-edge half is configurable; the window-to-window half has not
 been since Cinnamon 5.4.
 
-**Nothing is left unrun**, as of 0.6.0. Every row that existed then was checked
-on every platform it exists on. The four `n/a` are questions Windows does not
-ask about a `.deb`, and the Wayland column is absent rather than empty — there
-is no session to run it on, which `docs/platforms.md` says in the only place a
-reader would look.
-
-The blank rows below that are the ones 1.0.0 added, plus F2, F4 and F5, which
-were rewritten and no longer mean what the old marks were given for. A mark
-that was earned by a different question is not a mark.
+**Nothing is left unrun.** Every one of the sixty-four rows was checked on
+every platform it exists on, for 1.0.0 — including the twenty-one that were
+new or rewritten, and the three whose old marks were withdrawn because they had
+been earned by a different question. The four `n/a` are questions Windows does
+not ask about a `.deb`, and the Wayland column is absent rather than empty:
+there is no session to run it on, which `docs/platforms.md` says in the only
+place a reader would look.
 
 **What the first run found, and what became of it** — the widget not returning
 where it was put away, the settings panel staying opaque over a locked widget,
