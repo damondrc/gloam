@@ -1,0 +1,12 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A security issue
+    url: https://github.com/damondrc/gloam/security/advisories/new
+    about: >
+      Report it privately rather than in an issue. SECURITY.md says what Gloam
+      touches, which is very little, and how this is handled.
+  - name: Already known
+    url: https://github.com/damondrc/gloam/blob/main/docs/open.md
+    about: >
+      Wayland, macOS, packages for distributions that are not Debian, and
+      everything else the project has said it would come back to.

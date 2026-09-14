@@ -1,0 +1,47 @@
+name: An idea
+description: Something Gloam could do that it does not.
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome, and most of them are declined — not because they are
+        bad but because Gloam is a countdown you are not supposed to look at,
+        and the failure mode is not one bad feature, it is twelve good ones.
+
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) has the bar and the
+        short list of things that are already settled: statistics, a scene
+        editor, notifications, and anything networked. If your idea is one of
+        those, the answer is already written down and it is no.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What it would do
+      validations:
+        required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What it is for
+      description: >
+        The situation you were in when you wanted it, rather than the feature
+        as a description. The problem usually has more than one answer and the
+        best one is often not the one that was asked for.
+    validations:
+      required: true
+
+  - type: textarea
+    id: busier
+    attributes:
+      label: Does this make Gloam better without making Gloam busier?
+      description: >
+        The question every proposal here is measured against. The rule
+        underneath it is that the default state never gets busier: anything new
+        arrives as something you expand into, so a Gloam with every setting
+        turned on still looks like the recording at the top of the README until
+        you ask it for more. Where would this live, and what does somebody who
+        does not want it see?
+    validations:
+      required: true

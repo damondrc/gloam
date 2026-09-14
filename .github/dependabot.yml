@@ -1,0 +1,47 @@
+version: 2
+
+# Monthly and grouped, not weekly and scattered.
+#
+# Gloam has around a dozen npm packages and a handful of crates, all of them
+# build tooling or the framework itself — nothing that ships in the binary and
+# reaches the network, because the binary does not reach the network. So the
+# risk a bump carries here is "the build breaks", which CI answers in four
+# minutes, rather than "a user is exposed", which would deserve a faster cadence.
+#
+# Grouped because a pull request per package turns a maintenance task into a
+# queue, and a queue is how updates stop getting read.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: monthly
+    groups:
+      cargo:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+
+  # The one that goes stale silently. A pinned action keeps working long after
+  # the runner image it was written for has gone, and then stops in the middle
+  # of a release.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

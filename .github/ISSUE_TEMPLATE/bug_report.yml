@@ -1,0 +1,86 @@
+name: Something is wrong
+description: The widget does something it should not, or stops doing something it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nearly every bug in this project has lived in the window layer — always
+        on top, click-through, resizing, trays — and those behave differently
+        per platform, per desktop and per display scale. The questions below
+        are the ones that have actually mattered, which is why there are so
+        few of them.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+      placeholder: |
+        The widget came back from the tray in the top-left corner rather than
+        where I had left it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to get there
+      description: >
+        Numbered if it takes more than one step. If it only happens sometimes,
+        say roughly how often — "once in a morning" is a useful answer.
+      placeholder: |
+        1. Drag the widget to the second monitor
+        2. Close it
+        3. Click the tray icon
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Gloam version
+      description: From the release you installed — or the commit, if you built it.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux · X11
+        - Linux · Wayland
+        - macOS
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop environment, if Linux
+      description: >
+        And whether the session is X11 or Wayland — `echo $XDG_SESSION_TYPE`
+        answers it. Wayland is untested territory and the README says so, so
+        this decides whether you have found a bug or a known gap.
+      placeholder: "Cinnamon 6.4, X11"
+
+  - type: input
+    id: displays
+    attributes:
+      label: Displays and scaling
+      description: >
+        How many, and at what scale each. A surprising share of what goes wrong
+        here only goes wrong on a second monitor or at a scale nobody tried.
+      placeholder: "Two — 1920x1080 at 100%, 2560x1440 at 150%"
+
+  - type: textarea
+    id: anything
+    attributes:
+      label: Anything else
+      description: >
+        A recording is worth a great deal for anything about how the window
+        behaves. If Gloam printed anything on stderr, that too.
