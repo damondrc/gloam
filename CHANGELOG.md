@@ -33,39 +33,24 @@ commit that made the change, and in the architecture notes.
   back to the tour for anyone who wants it a second time.
 - **Launch at login**, under a Startup heading in the General tab. Gloam
   registers itself with the session and starts *in the tray* rather than on
-  screen: a widget is something you reach for, and a session manager is not a
+  screen — a widget is something you reach for, and a session manager is not a
   person reaching. The tray icon or `Ctrl+Alt+G` brings it out. On a desktop
-  with no tray it opens on screen instead, because starting hidden with
-  nothing to bring it back is starting lost, and the line under the switch
-  says which of the two you will get.
-  The setting is not stored with the others. It lives in the operating system
-  — a registry value on Windows, a `.desktop` file in `~/.config/autostart` on
-  Linux — where Task Manager or a startup applications dialogue can change it
-  without Gloam knowing, so the panel asks rather than remembers, and the
-  switch only moves once the platform confirms it did.
-- A choice of horizon, in the Ambience tab. It replaces the bottom of the
-  widget rather than standing on it, so what you get is one mass with a
-  silhouette for a top edge — and the whole of it stays inside the last
-  quarter of the frame, because the sky is the clock and the sky is what
-  should dominate. **Water** is the flat band Gloam has always had.
-  **Skyline** is a city, drawn in three planes at three distances so the near
-  blocks cut off the base of the towers behind them. Its windows fill in
-  through the sunset, are at their fullest the moment the sun has gone, and go
-  out again through the break as the place turns in for the night — the same
-  clock the sun is keeping, read a second way. Each window switches rather
-  than fades, at its own brightness and at its own hour: about a quarter never
-  light at all, one in eight is already on before the sun is down, and one in
-  six is still burning when the break ends. **Ridge** is three ranges at three
-  distances, the far one tallest and palest, every one of them opaque — the
-  sun and the moon set behind them.
-  Both shapes are generated rather than drawn, and each launch draws one from
-  a short cast of seeds that were rendered and looked at first. Whichever it
-  drew stays put for as long as the window is open — switching horizons and
-  switching back gets the same view — so what changes is which city or which
-  range you find the next time you open Gloam, never the one you are working
-  in front of. Neither animates: the lights are one comparison in the
-  stylesheet, which is why they stay even in the lightest backdrop mode.
-  Compact keeps whichever was picked, as a low profile in a shorter frame.
+  with no tray it opens on screen instead, and the line under the switch says
+  which of the two you will get. It is the one setting Gloam does not store
+  with the others, because it belongs to the operating system rather than to
+  Gloam.
+- A choice of horizon, in the Ambience tab. **Water** is the flat band Gloam
+  has always had. **Skyline** is a city whose windows fill in through the
+  sunset, are at their fullest the moment the sun has gone, and go out again
+  through the break as the place turns in for the night — the same clock the
+  sun is keeping, read a second way. **Ridge** is three ranges at three
+  distances, the far one tallest and palest.
+  Whichever is picked replaces the bottom of the widget rather than standing on
+  it, and stays inside the last quarter of the frame, because the sky is the
+  clock and the sky is what should dominate. Both shapes are generated rather
+  than drawn, and each launch draws a different one — so what changes is which
+  city you find next time you open Gloam, never the one you are working in
+  front of. Compact keeps whichever was picked.
 
 ### Changed
 
