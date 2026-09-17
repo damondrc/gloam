@@ -49,6 +49,25 @@ try {
   console.warn("gloam: could not place the window", error);
 }
 
+/**
+ * A handle on the music player, for a build that is being worked on.
+ *
+ * The player has no interface yet, and the way to find out whether it decodes
+ * a real folder of real FLAC on a real machine should not be to build one
+ * first. `import.meta.env.DEV` is the literal `false` in a release build, so
+ * the bundler removes this entirely: in a shipped Gloam there is no
+ * `window.gloam` to find.
+ *
+ *   await gloam.music.openFolder("C:/Users/you/Music/Something")
+ *   await gloam.music.play()
+ *   await gloam.music.next()
+ *   await gloam.music.status()
+ */
+if (import.meta.env.DEV) {
+  const music = await import("./lib/music");
+  Object.assign(window, { gloam: { music } });
+}
+
 const target = document.getElementById("app");
 if (!target) throw new Error("#app container not found");
 

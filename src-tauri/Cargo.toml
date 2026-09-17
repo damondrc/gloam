@@ -35,6 +35,20 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 
+# Decoding and playback, deliberately not through the WebView.
+#
+# WebKitGTK routes all web audio through gstreamer, and FLAC lives in a plugin
+# package a machine may or may not have — which is exactly what made the
+# AppImage ship silent. rodio decodes with symphonia, which is pure Rust and
+# inside the binary, and writes to the device through cpal. The only thing
+# between a file and the speakers is code that shipped with the app.
+#
+# Default features carry FLAC, MP3, Vorbis, WAV and AAC, which is the whole
+# list this player claims. Held at 0.21 by the crate's own rust-version rule
+# rather than by preference: 0.22 wants a newer compiler than Gloam asks for,
+# and nothing in it is needed here.
+rodio = "0.21"
+
 # The widget sits idle for long stretches, so favour a small, fast binary over
 # compile time in release builds.
 [profile.release]

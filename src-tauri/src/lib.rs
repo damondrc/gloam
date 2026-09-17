@@ -1,5 +1,8 @@
 use tauri::Manager;
 
+#[cfg(desktop)]
+mod music;
+
 /// Emitted to the frontend when the user asks to toggle lock mode from outside
 /// the window. Locking makes the widget click-through, so this shortcut is the
 /// guaranteed way back in if hit-testing the padlock ever fails.
@@ -76,8 +79,27 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(autostart_plugin());
 
+    // Two lists rather than one with attributes in it: `generate_handler!`
+    // takes paths, not conditionally-compiled items, and the music commands
+    // only exist where there is an audio device to write to.
+    #[cfg(desktop)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        dismiss,
+        tray_present,
+        music::music_open,
+        music::music_play,
+        music::music_pause,
+        music::music_next,
+        music::music_prev,
+        music::music_at,
+        music::music_volume,
+        music::music_status,
+    ]);
+
+    #[cfg(not(desktop))]
+    let builder = builder.invoke_handler(tauri::generate_handler![dismiss, tray_present]);
+
     builder
-        .invoke_handler(tauri::generate_handler![dismiss, tray_present])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 // The window is also declared always-on-top in tauri.conf.json,
@@ -108,6 +130,13 @@ pub fn run() {
 
             app.manage(TrayPresence(tray));
             app.manage(HiddenAt(std::sync::Mutex::new(None)));
+
+            // Started here rather than on first use, because the thread owns
+            // an output device and opening one takes long enough to be felt if
+            // it happens under a button press. Costs a thread and no device
+            // until something is actually played.
+            #[cfg(desktop)]
+            app.manage(music::Music::start(app.handle().clone()));
 
             // Started by the session, and there is somewhere to be started
             // into. Both halves matter: on a desktop with no tray, hiding at
