@@ -79,6 +79,12 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(autostart_plugin());
 
+    // Only ever opened by the Choose button in the Music tab. The picker is
+    // the operating system's because the path has to reach Rust, and a path is
+    // the one thing the WebView's own file input will not give up.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_dialog::init());
+
     // Two lists rather than one with attributes in it: `generate_handler!`
     // takes paths, not conditionally-compiled items, and the music commands
     // only exist where there is an audio device to write to.

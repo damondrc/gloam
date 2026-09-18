@@ -4,6 +4,7 @@
   import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
   import { skyFor, skyVars } from "./lib/sky";
   import * as sound from "./lib/sound";
+  import * as music from "./lib/music";
   import {
     dismissWindow,
     hasTray,
@@ -99,6 +100,49 @@
   let soundSet = $state(stored.sound);
   let ambience = $state(stored.ambience);
   let horizon = $state(stored.horizon);
+
+  // The folder as a preference, and the queue as whatever Rust made of it.
+  // Kept apart because they can disagree: a path that was good last week can
+  // name a folder that is gone, and the honest thing to show then is the
+  // folder somebody chose alongside a count of nothing, rather than quietly
+  // forgetting the choice.
+  let musicFolder = $state(stored.music.folder);
+  let musicVolume = $state(stored.music.volume);
+  let musicCount = $state(0);
+
+  $effect(() => {
+    void music.setVolume(musicVolume);
+  });
+
+  // Reopened once, so the queue is ready and the panel can say how much is in
+  // it. Nothing starts playing: a widget that begins the day with music
+  // nobody asked for is a widget that gets closed.
+  $effect(() => {
+    if (!musicFolder) return;
+    let cancelled = false;
+
+    void music.openFolder(musicFolder).then((state) => {
+      if (!cancelled) musicCount = state.count;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  /**
+   * Opens the picker, and writes the answer down only if there was one.
+   *
+   * Cancelling leaves everything alone — including a folder chosen earlier,
+   * which is the whole reason this does not clear anything before asking.
+   */
+  async function chooseMusicFolder(): Promise<void> {
+    const picked = await music.pickFolder();
+    if (!picked) return;
+
+    musicFolder = picked;
+    musicCount = (await music.openFolder(picked)).count;
+  }
   let position = $state(stored.position);
 
   const backdrop = $derived(ambienceSettings(ambience));
@@ -252,6 +296,7 @@
       ambience,
       horizon,
       config: timer.config,
+      music: { folder: musicFolder, volume: musicVolume },
       position,
       seenIntro,
     });
@@ -688,6 +733,11 @@
        {atLoginKnown}
        {tray}
        onAtLogin={setAtLogin}
+       {musicFolder}
+       {musicCount}
+       onPickFolder={chooseMusicFolder}
+       {musicVolume}
+       onMusicVolume={(next) => (musicVolume = next)}
        onTour={startTour}
      />
    {/if}

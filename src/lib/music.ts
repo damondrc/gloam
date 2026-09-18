@@ -60,6 +60,44 @@ async function ask<T>(command: string, args?: Record<string, unknown>, fallback?
 export const openFolder = (folder: string): Promise<MusicState> =>
   ask<MusicState>("music_open", { folder }, EMPTY);
 
+/**
+ * Asks the operating system for a folder, and returns its path unopened.
+ *
+ * The native picker rather than anything of Gloam's own, and not only because
+ * writing a file browser into a 320-pixel widget would be absurd. The path has
+ * to reach Rust, and the WebView cannot hand one over: a `<input
+ * type="file" webkitdirectory>` yields file handles inside the sandbox, which
+ * is precisely what this feature exists to avoid touching.
+ *
+ * Returns the path rather than opening it, because choosing a folder and
+ * remembering one are the same act from here and the caller is what knows
+ * whether this one is worth writing down.
+ */
+export async function pickFolder(): Promise<string | null> {
+  if (!inTauri()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const picked = await open({ directory: true, multiple: false });
+    return typeof picked === "string" ? picked : null;
+  } catch (error) {
+    console.warn("gloam: the folder picker did not open", error);
+    return null;
+  }
+}
+
+/**
+ * The last part of a path, which is the only part that fits.
+ *
+ * A stored folder is an absolute path and the panel has about 180 design
+ * pixels for it. Eliding the middle would keep a drive letter nobody needs and
+ * lose the word that identifies the place; the folder's own name is what the
+ * person called it, so that is what is shown, with the whole path on hover.
+ */
+export function folderName(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
+
 export const play = (): Promise<void> => ask<void>("music_play");
 export const pause = (): Promise<void> => ask<void>("music_pause");
 export const next = (): Promise<void> => ask<void>("music_next");

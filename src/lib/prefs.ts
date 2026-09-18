@@ -42,6 +42,20 @@ export interface Prefs {
   horizon: Horizon;
   config: TimerConfig;
   /**
+   * The music folder and how loud it plays.
+   *
+   * The folder is a path on a disk, which makes it the one preference here
+   * that can stop being true while nobody is looking — a drive is unplugged, a
+   * folder is renamed. It is stored anyway and checked when it is used, the
+   * same bargain the window position strikes: remembering something that might
+   * have moved is better than asking again every morning, as long as nothing
+   * assumes it is still there.
+   *
+   * Nothing plays on its own at startup. The folder is reopened so the queue
+   * is ready; pressing play stays a decision somebody makes.
+   */
+  music: { folder: string | null; volume: number };
+  /**
    * Where the window was left, in physical desktop pixels, or null if it has
    * never been moved.
    *
@@ -80,9 +94,36 @@ export const DEFAULT_PREFS: Prefs = {
   // horizon is the one that says nothing about where you are.
   horizon: "water",
   config: { ...DEFAULT_CONFIG },
+  // No folder, and half volume rather than the widget's 0.6. Music is the one
+  // sound here meant to sit underneath something else — a run's own phrases
+  // have to carry over it, and the first impression of a feature should not be
+  // having to turn it down.
+  music: { folder: null, volume: 0.5 },
   position: null,
   seenIntro: false,
 };
+
+/**
+ * A stored folder is a non-empty string and nothing more is checked here.
+ *
+ * Whether it still exists, and whether anything in it can be decoded, are
+ * questions only the disk can answer, and asking them belongs where the folder
+ * is opened rather than where it is read back. An empty string is dropped
+ * because it is not a path anybody chose.
+ */
+function readMusic(value: unknown): Prefs["music"] {
+  const fallback = { ...DEFAULT_PREFS.music };
+  if (typeof value !== "object" || value === null) return fallback;
+
+  const stored = value as { folder?: unknown; volume?: unknown };
+  return {
+    folder:
+      typeof stored.folder === "string" && stored.folder.length > 0
+        ? stored.folder
+        : null,
+    volume: readNumber(stored.volume, 0, 1, fallback.volume),
+  };
+}
 
 /**
  * A position is only worth keeping if it is two real numbers.
@@ -194,6 +235,7 @@ export function loadPrefs(): Prefs {
       ),
       horizon: readOption(value.horizon, HORIZONS, DEFAULT_PREFS.horizon),
       config: readConfig(value.config),
+      music: readMusic(value.music),
       position: readPosition(value.position),
       seenIntro: value.seenIntro === true,
     };

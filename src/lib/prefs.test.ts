@@ -62,6 +62,7 @@ describe("round trip", () => {
       ambience: "light",
       horizon: "skyline",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
+      music: { folder: "D:/Music/Nocturnes", volume: 0.25 },
       position: { x: 2400, y: 300 },
       seenIntro: true,
     },
@@ -73,6 +74,7 @@ describe("round trip", () => {
       ambience: "calm",
       horizon: "ridge",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
+      music: { folder: null, volume: 1 },
       position: { x: -1200, y: -80 },
       seenIntro: false,
     },
@@ -97,6 +99,8 @@ describe("nonsense in storage", () => {
     '{"config":"none"}',
     '{"config":{"focusMinutes":null}}',
     '{"compact":"yes","ambience":42,"sound":[],"horizon":{}}',
+    '{"music":"D:/Music"}',
+    '{"music":{"folder":42,"volume":"loud"}}',
   ];
 
   // The bar is not "recovers gracefully". It is "the widget opens", which
@@ -116,6 +120,11 @@ describe("nonsense in storage", () => {
     expect(["full", "calm", "light"]).toContain(prefs.ambience);
     expect(["water", "skyline", "ridge"]).toContain(prefs.horizon);
     expect(Number.isFinite(prefs.config.focusMinutes)).toBe(true);
+    expect(prefs.music.volume).toBeGreaterThanOrEqual(0);
+    expect(prefs.music.volume).toBeLessThanOrEqual(1);
+    expect(
+      prefs.music.folder === null || typeof prefs.music.folder === "string"
+    ).toBe(true);
   });
 
   it("survives storage that throws on read", () => {
@@ -176,6 +185,45 @@ describe("values out of range", () => {
     write({ [key]: stored });
 
     expect(loadPrefs()[key]).toBe(DEFAULT_PREFS[key]);
+  });
+});
+
+describe("the music folder", () => {
+  // A path is the one preference here that names something outside Gloam, so
+  // the only thing checked on the way in is that it is a path at all. Whether
+  // the folder is still there is a question for the disk, asked when it is
+  // opened.
+  it("keeps a stored path as it was written", () => {
+    write({ music: { folder: "D:/Music/Nocturnes", volume: 0.4 } });
+
+    expect(loadPrefs().music.folder).toBe("D:/Music/Nocturnes");
+  });
+
+  // An empty string, a number, and nothing at all: none of them is a path
+  // somebody chose, and all three arrive from the same places a good one does.
+  it.each(["", 42, null] as const)(
+    "drops %p rather than taking it for a folder",
+    (folder) => {
+      write({ music: { folder } });
+
+      expect(loadPrefs().music.folder).toBeNull();
+    }
+  );
+
+  it("pulls the volume back into range", () => {
+    write({ music: { folder: "/music", volume: 9 } });
+    expect(loadPrefs().music.volume).toBe(1);
+
+    write({ music: { folder: "/music", volume: -9 } });
+    expect(loadPrefs().music.volume).toBe(0);
+  });
+
+  // Everyone who used Gloam before 1.1 has preferences with no music block in
+  // them, and none of them should be met by a broken panel.
+  it("defaults cleanly when there was never a music block", () => {
+    write({ compact: true, scale: 1.2 });
+
+    expect(loadPrefs().music).toEqual(DEFAULT_PREFS.music);
   });
 });
 

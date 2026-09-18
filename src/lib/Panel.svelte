@@ -15,6 +15,7 @@
   import Stepper from "./Stepper.svelte";
   import Toggle from "./Toggle.svelte";
   import Cycler from "./Cycler.svelte";
+  import { folderName } from "./music";
   import { SHORTCUTS } from "./shortcuts";
 
   /**
@@ -37,11 +38,15 @@
    * the backdrop's liveliness specifically, which is what it meant before this
    * tab took the broader name. Its row is labelled Backdrop for that reason.
    */
-  type Tab = "general" | "ambience" | "keys";
+  type Tab = "general" | "ambience" | "music" | "keys";
 
+  // Music sits after Ambience because it is the same kind of question — what
+  // this thing is like to sit beside — and before Keys, which stays last for
+  // being the only tab that changes nothing.
   const TABS: readonly { id: Tab; label: string }[] = [
     { id: "general", label: "General" },
     { id: "ambience", label: "Ambience" },
+    { id: "music", label: "Music" },
     { id: "keys", label: "Keys" },
   ];
 
@@ -72,6 +77,13 @@
      * login actually looks like — and so what the line under it should say.
      */
     tray: boolean;
+    /** The music folder, or null while none has been chosen. */
+    musicFolder: string | null;
+    /** How many playable files that folder turned out to hold. */
+    musicCount: number;
+    onPickFolder: () => void;
+    musicVolume: number;
+    onMusicVolume: (value: number) => void;
     /** Starts the first-run tour again, for anyone who wants it back. */
     onTour: () => void;
   }
@@ -93,6 +105,11 @@
     onAtLogin,
     atLoginKnown,
     tray,
+    musicFolder,
+    musicCount,
+    onPickFolder,
+    musicVolume,
+    onMusicVolume,
     onTour,
   }: Props = $props();
 
@@ -148,6 +165,22 @@
   };
 
   const percent = $derived(Math.round(volume * 100));
+  const musicPercent = $derived(Math.round(musicVolume * 100));
+
+  /**
+   * What the folder row says under itself, which is the only place a folder
+   * that has gone can be reported.
+   *
+   * A path stored last week is not a promise, and the difference between "this
+   * folder holds nothing playable" and "this folder is no longer there" is not
+   * one the widget can draw from a count of zero — so the line says both and
+   * lets the person tell which.
+   */
+  const folderHint = $derived.by(() => {
+    if (!musicFolder) return "Anything Gloam can decode. Read, never changed.";
+    if (musicCount === 0) return "Nothing playable here, or the folder has moved.";
+    return musicCount === 1 ? "1 track" : `${musicCount} tracks`;
+  });
 
   function set(key: keyof TimerConfig, value: number): void {
     onConfig({ ...config, [key]: value });
@@ -268,6 +301,39 @@
         options={HORIZON_OPTIONS}
         onChange={onHorizon}
       />
+    </div>
+  {:else if tab === "music"}
+    <div class="rows">
+      <!-- The whole row is the button. A path is not a label with a control
+           beside it — the path is what you press to change the path. -->
+      <button class="folder" onclick={onPickFolder} title={musicFolder ?? ""}>
+        <span class="name">Folder</span>
+        <span class="path" class:empty={!musicFolder}>
+          {musicFolder ? folderName(musicFolder) : "Choose\u2026"}
+        </span>
+      </button>
+
+      <p class="hint">{folderHint}</p>
+
+      <label class="row apart">
+        <span class="name">Volume</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={musicPercent}
+          oninput={(event) =>
+            onMusicVolume(Number(event.currentTarget.value) / 100)}
+          aria-label="Music volume"
+        />
+        <span class="value">{musicPercent}%</span>
+      </label>
+
+      <p class="hint">
+        Separate from the widget's own volume, and ducked under it when Gloam
+        has something to say.
+      </p>
     </div>
   {:else}
     <!-- Reference rather than settings: the one tab with nothing to change.
@@ -400,6 +466,53 @@
     font-size: 9.5rem;
     line-height: 1.4;
     color: rgb(var(--ink) / 0.45);
+  }
+
+  /* A row that happens to be a button, because the path is the control: a
+     folder is changed by pressing the folder, not by a Browse beside it. Only
+     the path takes the colour of something pressable — the label stays a
+     label, so the row still reads like the ones above it. */
+  .folder {
+    display: flex;
+    align-items: center;
+    gap: 12rem;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .folder .path {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11rem;
+    color: rgb(var(--accent));
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.16s ease;
+  }
+
+  .folder .path.empty {
+    color: rgb(var(--ink) / 0.5);
+  }
+
+  .folder:hover .path {
+    border-bottom-color: rgb(var(--accent) / 0.5);
+  }
+
+  .folder:focus-visible {
+    outline: 2px solid rgb(var(--accent) / 0.8);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* The volume is a second question, not a fourth line about the folder. */
+  .row.apart {
+    margin-top: 10rem;
   }
 
   .section {

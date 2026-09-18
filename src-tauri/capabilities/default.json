@@ -24,6 +24,7 @@
     "core:window:allow-set-ignore-cursor-events",
     "core:event:allow-listen",
     "core:event:allow-unlisten",
-    "autostart:default"
+    "autostart:default",
+    "dialog:allow-open"
   ]
 }
