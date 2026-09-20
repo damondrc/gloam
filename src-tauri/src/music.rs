@@ -12,14 +12,22 @@
 //! `rodio::OutputStream` owns a `cpal::Stream`, which is `!Send`: it cannot be
 //! moved between threads, so it cannot live in Tauri's managed state and be
 //! touched from whichever thread happens to service a command. So one thread
-//! owns the stream for the life of the process and everything else talks to it
-//! down a channel. That also means playback cannot be blocked by anything
-//! happening in the UI, which for an app whose whole job is to be ignorable is
-//! worth more than the simplicity it costs.
+//! owns the stream and everything else talks to it down a channel. That also
+//! means playback cannot be blocked by anything happening in the UI, which for
+//! an app whose whole job is to be ignorable is worth more than the simplicity
+//! it costs.
 //!
 //! The thread polls rather than blocking on `sleep_until_end`, because it has
 //! to be able to hear a command while a track is playing. A hundred
 //! milliseconds is the same beat the timer runs at and costs nothing.
+//!
+//! ## What the WebView was doing for us
+//!
+//! A stream is bound to the device it was opened against and stays there. The
+//! browser used to follow the system's default output on our behalf, so taking
+//! audio out of the WebView meant inheriting that job: the thread checks every
+//! couple of seconds whether the speakers have changed underneath it, and
+//! carries the music across when they have.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -39,6 +47,14 @@ const TRACK_EVENT: &str = "gloam://music-track";
 /// How often the thread looks up from playing to see whether it has been
 /// spoken to, or whether the current track has run out.
 const POLL: Duration = Duration::from_millis(100);
+
+/// How many polls pass between asking the operating system which speakers it
+/// would hand a new stream today.
+///
+/// Two seconds. Enumerating devices is cheap but not free, and nobody plugs in
+/// headphones and expects the change inside a frame — a beat late reads as the
+/// hardware settling, which is what it is.
+const DEVICE_EVERY: u32 = 20;
 
 /// What symphonia can actually decode, and nothing aspirational.
 ///
@@ -187,72 +203,178 @@ impl Music {
     }
 }
 
+/// The output device, and everything bound to it.
+///
+/// Grouped because they can only be replaced together: the sink plays into the
+/// stream's mixer, so a stream that goes away takes its sink with it.
+struct Audio {
+    /// Never read. Held because dropping it ends playback.
+    _stream: rodio::OutputStream,
+    sink: rodio::Sink,
+    /// Which speakers this was opened against, to notice when they change.
+    device: Option<String>,
+}
+
+impl Audio {
+    fn open() -> Option<Self> {
+        // --- the whole of the rodio surface, on purpose -------------------
+        //
+        // If the crate's API has moved, it has moved here and nowhere else.
+        let stream = rodio::OutputStreamBuilder::open_default_stream().ok()?;
+        let sink = rodio::Sink::connect_new(stream.mixer());
+        // ------------------------------------------------------------------
+        Some(Self {
+            _stream: stream,
+            sink,
+            device: default_output_name(),
+        })
+    }
+}
+
+/// The name of the device the system would give a new stream right now.
+///
+/// A name rather than the device itself, because a name is the only thing here
+/// that survives being compared: two handles to the same speakers are separate
+/// values with no equality between them.
+fn default_output_name() -> Option<String> {
+    use rodio::cpal::traits::{DeviceTrait, HostTrait};
+
+    rodio::cpal::default_host()
+        .default_output_device()
+        .and_then(|device| device.name().ok())
+}
+
+/// Moves playback onto whatever the system now calls the default output.
+///
+/// An open stream is bound to the device it was opened against and stays there
+/// for as long as it lives. Every other sound on the machine follows the
+/// default when it changes — including Gloam's own, which the WebView routes —
+/// so plugging in headphones used to leave the music alone in the speakers,
+/// which looks less like a limitation than like the app being broken.
+///
+/// This is the cost of having taken audio out of the WebView. Decoding in Rust
+/// is what made FLAC play on a machine with no gstreamer plugin for it, and the
+/// same move handed us the housekeeping the browser had been doing quietly.
+///
+/// The position is carried over rather than the track restarted, which is the
+/// difference between a seam and an interruption.
+fn follow_device(audio: &mut Audio, queue: &Arc<Mutex<Queue>>) {
+    let position = audio.sink.get_pos();
+    let volume = audio.sink.volume();
+    let carrying = !audio.sink.empty();
+    let playing = carrying && !audio.sink.is_paused();
+
+    // If the new default will not open, the old stream keeps the music going
+    // on the old speakers. That is the wrong device but it is not silence, and
+    // silence is the worse of the two.
+    let Some(mut next) = Audio::open() else {
+        eprintln!("gloam: the new default output would not open; staying put");
+        return;
+    };
+
+    next.sink.set_volume(volume);
+
+    if carrying {
+        // Paused before anything is appended, because a fresh sink plays what
+        // it is given the moment it has it.
+        next.sink.pause();
+
+        let index = queue.lock().unwrap().index;
+        load(&next.sink, queue, index);
+
+        // Seeking is the decoder's to support and some formats do not. Falling
+        // back to the top of the track is worse than a seam and much better
+        // than a player that stopped.
+        if next.sink.try_seek(position).is_err() {
+            eprintln!("gloam: could not resume at {position:?}; from the top instead");
+        }
+
+        if playing {
+            next.sink.play();
+        }
+    }
+
+    // Replacing it here is what closes the old stream, and so what stops the
+    // sound still coming out of the device nobody is listening to.
+    *audio = next;
+}
+
 /// The audio thread.
 ///
 /// Owns the output stream and the sink for the life of the process, and is the
 /// only place in the app that touches either.
 fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
-    // --- the whole of the rodio surface, on purpose -----------------------
-    //
-    // If the crate's API has moved, it has moved here and nowhere else.
-    let Ok(stream) = rodio::OutputStreamBuilder::open_default_stream() else {
+    let Some(mut audio) = Audio::open() else {
         eprintln!("gloam: no audio output device; music is unavailable");
         return;
     };
-    let sink = rodio::Sink::connect_new(stream.mixer());
-    // ----------------------------------------------------------------------
+
+    let mut ticks: u32 = 0;
 
     loop {
         match rx.recv_timeout(POLL) {
             Ok(Cmd::Play) => {
-                if sink.empty() {
+                if audio.sink.empty() {
                     let index = queue.lock().unwrap().index;
-                    load(&sink, &queue, index);
+                    load(&audio.sink, &queue, index);
                 }
                 // Still empty means there was nothing to load — an empty
                 // folder, or a file that would not decode. Saying "playing"
                 // then would be a transport control lying about silence.
-                if !sink.empty() {
-                    sink.play();
+                if !audio.sink.empty() {
+                    audio.sink.play();
                     set_playing(&app, &queue, true);
                 }
             }
             Ok(Cmd::Pause) => {
-                sink.pause();
+                audio.sink.pause();
                 set_playing(&app, &queue, false);
             }
             Ok(Cmd::Step(by)) => {
                 let next = step(&queue, by);
-                sink.stop();
-                load(&sink, &queue, next);
-                sink.play();
+                audio.sink.stop();
+                load(&audio.sink, &queue, next);
+                audio.sink.play();
                 set_playing(&app, &queue, true);
                 announce(&app, &queue);
             }
             Ok(Cmd::At(index, play)) => {
-                sink.stop();
-                load(&sink, &queue, index);
+                audio.sink.stop();
+                load(&audio.sink, &queue, index);
                 if play {
-                    sink.play();
+                    audio.sink.play();
                 }
                 set_playing(&app, &queue, play);
                 announce(&app, &queue);
             }
-            Ok(Cmd::Volume(v)) => sink.set_volume(v.clamp(0.0, 1.0)),
+            Ok(Cmd::Volume(v)) => audio.sink.set_volume(v.clamp(0.0, 1.0)),
             Ok(Cmd::Stop) => {
-                sink.stop();
+                audio.sink.stop();
                 set_playing(&app, &queue, false);
                 announce(&app, &queue);
             }
             Err(mpsc::RecvTimeoutError::Timeout) => {
-                // Nothing said, so the only question left is whether the track
-                // ran out while nobody was asking.
+                // Nothing said, so the only questions left are the ones the
+                // world answers rather than the user: whether the track ran
+                // out, and whether the speakers moved.
                 let playing = queue.lock().unwrap().playing;
-                if playing && sink.empty() {
+                if playing && audio.sink.empty() {
                     let next = step(&queue, 1);
-                    load(&sink, &queue, next);
-                    sink.play();
+                    load(&audio.sink, &queue, next);
+                    audio.sink.play();
                     announce(&app, &queue);
+                }
+
+                ticks = ticks.wrapping_add(1);
+                if ticks % DEVICE_EVERY == 0 {
+                    // Both sides have to be known before a difference means
+                    // anything: a name that could not be read this time is not
+                    // evidence that the speakers changed.
+                    if let (Some(now), Some(then)) = (default_output_name(), &audio.device) {
+                        if &now != then {
+                            follow_device(&mut audio, &queue);
+                        }
+                    }
                 }
             }
             // The app is going away and took the sender with it.
