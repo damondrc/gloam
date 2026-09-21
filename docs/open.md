@@ -78,6 +78,37 @@ decisions that were deliberately deferred, and each says what would unblock it.
 - [ ] **Preferences in a file rather than `localStorage`.** The seam is marked
       in `prefs.ts`. Nothing needs it yet; the validation on the way in already
       does the job that moving would be meant to do.
+- [ ] **What the face shows when there is more to show than room.** The
+      readout and a track title both want the middle of a 320-pixel widget,
+      and in compact there are 180. Three shapes have been considered and two
+      were set aside, which is the part worth keeping.
+
+      **Swapping one for the other by size** was the first idea and it fails
+      on its own premise. The argument for dropping the digits is that the sky
+      already carries the time — but compact is 180×58, and at that size the
+      gradient stops being legible as progress: nobody reads early dusk off
+      late dusk in a band 58 pixels tall. The digits are needed *more* there,
+      not less. As a setting it also multiplies: compact against readout
+      against whether music is loaded is eight states to document and test.
+
+      **A title that appears when the track changes and leaves again** is the
+      shape that fits. It costs no setting and no space, it answers "what is
+      this?" at the moment the question occurs, and it is the same grammar as
+      the flock and the shooting star — things that happen rather than things
+      that sit there.
+
+      **A resting face with no readout on it** is worth doing and worth
+      renaming. Hiding the clock outright would break the one job: the sky
+      says "about half way", never whether three minutes are left or six, and
+      that number is exactly what somebody wants before starting something.
+      But the controls already appear on hover and withdraw at rest, so the
+      readout can join them — at rest the widget is scenery, and the number
+      stays one gesture away. Not hidden, just not resident.
+
+      Whatever is built, none of it keys off whether music is loaded. Having
+      chosen a folder and wanting to see the digits are unrelated questions,
+      and tying them together means plugging in music silently changes the
+      clock.
 
 ## Planned
 
