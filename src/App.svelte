@@ -114,6 +114,17 @@
     void music.setVolume(musicVolume);
   });
 
+  // Gloam speaking is the one thing allowed to interrupt the music, and it
+  // interrupts by leaning on it rather than by stopping it. Wired here rather
+  // than inside sound.ts, because what should happen to other sound while the
+  // widget talks is a question about the app: synthesis has no opinion about
+  // whether there is an album underneath. Buttons never reach this — a tick
+  // that ducked on every click would make both unbearable.
+  $effect(() => {
+    sound.onSpeak((seconds) => void music.duck(seconds));
+    return () => sound.onSpeak(null);
+  });
+
   // Reopened once, so the queue is ready and the panel can say how much is in
   // it. Nothing starts playing: a widget that begins the day with music
   // nobody asked for is a widget that gets closed.

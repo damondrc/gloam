@@ -48,13 +48,40 @@ const TRACK_EVENT: &str = "gloam://music-track";
 /// spoken to, or whether the current track has run out.
 const POLL: Duration = Duration::from_millis(100);
 
-/// How many polls pass between asking the operating system which speakers it
-/// would hand a new stream today.
+/// How long between asking the operating system which speakers it would hand a
+/// new stream today.
 ///
-/// Two seconds. Enumerating devices is cheap but not free, and nobody plugs in
-/// headphones and expects the change inside a frame — a beat late reads as the
-/// hardware settling, which is what it is.
-const DEVICE_EVERY: u32 = 20;
+/// Enumerating devices is cheap but not free, and nobody plugs in headphones
+/// and expects the change inside a frame — a beat late reads as the hardware
+/// settling, which is what it is. Measured in time rather than in polls
+/// because the poll rate is not constant: it quickens while the music is
+/// ducked, and counting wakes would make this fire five times as often for no
+/// reason.
+const DEVICE_EVERY: Duration = Duration::from_secs(2);
+
+/// How often the thread wakes while a duck is in progress.
+///
+/// A fade stepped at the ordinary hundred milliseconds is heard as a staircase
+/// rather than a fade — the ear is far better at spotting steps in loudness
+/// than the eye is at spotting them in brightness. Twenty milliseconds puts
+/// thirty steps in the release, which is below where anybody hears the joins,
+/// and it lasts only as long as the duck does.
+const DUCK_POLL: Duration = Duration::from_millis(20);
+
+/// How far down the music goes while Gloam is talking.
+///
+/// Down, not out. Silence draws more attention than a dip does, and the point
+/// is for the phrase to be heard over the music rather than instead of it —
+/// somebody should be able to tell the album never stopped.
+const DUCK_FLOOR: f32 = 0.22;
+
+/// Quick enough to be out of the way before the first note lands, and not so
+/// quick that the drop is itself an event.
+const DUCK_FADE_IN: Duration = Duration::from_millis(140);
+
+/// Slower coming back than going down, which is the asymmetry every compressor
+/// has for the same reason: a fast recovery sounds like a mistake being undone.
+const DUCK_FADE_OUT: Duration = Duration::from_millis(900);
 
 /// What symphonia can actually decode, and nothing aspirational.
 ///
@@ -85,7 +112,46 @@ enum Cmd {
     /// Start at an index, playing or not.
     At(usize, bool),
     Volume(f32),
+    /// Hold the music down for this long, with fades either side of it.
+    Duck(Duration),
     Stop,
+}
+
+/// A duck in progress.
+///
+/// Held as two instants rather than a phase, so that a second phrase arriving
+/// while the first is still ringing extends the hold instead of restarting the
+/// fade — which would be heard as the music jumping up and ducking again.
+struct Duck {
+    started: std::time::Instant,
+    hold_until: std::time::Instant,
+}
+
+impl Duck {
+    /// How loud the music should be right now, as a fraction of its own level.
+    ///
+    /// Returns `None` once the whole gesture is over, which is what tells the
+    /// caller to stop asking and go back to the slow poll.
+    fn gain(&self, now: std::time::Instant) -> Option<f32> {
+        let since = now.duration_since(self.started);
+
+        if since < DUCK_FADE_IN {
+            let t = since.as_secs_f32() / DUCK_FADE_IN.as_secs_f32();
+            return Some(1.0 - (1.0 - DUCK_FLOOR) * t);
+        }
+
+        if now < self.hold_until {
+            return Some(DUCK_FLOOR);
+        }
+
+        let released = now.duration_since(self.hold_until);
+        if released < DUCK_FADE_OUT {
+            let t = released.as_secs_f32() / DUCK_FADE_OUT.as_secs_f32();
+            return Some(DUCK_FLOOR + (1.0 - DUCK_FLOOR) * t);
+        }
+
+        None
+    }
 }
 
 struct Queue {
@@ -258,9 +324,8 @@ fn default_output_name() -> Option<String> {
 ///
 /// The position is carried over rather than the track restarted, which is the
 /// difference between a seam and an interruption.
-fn follow_device(audio: &mut Audio, queue: &Arc<Mutex<Queue>>) {
+fn follow_device(audio: &mut Audio, queue: &Arc<Mutex<Queue>>, volume: f32) {
     let position = audio.sink.get_pos();
-    let volume = audio.sink.volume();
     let carrying = !audio.sink.empty();
     let playing = carrying && !audio.sink.is_paused();
 
@@ -301,18 +366,29 @@ fn follow_device(audio: &mut Audio, queue: &Arc<Mutex<Queue>>) {
 
 /// The audio thread.
 ///
-/// Owns the output stream and the sink for the life of the process, and is the
-/// only place in the app that touches either.
+/// Owns the output stream and the sink, and is the only place in the app that
+/// touches either.
+///
+/// Two levels are kept apart here. `volume` is what the person set and is the
+/// only one they ever change; what reaches the sink is that multiplied by
+/// whatever a duck is currently asking for. Storing only the product would
+/// mean a phrase arriving mid-drag either loses the new setting or restores an
+/// old one when it lets go.
 fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
     let Some(mut audio) = Audio::open() else {
         eprintln!("gloam: no audio output device; music is unavailable");
         return;
     };
 
-    let mut ticks: u32 = 0;
+    let mut volume: f32 = 1.0;
+    let mut duck: Option<Duck> = None;
+    let mut device_checked = std::time::Instant::now();
 
     loop {
-        match rx.recv_timeout(POLL) {
+        // Quicker while a fade is running, and only then.
+        let wait = if duck.is_some() { DUCK_POLL } else { POLL };
+
+        match rx.recv_timeout(wait) {
             Ok(Cmd::Play) => {
                 if audio.sink.empty() {
                     let index = queue.lock().unwrap().index;
@@ -347,7 +423,23 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                 set_playing(&app, &queue, play);
                 announce(&app, &queue);
             }
-            Ok(Cmd::Volume(v)) => audio.sink.set_volume(v.clamp(0.0, 1.0)),
+            Ok(Cmd::Volume(v)) => volume = v.clamp(0.0, 1.0),
+            Ok(Cmd::Duck(hold)) => {
+                let now = std::time::Instant::now();
+                duck = Some(match duck {
+                    // Already down: extend the hold rather than start again.
+                    // Restarting would run the fade from full a second time,
+                    // and a phrase would be preceded by the music bouncing up.
+                    Some(active) => Duck {
+                        started: active.started,
+                        hold_until: active.hold_until.max(now + hold),
+                    },
+                    None => Duck {
+                        started: now,
+                        hold_until: now + DUCK_FADE_IN + hold,
+                    },
+                });
+            }
             Ok(Cmd::Stop) => {
                 audio.sink.stop();
                 set_playing(&app, &queue, false);
@@ -365,14 +457,14 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                     announce(&app, &queue);
                 }
 
-                ticks = ticks.wrapping_add(1);
-                if ticks % DEVICE_EVERY == 0 {
+                if device_checked.elapsed() >= DEVICE_EVERY {
+                    device_checked = std::time::Instant::now();
                     // Both sides have to be known before a difference means
                     // anything: a name that could not be read this time is not
                     // evidence that the speakers changed.
                     if let (Some(now), Some(then)) = (default_output_name(), &audio.device) {
                         if &now != then {
-                            follow_device(&mut audio, &queue);
+                            follow_device(&mut audio, &queue, volume);
                         }
                     }
                 }
@@ -380,6 +472,21 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
             // The app is going away and took the sender with it.
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
         }
+
+        // After every wake, whatever woke it. A command that changes the
+        // volume mid-duck has to land through the same multiplication as a
+        // fade step, or the two take turns overwriting each other.
+        let gain = match &duck {
+            Some(active) => match active.gain(std::time::Instant::now()) {
+                Some(gain) => gain,
+                None => {
+                    duck = None;
+                    1.0
+                }
+            },
+            None => 1.0,
+        };
+        audio.sink.set_volume(volume * gain);
     }
 }
 
@@ -466,6 +573,17 @@ pub fn music_at(app: AppHandle, index: usize, play: bool) {
 #[tauri::command]
 pub fn music_volume(app: AppHandle, volume: f32) {
     app.state::<Music>().send(Cmd::Volume(volume));
+}
+
+/// Seconds rather than milliseconds, because the caller measures this in notes
+/// and a note is most of a second.
+#[tauri::command]
+pub fn music_duck(app: AppHandle, seconds: f32) {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return;
+    }
+    app.state::<Music>()
+        .send(Cmd::Duck(Duration::from_secs_f32(seconds.min(30.0))));
 }
 
 #[tauri::command]

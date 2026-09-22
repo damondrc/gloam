@@ -107,6 +107,19 @@ export const previous = (): Promise<void> => ask<void>("music_prev");
 export const at = (index: number, playing = true): Promise<void> =>
   ask<void>("music_at", { index, play: playing });
 
+/**
+ * Holds the music down for a moment, then lets it back up.
+ *
+ * Called when Gloam is about to say something. The alternative was to compete:
+ * the widget's phrases are quiet by design and a phrase that has to be loud
+ * enough to carry over an album is a phrase that is too loud on its own.
+ *
+ * The seconds are the hold only. Rust adds the fades at either end, because
+ * the ramp has to happen where the samples are.
+ */
+export const duck = (seconds: number): Promise<void> =>
+  ask<void>("music_duck", { seconds });
+
 /** 0 to 1, and not the same control as the widget's own volume. */
 export const setVolume = (volume: number): Promise<void> =>
   ask<void>("music_volume", { volume });
