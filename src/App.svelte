@@ -28,6 +28,7 @@
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
+  import MusicBar from "./lib/MusicBar.svelte";
   import Grip from "./lib/Grip.svelte";
   import Panel from "./lib/Panel.svelte";
   import Tour from "./lib/Tour.svelte";
@@ -108,7 +109,30 @@
   // forgetting the choice.
   let musicFolder = $state(stored.music.folder);
   let musicVolume = $state(stored.music.volume);
-  let musicCount = $state(0);
+
+  // The whole snapshot rather than the parts of it this file happens to need
+  // today. Rust owns what is playing and says so on one event; keeping a field
+  // here per question would be several copies to hold in agreement, and they
+  // would first disagree the moment a track ended while nobody was watching.
+  let player = $state<music.MusicState>(music.EMPTY);
+
+  // Every route to a different track ends in Rust announcing the new one — a
+  // button, a folder being opened, or a file simply running out. Subscribing
+  // is how the last of those three gets here at all.
+  $effect(() => {
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+
+    void music.onTrack((state) => (player = state)).then((fn) => {
+      if (cancelled) fn();
+      else stop = fn;
+    });
+
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  });
 
   $effect(() => {
     void music.setVolume(musicVolume);
@@ -133,7 +157,7 @@
     let cancelled = false;
 
     void music.openFolder(musicFolder).then((state) => {
-      if (!cancelled) musicCount = state.count;
+      if (!cancelled) player = state;
     });
 
     return () => {
@@ -152,7 +176,7 @@
     if (!picked) return;
 
     musicFolder = picked;
-    musicCount = (await music.openFolder(picked)).count;
+    player = await music.openFolder(picked);
   }
   let position = $state(stored.position);
 
@@ -651,6 +675,20 @@
         </svg>
       </button>
 
+      <!-- Only once there is something to play. An empty transport is three
+           buttons that do nothing and a blank where a name should be, which is
+           furniture rather than an interface. Not in compact either: the strip
+           it lives in does not exist there. -->
+      {#if !compact && player.count > 0}
+        <MusicBar
+          name={player.name}
+          playing={player.playing}
+          onPrevious={() => void music.previous()}
+          onToggle={() => void (player.playing ? music.pause() : music.play())}
+          onNext={() => void music.next()}
+        />
+      {/if}
+
       <div class="dock">
         <Controls
           running={timer.running}
@@ -745,7 +783,7 @@
        {tray}
        onAtLogin={setAtLogin}
        {musicFolder}
-       {musicCount}
+       musicCount={player.count}
        onPickFolder={chooseMusicFolder}
        {musicVolume}
        onMusicVolume={(next) => (musicVolume = next)}
