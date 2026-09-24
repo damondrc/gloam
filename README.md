@@ -78,6 +78,9 @@ distance between an ambient backdrop and a busy one.</em></p>
   whole thing from 80% to 180%.
 - **A tray icon**, so it can be put away without stopping the run — and found
   again if it ends up somewhere you cannot reach.
+- **Plays a folder of your own music**, decoded inside the app rather than
+  through the browser engine — so FLAC works without hunting for a codec. It
+  steps aside when Gloam has something to say, and follows your headphones.
 - **Soft synthesised sound**, no audio files and no jump scares.
 - **Opens with your session** if you ask it to, into the tray rather than onto
   your screen.
@@ -167,6 +170,7 @@ the timer, the ground is where the machinery lives.
 | --- | --- |
 | **General** | How long a run is, and whether the machine opens Gloam by itself. |
 | **Ambience** | What the widget is like to sit beside: volume, the material it sounds like, how alive the sky is, and what the horizon is. |
+| **Music** | Which folder to play, and how loud. |
 | **Keys** | Every shortcut, and the way back to the tour. |
 
 **Sound.** Three sets, each an instrument, a phrase and a kit of button sounds
@@ -195,6 +199,18 @@ standing on it.
 | **Water** | A flat band. What Gloam has always looked like. |
 | **Skyline** | A city, lighting up as the sky goes dark and out again through the break. |
 | **Ridge** | Three ranges at three distances. |
+
+**Music.** Point Gloam at a folder and it plays what is in it — FLAC, MP3,
+Vorbis, WAV or AAC — with previous, play and next on the widget's face and the
+track name beside them. One folder, flat, in file-name order: a library needs
+more than three buttons to navigate, and at that point it stops being a timer
+that plays music.
+
+Decoding happens inside the app rather than through the browser engine, which
+is why FLAC works on a machine that has no codec for it. The music has its own
+volume, dips while Gloam speaks instead of competing with it, and moves with
+you when you plug in headphones. Your folder is read and never changed, and
+nothing plays until you press play — including after a restart.
 
 **Launch at login** starts Gloam in the tray rather than on screen: a widget is
 something you reach for, and a session manager is not a person reaching. On a

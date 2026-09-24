@@ -13,6 +13,38 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+## [1.1.0]
+
+### Added
+
+- **A music player.** Point Gloam at a folder and it plays what is in it —
+  FLAC, MP3, Vorbis, WAV or AAC. Previous, play and next appear on the
+  widget's face with the track name beside them; the folder and its volume
+  live in a new **Music** tab in the panel. One folder, flat, in file-name
+  order: descending into subfolders would make it a library, and a library
+  needs more than three buttons to navigate.
+  Decoding happens inside the app rather than through the browser engine.
+  That is the whole shape of the feature and not a detail — a web page's audio
+  goes through a media stack that depends on what the machine happens to have
+  installed, which is precisely what made Gloam's AppImage ship silent. FLAC
+  plays here whether or not the system has a codec for it.
+  The music has its own volume, separate from the widget's. Your folder is
+  read and never written to, and nothing plays on its own: the folder is
+  remembered across restarts so the queue is ready, but pressing play stays
+  something you do.
+- **The music steps aside while Gloam speaks.** At a phase change or the end
+  of a run it dips to about a fifth and comes back, rather than being talked
+  over. Never to silence — a gap draws more attention than a dip, and you
+  should be able to tell the music never stopped. Button clicks never do this;
+  only the sounds that mean something.
+
+### Fixed
+
+- **Music now follows the default output device.** Plugging in headphones
+  mid-track used to move every sound on the machine except the music, which
+  carried on in the speakers. It now moves across within a couple of seconds,
+  resuming near where it was rather than starting the track again.
+
 ## [1.0.0] — 2026-09-14
 
 ### Added
