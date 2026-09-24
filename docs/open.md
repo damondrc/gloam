@@ -112,11 +112,18 @@ decisions that were deliberately deferred, and each says what would unblock it.
 
 ## Planned
 
-- [ ] **A local music player** — 1.1.0. Decoding in Rust rather than through
-      the WebView, for the reason the AppImage demonstrated: anything routed
-      through WebKitGTK's media stack depends on what the machine happens to
-      have. A folder rather than a library, and the music ducks for a
-      transition rather than competing with it.
+- [x] **A local music player** — landed in 1.1.0. Decoding in Rust rather than
+      through the WebView, for the reason the AppImage demonstrated: anything
+      routed through WebKitGTK's media stack depends on what the machine
+      happens to have. A folder rather than a library, and the music ducks for
+      a transition rather than competing with it. `src-tauri/src/music.rs`,
+      `src/lib/music.ts`.
+
+      It also collected a bill nobody had written down. An audio stream is
+      bound to the device it was opened against, and the browser had been
+      following the system's default on our behalf — so owning playback meant
+      owning that too. Fixed in the same version; the reasoning is in
+      `architecture.md`.
 - [x] **Alternative horizons** — landed in 1.0.0. A skyline whose windows come
       on as the sun goes down and out again through the break, and a mountain
       ridge in three ranges. Generated from a seed rather than drawn, so

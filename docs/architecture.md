@@ -295,6 +295,130 @@ Every gesture fades out whatever is still ringing before it starts. Auditioning
 a setting is the reason: you are there to hear the thing you picked, not the
 thing you picked over the last two.
 
+## Music
+
+A folder of music, decoded in Rust and never touched by the WebView.
+
+That last part is the whole shape of the feature rather than an optimisation.
+WebKitGTK routes every sound a web page makes through gstreamer, and FLAC lives
+in a plugin package a machine may or may not have installed — which is exactly
+what made Gloam's AppImage ship silent. A player built the obvious way would
+work on the machine it was written on and be a coin toss everywhere else.
+Decoding with symphonia and writing to the device with cpal means the only
+thing between a file and the speakers is code that shipped inside the binary.
+
+It costs a thread. `rodio::OutputStream` owns a `cpal::Stream`, which is
+`!Send`: it cannot move between threads, so it cannot sit in Tauri's managed
+state and be touched by whichever thread happens to service a command. One
+thread owns it and everything else talks down a channel — which also means
+nothing happening in the interface can stall playback, and for an app whose job
+is to be ignorable that is worth more than the simplicity it costs.
+
+### A folder, not a library
+
+One folder, flat, sorted by file name. No descending into subfolders, no tags,
+no playlists, no shuffle, no seeking.
+
+Descending would turn "the album I picked" into a library, and a library needs
+more than three buttons to navigate — at which point Gloam is a music player
+that keeps time rather than a timer that plays music. Sorting by file name
+rather than by tag gets album order for free from the way albums are already
+numbered, and works on files nobody tagged. The track name shown is the file's,
+without directory or extension, which is what the folder already told you it
+was.
+
+Anything unreadable is skipped rather than reported. A folder with one corrupt
+file and forty good ones should be a folder that plays.
+
+### Following the speakers
+
+An audio stream is bound to the device it was opened against and stays there
+for as long as it lives. Nothing in the documentation hides this; it simply
+never came up, because the browser had been following the system's default
+output on Gloam's behalf for every other sound in the app. Taking playback out
+of the WebView meant inheriting that job, and until it was inherited, plugging
+in headphones moved every sound on the machine except the music.
+
+There is no cross-platform notification to subscribe to, so the thread asks. It
+already wakes every hundred milliseconds to notice a track running out; every
+two seconds it also asks which device the system would hand a new stream today,
+and compares by name — a name being the only thing here that survives being
+compared, since two handles to the same speakers are separate values with no
+equality between them. On a change it opens a new stream, reloads the track and
+seeks to where the old one had got to, which is the difference between a seam
+and an interruption.
+
+Three ways that can fail, each answered rather than propagated. A new default
+that will not open leaves the old stream alone, because the wrong speakers beat
+silence. A seek the decoder will not support restarts the track instead of
+giving up. A name that cannot be read is not evidence of anything, so nothing
+happens.
+
+### Ducking
+
+When Gloam speaks, the music leans out of the way: down to about a fifth over
+140 milliseconds, held while the phrase plays, and back over 900.
+
+Never to silence. A gap draws more attention than a dip does, and the point is
+for the phrase to be heard *over* the music rather than instead of it — someone
+listening should be able to tell the album never stopped. The alternative was
+to make the transitions loud enough to carry over an album, which is a
+transition that is too loud every other time.
+
+The asymmetry between the two fades is the one every compressor has, for the
+same reason: a fast recovery sounds like a mistake being undone. And while a
+fade is running the thread quickens from a hundred milliseconds to twenty,
+because a ramp stepped at the ordinary rate is heard as a staircase rather than
+a fade. The ear catches steps in loudness far better than the eye catches them
+in brightness.
+
+Buttons cannot trigger it, and not by convention: the announcement hangs off
+the function that plays a phrase, which the button sounds do not go through, so
+it is structurally impossible for a click to duck the music. A tick that leaned
+on the album every time you pressed pause would make the music unlistenable and
+the clicks sinister.
+
+Two levels are kept apart in the thread — what the person set, and what reaches
+the sink, which is that multiplied by whatever the duck is asking for. Storing
+only the product would mean a phrase arriving mid-drag either loses the new
+setting or restores an old one when the slider is let go.
+
+Which sounds duck is a decision the app makes, not the synthesiser. `sound.ts`
+offers a hook and knows nothing about music; `App.svelte` wires it to the
+player. Whether there is an album underneath the widget's voice is not a
+question synthesis has any business having an opinion about.
+
+### Where the controls are
+
+Split by how often they are used. The folder and the volume are chosen once and
+live in the panel; previous, play and next are the most frequent thing anybody
+does to a music player and live on the face, appearing on hover like every
+other control.
+
+They sit in the top strip, which is the only clear span there — and turns out
+to be right rather than merely available, because the timer's own play button
+is in the bottom corner. Two play buttons within an inch of each other make a
+widget you have to read before pressing, and distance settles that better than
+any pair of icons could. They are drawn lighter than the timer's controls for
+the same reason: Gloam is a timer that can play music, and the hierarchy should
+say so before anyone reads a label.
+
+Nothing is drawn until there is something to play, and nothing appears in
+compact, where that strip does not exist.
+
+### What the frontend does not keep
+
+No copy of the queue. What is playing and where in the folder it sits lives in
+Rust and arrives as a whole snapshot — as a command's return, or on the track
+event. Two copies would be two copies to hold in agreement, and they would
+first disagree the moment a track ended while nobody was watching, which is
+also the one change no click will ever report.
+
+Everything in the bridge fails soft. A missing audio device, a folder that has
+gone, a file nothing can decode: each logs and returns rather than throwing.
+Gloam is a timer that can play music, not a music player that keeps time, and
+none of those is a reason for a countdown to stop.
+
 ## The backdrop
 
 Clouds drift across the sky in three banks, taking six to eight minutes to
