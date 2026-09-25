@@ -224,6 +224,48 @@ Which means glibc is not what decides the floor. The `.deb` also depends on
 the one this check was written to test. Worth knowing before anyone tries to
 widen the range by building somewhere older still.
 
+### I · Music
+
+Appended rather than slotted in after F, where it belongs by subject. The
+letters are positional, and renaming two sections would rewrite a table of
+results somebody actually observed — which is a worse trade than a list that
+grew in the order the features did.
+
+This section carries more weight than its length suggests. Everything else here
+is drawn by the WebView, which behaves the same on both machines because it is
+the same engine. Playback is not: it is Rust talking to WASAPI on one side and
+to ALSA, PulseAudio or PipeWire on the other, depending on what the machine
+happens to run. Audio on Linux is also the exact ground that made the AppImage
+ship silent, so a pass here is worth more than a pass anywhere else in this
+document.
+
+| # | Check | Win 11 | Linux |
+| --- | --- | --- | --- |
+| I1 | The folder picker opens, and the folder chosen appears in the panel with the right number of tracks | | |
+| I2 | FLAC plays. So does anything else in the folder | | |
+| I3 | Previous, play/pause and next all do what they say, and the name on the face follows | | |
+| I4 | A track ending on its own moves to the next one, with no gap worth noticing | | |
+| I5 | The music volume moves the music and nothing else; the widget's own volume moves the widget and nothing else | | |
+| I6 | The folder survives a restart, and **nothing plays until asked** | | |
+| I7 | A folder that has been renamed or unplugged since says so, rather than pretending | | |
+| I8 | A phase boundary ducks the music and lets it back up, with no step audible in either fade | | |
+| I9 | Pressing buttons during a phrase does not make the music bounce | | |
+| I10 | Plugging in headphones mid-track moves the music within a couple of seconds, near where it was — **and stops the old device** | | |
+| I11 | Unplugging them again comes back the same way | | |
+| I12 | Changing device while paused does not start the music | | |
+| I13 | Quitting Gloam stops the audio, with no process left holding the device | | |
+
+**I10 on Linux** is the row most likely to behave differently. PulseAudio and
+PipeWire both move streams between devices on their own, which may mean the
+music follows before Gloam has noticed anything — a pass either way, as long as
+it ends up in the headphones and leaves the speakers. What would be a failure
+is hearing it in both.
+
+**I2 on Linux** is the AppImage's ghost. FLAC decodes inside the binary now, so
+a machine with no gstreamer plugin for it should be no different from one with;
+if FLAC is silent here and plays elsewhere, that assumption is wrong and the
+whole shape of the feature needs revisiting.
+
 ### Notes
 
 **D1 · Linux** — resizing with the grip is noticeably less smooth than on
