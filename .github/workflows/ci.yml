@@ -91,14 +91,16 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # Tauri's Linux prerequisites. libayatana-appindicator is not needed by
-      # anything yet and is here on purpose: the tray lands next, and a build
-      # machine that cannot produce it is better discovered now than then.
+      # Tauri's Linux prerequisites, plus the ALSA headers. cpal links against
+      # ALSA on Linux whichever sound server the machine actually runs —
+      # PulseAudio and PipeWire both sit behind it — so the music player does
+      # not build without them.
       - name: Linux system dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
+            libasound2-dev \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
