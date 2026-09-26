@@ -49,8 +49,10 @@
   // needs to act on, and it keeps the sound vocabulary and the phrase names
   // describing the same thing.
   timer.onSegmentEnd = (_done, next) => {
-    if (!next) sound.runComplete();
-    else if (next.phase === "focus") sound.enterFocus();
+    if (!next) {
+      sound.runComplete();
+      endMusicWithRun();
+    } else if (next.phase === "focus") sound.enterFocus();
     else sound.enterBreak();
   };
 
@@ -115,6 +117,53 @@
   // here per question would be several copies to hold in agreement, and they
   // would first disagree the moment a track ended while nobody was watching.
   let player = $state<music.MusicState>(music.EMPTY);
+
+  /**
+   * Whether the music is paused because the timer was, rather than because
+   * somebody paused the music.
+   *
+   * The music follows the person's own interruptions. Pausing the timer is
+   * stepping out of the session, and the music steps out with it; resuming
+   * brings it back. But only music the timer took away — pause the album by
+   * hand, then pause and resume the run, and the album stays where you left
+   * it. Without this one flag the timer would be overruling the other button.
+   *
+   * Breaks and skips do not touch it. A break is part of a session, not an
+   * interruption of one, and starting the timer never starts music nobody
+   * started. Plain `let`: nothing on screen depends on it.
+   */
+  let heldByTimer = false;
+
+  function holdMusic(): void {
+    if (!player.playing) return;
+    heldByTimer = true;
+    void music.pause();
+  }
+
+  function releaseMusic(): void {
+    if (!heldByTimer) return;
+    heldByTimer = false;
+    void music.play();
+  }
+
+  /**
+   * The run is over, and so is the soundtrack to it.
+   *
+   * The alarm ducks the music as every phrase does; this changes how that duck
+   * ends, fading to nothing rather than back up, and leaves the player paused
+   * where it was. Carrying on is a decision for whoever is sitting there, and
+   * it is one button away — the same one that would carry on anywhere else.
+   */
+  function endMusicWithRun(): void {
+    heldByTimer = false;
+    void music.finish();
+  }
+
+  /** Touching the music directly takes it back from the timer. */
+  function byHand(act: () => Promise<void>): void {
+    heldByTimer = false;
+    void act();
+  }
 
   // Every route to a different track ends in Rust announcing the new one — a
   // button, a folder being opened, or a file simply running out. Subscribing
@@ -415,8 +464,11 @@
     // The first click doubles as the user gesture that unlocks WebAudio, so the
     // end-of-segment sounds are guaranteed to be audible later.
     sound.unlockAudio();
-    sound.press(timer.running ? "pause" : "start");
+    const pausing = timer.running;
+    sound.press(pausing ? "pause" : "start");
     timer.toggle();
+    if (pausing) holdMusic();
+    else releaseMusic();
   }
 
   // Manual actions get the faint interface tick, never a transition phrase.
@@ -425,6 +477,8 @@
   function resetTimer(): void {
     sound.press("reset");
     timer.reset();
+    // An interruption like pausing, and undone the same way: starting again.
+    holdMusic();
   }
 
   function skipSegment(): void {
@@ -683,9 +737,9 @@
         <MusicBar
           name={player.name}
           playing={player.playing}
-          onPrevious={() => void music.previous()}
-          onToggle={() => void (player.playing ? music.pause() : music.play())}
-          onNext={() => void music.next()}
+          onPrevious={() => byHand(music.previous)}
+          onToggle={() => byHand(player.playing ? music.pause : music.play)}
+          onNext={() => byHand(music.next)}
         />
       {/if}
 

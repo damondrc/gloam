@@ -100,6 +100,7 @@ pub fn run() {
         music::music_at,
         music::music_volume,
         music::music_duck,
+        music::music_finish,
         music::music_status,
     ]);
 

@@ -120,6 +120,12 @@ export const at = (index: number, playing = true): Promise<void> =>
 export const duck = (seconds: number): Promise<void> =>
   ask<void>("music_duck", { seconds });
 
+/**
+ * The run is over. The music fades out of the alarm's duck instead of coming
+ * back, and pauses where it is — so playing it again continues the track.
+ */
+export const finish = (): Promise<void> => ask<void>("music_finish");
+
 /** 0 to 1, and not the same control as the widget's own volume. */
 export const setVolume = (volume: number): Promise<void> =>
   ask<void>("music_volume", { volume });

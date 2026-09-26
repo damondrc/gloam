@@ -83,6 +83,14 @@ const DUCK_FADE_IN: Duration = Duration::from_millis(140);
 /// has for the same reason: a fast recovery sounds like a mistake being undone.
 const DUCK_FADE_OUT: Duration = Duration::from_millis(900);
 
+/// How long the music takes to leave at the end of a run, starting from where
+/// the alarm's duck left it.
+///
+/// Long enough to read as the music ending with the run rather than being
+/// switched off by it — the difference between a record finishing and a hand
+/// on the needle.
+const DUCK_FADE_END: Duration = Duration::from_millis(1800);
+
 /// What symphonia can actually decode, and nothing aspirational.
 ///
 /// Opus is deliberately absent: symphonia does not decode it, and listing an
@@ -114,6 +122,9 @@ enum Cmd {
     Volume(f32),
     /// Hold the music down for this long, with fades either side of it.
     Duck(Duration),
+    /// The run is over: instead of coming back up after the current duck, the
+    /// music fades out and pauses where it is.
+    Finish,
     Stop,
 }
 
@@ -122,9 +133,13 @@ enum Cmd {
 /// Held as two instants rather than a phase, so that a second phrase arriving
 /// while the first is still ringing extends the hold instead of restarting the
 /// fade — which would be heard as the music jumping up and ducking again.
+#[derive(Clone, Copy)]
 struct Duck {
     started: std::time::Instant,
     hold_until: std::time::Instant,
+    /// Set at the end of a run. The release becomes a fade to nothing, and
+    /// the player pauses when it gets there.
+    ending: bool,
 }
 
 impl Duck {
@@ -145,6 +160,15 @@ impl Duck {
         }
 
         let released = now.duration_since(self.hold_until);
+
+        if self.ending {
+            if released < DUCK_FADE_END {
+                let t = released.as_secs_f32() / DUCK_FADE_END.as_secs_f32();
+                return Some(DUCK_FLOOR * (1.0 - t));
+            }
+            return None;
+        }
+
         if released < DUCK_FADE_OUT {
             let t = released.as_secs_f32() / DUCK_FADE_OUT.as_secs_f32();
             return Some(DUCK_FLOOR + (1.0 - DUCK_FLOOR) * t);
@@ -431,14 +455,38 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                     // Restarting would run the fade from full a second time,
                     // and a phrase would be preceded by the music bouncing up.
                     Some(active) => Duck {
-                        started: active.started,
                         hold_until: active.hold_until.max(now + hold),
+                        ..active
                     },
                     None => Duck {
                         started: now,
                         hold_until: now + DUCK_FADE_IN + hold,
+                        ending: false,
                     },
                 });
+            }
+            Ok(Cmd::Finish) => {
+                // Only music that is actually sounding has anywhere to fade
+                // from. Paused or empty, the end of a run has nothing to do.
+                if !audio.sink.empty() && !audio.sink.is_paused() {
+                    let now = std::time::Instant::now();
+                    // Either order of arrival works. Usually the alarm's duck
+                    // is already running and this only changes how it ends; if
+                    // this arrives first, the duck that follows extends the
+                    // hold and keeps the ending, because the extension above
+                    // carries every other field across.
+                    duck = Some(match duck {
+                        Some(active) => Duck {
+                            ending: true,
+                            ..active
+                        },
+                        None => Duck {
+                            started: now,
+                            hold_until: now + DUCK_FADE_IN,
+                            ending: true,
+                        },
+                    });
+                }
             }
             Ok(Cmd::Stop) => {
                 audio.sink.stop();
@@ -476,11 +524,20 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
         // After every wake, whatever woke it. A command that changes the
         // volume mid-duck has to land through the same multiplication as a
         // fade step, or the two take turns overwriting each other.
-        let gain = match &duck {
+        let gain = match duck {
             Some(active) => match active.gain(std::time::Instant::now()) {
                 Some(gain) => gain,
                 None => {
                     duck = None;
+                    // The end of a run fades to nothing and then stops there,
+                    // so pressing play afterwards picks up where the music
+                    // was rather than where the track began.
+                    if active.ending {
+                        audio.sink.pause();
+                        set_playing(&app, &queue, false);
+                    }
+                    // Back to full level either way: a paused sink makes no
+                    // sound, and the next play should not start at zero.
                     1.0
                 }
             },
@@ -573,6 +630,12 @@ pub fn music_at(app: AppHandle, index: usize, play: bool) {
 #[tauri::command]
 pub fn music_volume(app: AppHandle, volume: f32) {
     app.state::<Music>().send(Cmd::Volume(volume));
+}
+
+/// The run has ended. See `Cmd::Finish`.
+#[tauri::command]
+pub fn music_finish(app: AppHandle) {
+    app.state::<Music>().send(Cmd::Finish);
 }
 
 /// Seconds rather than milliseconds, because the caller measures this in notes
