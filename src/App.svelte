@@ -307,6 +307,74 @@
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
 
+  /** How much of the sun's light on the water the moon gives back. */
+  const MOONLIGHT = 0.34;
+
+  /**
+   * The sun's reflection in the water — or the moon's, which is the same
+   * element in a different colour.
+   *
+   * Light hanging from the waterline directly under the body, brightest
+   * where it meets the line and dissolving downward. It strengthens as the
+   * body comes down toward the water, because a low sun reflects hardest, and
+   * it is gone once the body has gone under — nothing left above the line
+   * means nothing to mirror.
+   *
+   * The first version placed a mirrored disc half the body's height below
+   * the line, which is geometrically right and looked wrong on screen: a
+   * dark gap between horizon and reflection made it read as an object
+   * floating under the water rather than as light on top of it. A reflection
+   * seen from a shore starts at the waterline, so this one does too.
+   *
+   * The moon gets the same light at a third of the strength, because it has
+   * a fraction of the sun's to give. It matters more than it sounds: the moon
+   * opens every break already low over the water, so without the difference
+   * the brightest reflection in the widget would arrive at the start of the
+   * one segment meant to be dimmer. It fades as the moon climbs, the same way
+   * the sun's grows as it sinks.
+   *
+   * Short and diffuse rather than a column. The longer shapes read as a
+   * feature of the scene; this reads as light, which is all it should be.
+   * Worked out here rather than in CSS because it needs the waterline and
+   * the body's radius together, and a calc() holding both would be harder to
+   * read than the arithmetic it replaced.
+   */
+  const reflection = $derived.by(() => {
+    const clamp = (x: number): number => Math.min(1, Math.max(0, x));
+    // The body is the moon for the whole of a break and after the run, which
+    // is exactly how skyFor chooses between the two.
+    const light = timer.finished || timer.phase === "break" ? MOONLIGHT : 1;
+    const stage = baseSize.height;
+    // Compact draws the sun smaller; see `.frame.compact .celestial`.
+    const r = sky.bodyR * (compact ? 0.72 : 1);
+    const above = (1 - HORIZON_SHARE) * stage - sky.bodyY * stage;
+    const d = above / r;
+
+    const strength = clamp((d + 1) / 0.9) * (0.5 + 0.5 * clamp((3.4 - d) / 2.4));
+    const width = r * 2.6;
+    const height = r * 1.6;
+    // A touch above the line, so the brightest part is under the lip rather
+    // than starting a pixel below it; the water's own clip takes the rest.
+    const top = -r * 0.15;
+
+    // The waterline's own light, peaking as the body touches the water.
+    // Without it the sun's glow ends in a hard edge against the sea, now that
+    // the sea is opaque — the halo is drawn in the sky, and the sky stops at
+    // the water. This is what sews the two together.
+    const touch = clamp(1 - Math.abs(d - 0.2) / 2.6);
+
+    return {
+      width,
+      height,
+      top,
+      strength: strength * 0.6 * light,
+      touch: touch * light,
+      lip: r * (3.4 + 1.2 * touch),  // size follows position, not brightness
+      lipHeight: r * 0.34,
+      bloom: r * 4.2,
+    };
+  });
+
   /** The stage is the timer; the panel grows the window beneath it. */
   const stageHeight = $derived(baseSize.height);
   const panelHeight = $derived(
@@ -624,7 +692,33 @@
            its place, so the bottom of the frame is one mass with a silhouette
            for a top edge rather than a band with something standing on it. -->
       {#if horizon === "water"}
-        <div class="ground"></div>
+        <!-- Outside the water, because it is light in the sky: anchored to
+             the waterline from below and fading upward into the halo. -->
+        {#if reflection.touch > 0.005}
+          <i
+            class="bloom"
+            style="width: {reflection.bloom.toFixed(2)}rem; --touch: {reflection.touch.toFixed(3)};"
+          ></i>
+        {/if}
+        <div class="ground">
+          {#if reflection.touch > 0.005}
+            <i
+              class="lip"
+              style="width: {reflection.lip.toFixed(2)}rem; height: {reflection.lipHeight.toFixed(2)}rem; --touch: {reflection.touch.toFixed(3)};"
+            ></i>
+          {/if}
+          {#if reflection.strength > 0.005}
+            <i
+              class="reflection"
+              style="
+                width: {reflection.width.toFixed(2)}rem;
+                height: {reflection.height.toFixed(2)}rem;
+                top: {reflection.top.toFixed(2)}rem;
+                --strength: {reflection.strength.toFixed(3)};
+              "
+            ></i>
+          {/if}
+        </div>
       {/if}
 
       <!-- After the ground, because its reflection has to land on the water
@@ -1016,12 +1110,110 @@
     right: 0;
     bottom: 0;
     height: var(--horizon);
+    overflow: hidden;
+    /* Opaque from the waterline down. It used to start at 72% and let the
+       sky show through the top of the sea, which also let the sun show
+       through it: a sun that sets into water and stays visible under the
+       surface is not setting. The ridge learnt the same lesson first —
+       a mountain you can see the moon through is not a mountain.
+
+       The sky still tints the top of the water, which is what the
+       transparency had been for. It is mixed in rather than shown through:
+       --ground-mid is the ground already carried a quarter of the way toward
+       the sky's own colour, so the band keeps its lighter lip without being
+       a window onto whatever is behind it. */
     background: linear-gradient(
       to bottom,
-      rgb(var(--ground) / 0.72),
+      rgb(var(--ground-mid)),
       rgb(var(--ground)) 62%
     );
     border-top: 1px solid rgb(var(--accent) / 0.2);
+  }
+
+  /* Why the first version looked dry, and what answers each part.
+
+     Its falloff was a straight line from centre to edge, and a linear ramp
+     shows the shape it is ramping over: you could see the oval. These stops
+     trace a bell instead — dropping fast from the centre and trailing a long
+     way before they reach nothing — which is what makes an edge stop being an
+     edge.
+
+     It was painted over the water, and a sun's colour at part opacity over
+     dark purple is grey. Light does not cover what it lands on, it adds to
+     it; `screen` lightens the water toward the sun's colour instead of mixing
+     the two into mud.
+
+     And it has a blur again, which the first version had removed on account
+     of the clouds. The clouds' seams came from a box with no size, clipped
+     exactly where the picture was. Here the gradient is already at zero by
+     the time it reaches its own edge, so wherever WebKitGTK decides to cut
+     the blur off, it is cutting through nothing. */
+  .reflection {
+    position: absolute;
+    left: 75%;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      ellipse 50% 100% at 50% 0%,
+      rgb(var(--body) / 0.9) 0%,
+      rgb(var(--body) / 0.62) 22%,
+      rgb(var(--body) / 0.32) 45%,
+      rgb(var(--body) / 0.12) 66%,
+      rgb(var(--body) / 0.03) 82%,
+      rgb(var(--body) / 0) 92%
+    );
+    mix-blend-mode: screen;
+    filter: blur(3rem);
+    opacity: calc(var(--strength) * var(--dim, 1));
+    pointer-events: none;
+    transition: opacity 0.4s linear;
+  }
+
+  /* A thread of light on the surface where the body meets it. Centred on the
+     waterline rather than hung below it, and with the same bell of a falloff
+     as the reflection, so it reads as a glint rather than a ruled line. A
+     little whiter than the body at its core, the way a highlight is. */
+  .lip {
+    position: absolute;
+    left: 75%;
+    top: 0;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      ellipse 50% 50% at 50% 50%,
+      rgb(255 236 210 / 0.95) 0%,
+      rgb(var(--body) / 0.55) 30%,
+      rgb(var(--body) / 0.18) 60%,
+      rgb(var(--body) / 0) 100%
+    );
+    mix-blend-mode: screen;
+    opacity: calc(var(--touch) * 0.6 * var(--dim, 1));
+    pointer-events: none;
+  }
+
+  /* And the same light caught in the air just above it, low and wide. */
+  .bloom {
+    position: absolute;
+    bottom: var(--horizon);
+    left: 75%;
+    height: 14rem;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at 50% 100%,
+      rgb(var(--body) / 0.35),
+      rgb(var(--body) / 0) 70%
+    );
+    opacity: calc(var(--touch) * 0.9 * var(--dim, 1));
+    pointer-events: none;
+  }
+
+  /* All three follow the sun in compact: moved in, and stepping back on hover
+     with it, so a reflection is never brighter than the thing it reflects. */
+  .frame.compact :is(.reflection, .lip, .bloom) {
+    left: 58%;
+  }
+
+  .frame.compact.hovering :is(.reflection, .lip, .bloom) {
+    --dim: 0.3;
   }
 
   /* --- readout --------------------------------------------------------- */
