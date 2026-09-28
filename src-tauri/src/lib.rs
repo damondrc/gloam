@@ -92,6 +92,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         dismiss,
         tray_present,
+        hold_size,
         music::music_open,
         music::music_play,
         music::music_pause,
@@ -105,7 +106,8 @@ pub fn run() {
     ]);
 
     #[cfg(not(desktop))]
-    let builder = builder.invoke_handler(tauri::generate_handler![dismiss, tray_present]);
+    let builder =
+        builder.invoke_handler(tauri::generate_handler![dismiss, tray_present, hold_size]);
 
     builder
         .setup(|app| {
@@ -272,6 +274,42 @@ fn hide_to_tray(app: &tauri::AppHandle) {
 /// With a tray, closing hides: the run carries on, and the icon is the way
 /// back. Without one, hiding would be indistinguishable from losing the app,
 /// so it quits instead — which is what it has always done.
+/// Tells GTK what size the window is meant to be when nobody is asking.
+///
+/// A window declared non-resizable is not left at the size it was given. GTK
+/// works its size out again from scratch — the largest of the size hints and
+/// its own default size — and a window nobody set a default size for gets
+/// 200 by 200. The widget asks for 149 pixels of height at 113%, so GTK handed
+/// back 200, and the difference was a band under the widget that nobody could
+/// see and that swallowed every click aimed at whatever was behind it.
+/// Measured rather than guessed: 200 with the flag closed, 46 with it open.
+///
+/// The flag has to stay closed, because it is what stops a window manager
+/// offering an invisible resize border around an undecorated window. So the
+/// fix is to give GTK the right answer to the question it is going to ask
+/// anyway, rather than to stop it asking.
+///
+/// A no-op everywhere else. Windows keeps the size it is given, and has no
+/// such default to get wrong.
+#[tauri::command]
+fn hold_size(window: tauri::WebviewWindow, width: f64, height: f64) {
+    #[cfg(target_os = "linux")]
+    {
+        // Run on the GTK thread whichever thread this command arrived on:
+        // GTK objects may only be touched from the one that owns them.
+        let target = window.clone();
+        let _ = window.run_on_main_thread(move || {
+            use gtk::prelude::GtkWindowExt;
+            if let Ok(gtk_window) = target.gtk_window() {
+                gtk_window.set_default_size(width.round() as i32, height.round() as i32);
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    let _ = (window, width, height);
+}
+
 #[tauri::command]
 fn dismiss(app: tauri::AppHandle, tray: tauri::State<'_, TrayPresence>) {
     if tray.0 {

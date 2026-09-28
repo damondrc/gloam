@@ -79,9 +79,16 @@ export async function setClickThrough(value: boolean): Promise<void> {
  * programmatic resizing", which is the bug this whole dance exists to avoid.
  *
  * So the flag is treated as momentary rather than permanent: opened for the
- * length of one resize and closed again. The min/max pins are set to the new
- * size as well, so that closing it cannot snap the window back to some size
- * GTK would rather it had.
+ * length of one resize and closed again.
+ *
+ * Closing it is also when GTK decides the size afresh, and it does not decide
+ * from what it was just given: it takes the largest of the size hints and its
+ * own default size, and a window with no default is 200 by 200. The pins
+ * alone could not stop that — they set the smallest the window may be, not
+ * the largest GTK may choose — which is why every height under 200 came back
+ * as 200 on Linux, with the difference as a dead band below the widget. Rust
+ * sets GTK's default to the same size just before the flag closes, so the
+ * size GTK arrives at is the one that was asked for. See `hold_size`.
  */
 export async function setWindowSize(
   width: number,
@@ -99,6 +106,10 @@ export async function setWindowSize(
   await win.setSize(size);
   await win.setMinSize(size);
   await win.setMaxSize(size);
+
+  const bridge = await core();
+  await bridge?.invoke("hold_size", { width, height }).catch(() => {});
+
   await win.setResizable(false);
 }
 

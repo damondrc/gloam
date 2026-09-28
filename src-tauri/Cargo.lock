@@ -1469,6 +1469,7 @@ dependencies = [
 name = "gloam"
 version = "1.1.0"
 dependencies = [
+ "gtk",
  "rodio",
  "serde",
  "serde_json",
