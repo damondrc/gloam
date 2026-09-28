@@ -19,8 +19,8 @@
   import { SHORTCUTS } from "./shortcuts";
 
   /**
-   * Three tabs, answering three questions: how long a run is, what the widget
-   * is like to sit beside, and what can be pressed.
+   * Four tabs, answering four questions: how long a run is, what the widget
+   * is like to sit beside, what it plays, and what can be pressed.
    *
    * Sound and the backdrop were once apart and are now together, because they
    * were separated by the order they were built in rather than by anything a
