@@ -37,9 +37,34 @@ commit that made the change, and in the architecture notes.
   over. Never to silence — a gap draws more attention than a dip, and you
   should be able to tell the music never stopped. Button clicks never do this;
   only the sounds that mean something.
+- **The music follows your interruptions.** Pausing or resetting the timer
+  pauses the music, and starting it again resumes it — but only music the
+  timer paused: an album you paused yourself stays paused. At the end of a run
+  it fades out with the alarm and waits where it was, so play carries on.
+  Breaks and skips leave it alone, and starting the timer never starts music
+  you had not started.
+
+- **The sun leaves a reflection on the water.** Short and soft, under
+  whichever body is in the sky, strongest as the sun comes down to meet the
+  sea and gone once it is under, with a thread of light along the waterline
+  where the two touch. The moon leaves a fainter one, a third as bright,
+  which fades as it climbs.
+
+### Changed
+
+- **`S` opens settings**, beside `C` for compact, instead of `,`. The comma is
+  the settings key on a Mac and a guess everywhere else.
 
 ### Fixed
 
+- **No more invisible band under the widget on Linux.** GTK was quietly
+  making the window at least 200 pixels tall, and the part the widget did not
+  fill still caught every click meant for whatever was behind it.
+- **The sun no longer shows through the sea.** The water band started
+  partly transparent, so a setting sun stayed visible underneath it.
+- **Clouds no longer have hard edges on Linux.** Each bank's blur was being
+  cut off at the edges of its own layer, which showed as vertical seams in the
+  sky at dusk.
 - **Music now follows the default output device.** Plugging in headphones
   mid-track used to move every sound on the machine except the music, which
   carried on in the speakers. It now moves across within a couple of seconds,
@@ -334,7 +359,8 @@ commit that made the change, and in the architecture notes.
 - Fixed 30/10 focus and break cycles.
 - An ambient sky whose state encodes progress, and chimes on each transition.
 
-[Unreleased]: https://github.com/damondrc/gloam/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/damondrc/gloam/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/damondrc/gloam/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/damondrc/gloam/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/damondrc/gloam/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/damondrc/gloam/compare/v0.4.0...v0.5.0

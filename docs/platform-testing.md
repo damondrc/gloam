@@ -110,10 +110,13 @@ reading A7.
 | D5 | No resize border or resize cursor appears around the widget | OK | OK |
 | D6 | The bottom corners stay rounded with the panel open and closed | OK | OK |
 | D7 | Locking with the panel open closes the panel, leaving only the dimmed backdrop | OK | OK |
-| D8 | All three tabs fit the panel without clipping at the bottom — at 80% and at 180% | OK | OK |
+| D8 | All four tabs fit the panel without clipping at the bottom — at 80% and at 180% | | |
 | D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
 | D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
 | D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |
+| D12 | The window is exactly the widget's size — nothing beside or below it catches clicks — at 80%, at 180% and in compact. See below | | |
+| D13 | Clouds at dusk have soft edges, with no vertical seams down the sides of a bank | | |
+| D14 | On water, the sun leaves a soft reflection as it comes down and none once it is under; the moon's, at the start of a break, is plainly fainter | | |
 
 **D8 is the one to look at first.** The panel is one height for every tab,
 sized to the tallest, and that height is a constant somebody has to keep in
@@ -223,6 +226,18 @@ Which means glibc is not what decides the floor. The `.deb` also depends on
 12 — so those remain the oldest supported releases, for a different reason than
 the one this check was written to test. Worth knowing before anyone tries to
 widen the range by building somewhere older still.
+
+**D12, measured rather than eyeballed.** The band this row exists for was
+invisible by nature, so looking is not a test. In a development build, open the
+inspector over the widget and run this in its console:
+
+```js
+const f = document.querySelector('.frame').getBoundingClientRect(); [innerWidth, innerHeight, Math.round(f.width), Math.round(f.height)]
+```
+
+The first pair is the window and the second the widget, and they have to be
+equal. Before 1.1.0, on Linux, the height came back as 200 however small the
+widget was.
 
 ### I · Music
 

@@ -22,7 +22,8 @@ beside the download is the answer to that, and the README says how to check it.
 **Supported.** Verified against 1.0.0 on Linux Mint 22 (Cinnamon, X11), single
 monitor and dual.
 
-Everything in the checklist passes, with three things worth knowing.
+Everything in the checklist passes, with three things worth knowing — and a
+fourth that was a defect, now fixed.
 
 **A run left going will announce its end whenever it reaches it**, including
 with the lid shut on a machine set not to suspend, and including at the instant
@@ -44,6 +45,13 @@ edges shimmer slightly as it drags. The compositor resizes the surface on a
 different beat from the WebView's repaint, and nothing above that layer can
 fix it — it is the same effect the widget already sidesteps by parking the
 window at its largest size for the length of a drag.
+
+**Until 1.1.0, the window could be taller than the widget.** GTK would not make
+it shorter than 200 pixels, so at small scales and in compact an invisible band
+under the widget caught clicks meant for whatever was behind it. Windows never
+did this. The cause and the fix are in [the architecture
+notes](architecture.md#scale), and the checklist now measures it rather than
+relying on anybody noticing.
 
 ### How far back a Linux release reaches
 

@@ -128,7 +128,7 @@ Scale is kept independent of the other two size-ish concepts on purpose:
 | --- | --- | --- |
 | Scale | How big is everything drawn? | Corner grip, `+` / `-` |
 | Layout | Which elements exist? | Double-click for compact |
-| Panels | How much content is there? | The chevron, `,` |
+| Panels | How much content is there? | The chevron, `S` |
 
 Folding these into a single "size" control is tempting and wrong: dragging to
 enlarge the clock would also unfold the settings, and collapsing them would
@@ -149,6 +149,21 @@ widget drawn inside it, since the frame carries its own dimensions.
 Pinning the minimum and maximum is not enough on its own: a window manager may
 still offer the grip it will then refuse. So the flag stays shut except for the
 instant a resize needs it.
+
+Closing it was a problem of its own, found in 1.1.0 by measuring rather than
+guessing. Closing the flag is when GTK works a window's size out afresh, and it
+does not use the size it was just given: it takes the largest of the size hints
+and its own default size, and a window nobody gave a default is 200 by 200. So
+on Linux the window was never shorter than 200 pixels — 149 asked for at 113%,
+200 delivered — and the difference was a band under the widget that caught
+every click aimed at what was behind it. It never showed at 180%, where the
+widget is already taller than that. The pins could not help, since they bound
+the smallest the window may be rather than the largest GTK may pick.
+
+The fix answers the question GTK is about to ask instead of stopping it from
+asking: just before the flag closes, Rust sets GTK's default size to the
+widget's. Leaving the flag open would also have worked, and would have brought
+the invisible resize border back.
 
 ## Where the widget lives
 
@@ -253,8 +268,10 @@ back is starting lost.
 
 ## Sound
 
-Everything is synthesised. No audio files means nothing to license, nothing to
-decode, no binaries in the repository, and a timbre that stays editable as code.
+Everything Gloam says in its own voice is synthesised. No audio files of its
+own means nothing to license, nothing to ship, no binaries in the repository,
+and a timbre that stays editable as code. Music you choose is a separate
+system, decoded in Rust — see [Music](#music).
 
 The module splits along one line: an *instrument* decides how a single note
 sounds, a *phrase* decides which notes and in what order. That split is why
@@ -387,6 +404,31 @@ Which sounds duck is a decision the app makes, not the synthesiser. `sound.ts`
 offers a hook and knows nothing about music; `App.svelte` wires it to the
 player. Whether there is an album underneath the widget's voice is not a
 question synthesis has any business having an opinion about.
+
+### Following the timer
+
+The music keeps time with the run without being run by it, and the line
+between the two is who did what.
+
+Pausing the timer pauses the music, and resuming brings it back. That is not
+the timer taking charge of the album: a pause is the person stepping out of
+their own session, and the music steps out with them. Resetting counts the
+same. But the timer only ever gives back what it took — one flag remembers
+whether the music was paused by the timer or by hand, so an album paused on
+purpose stays paused through any number of pauses and resumes of the run.
+Touching the music's own buttons clears the flag and takes it back.
+
+Breaks and skips leave it alone. A break is part of a session rather than an
+interruption of one, and the earlier idea of silencing the music for every
+break was the version that handed the timer control over something the person
+chose. Starting a run never starts music nobody started.
+
+At the end of a run the alarm ducks the music as every phrase does, and the
+duck ends differently: instead of rising back it fades to nothing over nearly
+two seconds and the player pauses where it was. The record finishes with the
+run rather than being switched off by it, and carrying on is the same play
+button it is anywhere else. The fade lives in the audio thread with the rest
+of the ramp, because a fade has to happen where the samples are.
 
 ### Where the controls are
 

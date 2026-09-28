@@ -81,7 +81,8 @@ distance between an ambient backdrop and a busy one.</em></p>
 - **Plays a folder of your own music**, decoded inside the app rather than
   through the browser engine — so FLAC works without hunting for a codec. It
   steps aside when Gloam has something to say, and follows your headphones.
-- **Soft synthesised sound**, no audio files and no jump scares.
+- **Soft synthesised sound** for its own voice — no bundled audio files, and
+  no jump scares.
 - **Opens with your session** if you ask it to, into the tray rather than onto
   your screen.
 - **No accounts, no network, no statistics.** Gloam opens no connections at all.
@@ -96,7 +97,7 @@ rest it reads as scenery.
 | --- | --- |
 | `Space` | Start / pause |
 | `C` | Toggle compact mode |
-| `,` | Open or close the settings panel |
+| `S` | Open or close the settings panel |
 | `+` / `-` | Scale the widget up or down |
 | `Ctrl+Alt+G` | Toggle lock, from anywhere |
 
@@ -211,6 +212,12 @@ is why FLAC works on a machine that has no codec for it. The music has its own
 volume, dips while Gloam speaks instead of competing with it, and moves with
 you when you plug in headphones. Your folder is read and never changed, and
 nothing plays until you press play — including after a restart.
+
+It keeps time with the timer without being run by it. Pausing or resetting
+the timer pauses the music, and starting again brings it back — unless you
+paused the music yourself, in which case it stays paused. At the end of a run
+it fades out with the alarm and waits. Breaks leave it alone: a break is part
+of a session, not an interruption of one.
 
 **Launch at login** starts Gloam in the tray rather than on screen: a widget is
 something you reach for, and a session manager is not a person reaching. On a
