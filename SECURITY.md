@@ -10,14 +10,27 @@ decision rather than an accident.
   accounts, no sync, no telemetry, no update check and no analytics. Its
   Content Security Policy is `default-src 'self'`, so the WebView cannot load
   anything remote even if something tried to.
-- **No files of yours.** Gloam never opens a file picker and never reads or
-  writes anything outside its own storage. Its preferences live in the
-  WebView's `localStorage` under a single key, `gloam.prefs.v1`, and everything
-  read back out of it is validated before use — corrupt or hand-edited
-  preferences produce defaults rather than undefined behaviour.
-- **No bundled media.** Every sound is synthesised and every shape is
-  generated, so there are no audio or image files to decode and no third-party
-  decoder in the path.
+- **One folder of yours, read and never written.** Since 1.1.0 Gloam can play
+  music, and that is the only reason it looks at your files at all. It opens
+  one file picker — the operating system's own, from the Music tab, and only
+  when you press it — and reads the playable files directly inside the folder
+  you chose: not the folders inside it, and nothing else on the disk. It never
+  writes, moves, renames or deletes anything there. The folder's path is kept
+  in the preferences so the queue is ready next time; it is the only path
+  stored.
+- **Its own preferences, validated.** They live in the WebView's
+  `localStorage` under a single key, `gloam.prefs.v1`, and everything read back
+  out of it is checked before use — corrupt or hand-edited preferences produce
+  defaults rather than undefined behaviour.
+- **One decoder, in memory-safe code.** Gloam's own sounds are synthesised and
+  every shape is generated, so it ships no media files. The music you choose
+  is decoded by [symphonia](https://github.com/pdeljanov/Symphonia), a
+  third-party decoder written in Rust and compiled into the binary, in the
+  app's Rust half rather than in the WebView. No system codec and no browser
+  media stack is involved, and a file that will not decode is skipped rather
+  than retried. A decoder parsing files is the classic place for this kind of
+  software to go wrong, which is why it is named here rather than left for you
+  to find.
 - **One entry outside the app, and only if you ask.** Turning on *Launch at
   login* writes a registry value under `HKCU\...\Run` on Windows or a
   `.desktop` file in `~/.config/autostart` on Linux, naming the installed
@@ -27,7 +40,10 @@ decision rather than an accident.
 The Tauri capability file, `src-tauri/capabilities/default.json`, is the
 complete list of what the frontend is permitted to ask the system for. It is
 short on purpose, and it is worth reading if you want to check the above rather
-than take it on trust.
+than take it on trust. The file picker is the one entry that reaches outside
+the window, as `dialog:allow-open`: permission to show a picker and receive the
+path chosen in it, and nothing broader. The reading itself happens in Rust, and
+only for the folder that picker returned.
 
 ## Not code signed
 
