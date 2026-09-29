@@ -111,6 +111,16 @@
   // forgetting the choice.
   let musicFolder = $state(stored.music.folder);
   let musicVolume = $state(stored.music.volume);
+  let musicShuffle = $state(stored.music.shuffle);
+  let musicCrossfade = $state(stored.music.crossfade);
+
+  $effect(() => {
+    void music.setShuffle(musicShuffle);
+  });
+
+  $effect(() => {
+    void music.setCrossfade(musicCrossfade);
+  });
 
   // The whole snapshot rather than the parts of it this file happens to need
   // today. Rust owns what is playing and says so on one event; keeping a field
@@ -448,7 +458,12 @@
       ambience,
       horizon,
       config: timer.config,
-      music: { folder: musicFolder, volume: musicVolume },
+      music: {
+        folder: musicFolder,
+        volume: musicVolume,
+        shuffle: musicShuffle,
+        crossfade: musicCrossfade,
+      },
       position,
       seenIntro,
     });
@@ -935,6 +950,10 @@
        onPickFolder={chooseMusicFolder}
        {musicVolume}
        onMusicVolume={(next) => (musicVolume = next)}
+       shuffle={musicShuffle}
+       onShuffle={(next) => (musicShuffle = next)}
+       crossfade={musicCrossfade}
+       onCrossfade={(next) => (musicCrossfade = next)}
        onTour={startTour}
      />
    {/if}

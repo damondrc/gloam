@@ -84,6 +84,10 @@
     onPickFolder: () => void;
     musicVolume: number;
     onMusicVolume: (value: number) => void;
+    shuffle: boolean;
+    onShuffle: (value: boolean) => void;
+    crossfade: boolean;
+    onCrossfade: (value: boolean) => void;
     /** Starts the first-run tour again, for anyone who wants it back. */
     onTour: () => void;
   }
@@ -110,6 +114,10 @@
     onPickFolder,
     musicVolume,
     onMusicVolume,
+    shuffle,
+    onShuffle,
+    crossfade,
+    onCrossfade,
     onTour,
   }: Props = $props();
 
@@ -330,10 +338,15 @@
         <span class="value">{musicPercent}%</span>
       </label>
 
-      <p class="hint">
-        Separate from the widget's own volume, and ducked under it when Gloam
-        has something to say.
-      </p>
+      <!-- One line rather than two: the tab already says whose volume this
+           is, and the two switches below need the room. -->
+      <p class="hint">Ducked while Gloam has something to say.</p>
+
+      <!-- Here rather than on the face. They are chosen once and lived with,
+           which is what the panel is for; the face keeps only what gets
+           pressed while listening. -->
+      <Toggle label="Shuffle" checked={shuffle} onChange={onShuffle} />
+      <Toggle label="Crossfade" checked={crossfade} onChange={onCrossfade} />
     </div>
   {:else}
     <!-- Reference rather than settings: the one tab with nothing to change.

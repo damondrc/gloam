@@ -91,6 +91,15 @@ const DUCK_FADE_OUT: Duration = Duration::from_millis(900);
 /// on the needle.
 const DUCK_FADE_END: Duration = Duration::from_millis(1800);
 
+/// How long one track takes to hand over to the next when crossfading.
+///
+/// Five seconds: long enough that the join is heard as a blend rather than as
+/// a cut with a softer edge, short enough that two songs are never both the
+/// point for long. Fixed rather than offered as a number, because the choice
+/// worth giving someone is whether tracks blend at all — not the length of
+/// the blend, which is a setting nobody changes twice.
+const CROSSFADE: Duration = Duration::from_secs(5);
+
 /// What symphonia can actually decode, and nothing aspirational.
 ///
 /// Opus is deliberately absent: symphonia does not decode it, and listing an
@@ -125,6 +134,8 @@ enum Cmd {
     /// The run is over: instead of coming back up after the current duck, the
     /// music fades out and pauses where it is.
     Finish,
+    /// Whether a track ending on its own blends into the next.
+    Crossfade(bool),
     Stop,
 }
 
@@ -180,11 +191,50 @@ impl Duck {
 
 struct Queue {
     tracks: Vec<PathBuf>,
+    /// The file playing now, as a position in `tracks` — which is folder
+    /// order, and what the frontend is told about.
     index: usize,
     playing: bool,
+    /// The order the tracks are played in, and where in it the player is.
+    ///
+    /// Kept apart from `tracks` rather than shuffling the list itself, so that
+    /// turning shuffle off goes back to the album as it was numbered, carrying
+    /// on from whichever track is playing.
+    order: Vec<usize>,
+    cursor: usize,
+    shuffle: bool,
 }
 
 impl Queue {
+    /// Rebuilds the play order: folder order, or a shuffle of it.
+    ///
+    /// A shuffle is one fixed permutation, walked from start to end, rather
+    /// than a fresh random pick at every track. A pick can play the same song
+    /// twice in an hour and skip another all afternoon, and nobody listening
+    /// experiences that as random — they experience it as broken.
+    ///
+    /// `keep` puts the current track first, which is what toggling shuffle
+    /// mid-song wants: the song carries on, and what changes is what follows.
+    fn reorder(&mut self, keep: bool) {
+        self.order = (0..self.tracks.len()).collect();
+        if self.shuffle && self.order.len() > 1 {
+            shuffle(&mut self.order);
+            if keep {
+                if let Some(at) = self.order.iter().position(|&i| i == self.index) {
+                    self.order.swap(0, at);
+                }
+            }
+        }
+        if !keep {
+            self.index = self.order.first().copied().unwrap_or(0);
+        }
+        self.cursor = self
+            .order
+            .iter()
+            .position(|&i| i == self.index)
+            .unwrap_or(0);
+    }
+
     fn snapshot(&self) -> Snapshot {
         Snapshot {
             count: self.tracks.len(),
@@ -255,6 +305,9 @@ impl Music {
             tracks: Vec::new(),
             index: 0,
             playing: false,
+            order: Vec::new(),
+            cursor: 0,
+            shuffle: false,
         }));
 
         let worker = Arc::clone(&queue);
@@ -282,6 +335,9 @@ impl Music {
             queue.tracks = tracks;
             queue.index = 0;
             queue.playing = false;
+            // A new folder starts wherever its order starts: the first track,
+            // or the first of a fresh shuffle.
+            queue.reorder(false);
         }
 
         self.send(Cmd::Stop);
@@ -291,6 +347,17 @@ impl Music {
     pub fn snapshot(&self) -> Snapshot {
         self.queue.lock().unwrap().snapshot()
     }
+
+    /// Changed on the queue directly rather than sent down the channel: it
+    /// is a question of what comes next, and the thread only ever asks that
+    /// when it next steps.
+    pub fn set_shuffle(&self, on: bool) {
+        let mut queue = self.queue.lock().unwrap();
+        if queue.shuffle != on {
+            queue.shuffle = on;
+            queue.reorder(true);
+        }
+    }
 }
 
 /// The output device, and everything bound to it.
@@ -298,8 +365,9 @@ impl Music {
 /// Grouped because they can only be replaced together: the sink plays into the
 /// stream's mixer, so a stream that goes away takes its sink with it.
 struct Audio {
-    /// Never read. Held because dropping it ends playback.
-    _stream: rodio::OutputStream,
+    /// Held because dropping it ends playback, and read for its mixer when a
+    /// crossfade needs a second sink playing into the same stream.
+    stream: rodio::OutputStream,
     sink: rodio::Sink,
     /// Which speakers this was opened against, to notice when they change.
     device: Option<String>,
@@ -314,7 +382,7 @@ impl Audio {
         let sink = rodio::Sink::connect_new(stream.mixer());
         // ------------------------------------------------------------------
         Some(Self {
-            _stream: stream,
+            stream,
             sink,
             device: default_output_name(),
         })
@@ -408,15 +476,26 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
     let mut duck: Option<Duck> = None;
     let mut device_checked = std::time::Instant::now();
 
+    // Crossfading. `length` is how long the current track is, when its
+    // decoder can say; `outgoing` is the track being faded out underneath the
+    // new one, with the moment it started to go.
+    let mut crossfade = false;
+    let mut length: Option<Duration> = None;
+    let mut outgoing: Option<(rodio::Sink, std::time::Instant)> = None;
+
     loop {
         // Quicker while a fade is running, and only then.
-        let wait = if duck.is_some() { DUCK_POLL } else { POLL };
+        let wait = if duck.is_some() || outgoing.is_some() {
+            DUCK_POLL
+        } else {
+            POLL
+        };
 
         match rx.recv_timeout(wait) {
             Ok(Cmd::Play) => {
                 if audio.sink.empty() {
                     let index = queue.lock().unwrap().index;
-                    load(&audio.sink, &queue, index);
+                    length = load(&audio.sink, &queue, index);
                 }
                 // Still empty means there was nothing to load — an empty
                 // folder, or a file that would not decode. Saying "playing"
@@ -427,20 +506,27 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                 }
             }
             Ok(Cmd::Pause) => {
+                // Anything done by hand ends a blend in progress: the tail of
+                // the last song has nothing to add to a pause or a skip.
+                outgoing = None;
                 audio.sink.pause();
                 set_playing(&app, &queue, false);
             }
             Ok(Cmd::Step(by)) => {
+                // A skip is a cut, not a blend. Fading into a song somebody
+                // just asked for would make them wait five seconds to hear it.
+                outgoing = None;
                 let next = step(&queue, by);
                 audio.sink.stop();
-                load(&audio.sink, &queue, next);
+                length = load(&audio.sink, &queue, next);
                 audio.sink.play();
                 set_playing(&app, &queue, true);
                 announce(&app, &queue);
             }
             Ok(Cmd::At(index, play)) => {
+                outgoing = None;
                 audio.sink.stop();
-                load(&audio.sink, &queue, index);
+                length = load(&audio.sink, &queue, index);
                 if play {
                     audio.sink.play();
                 }
@@ -488,7 +574,10 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                     });
                 }
             }
+            Ok(Cmd::Crossfade(on)) => crossfade = on,
             Ok(Cmd::Stop) => {
+                outgoing = None;
+                length = None;
                 audio.sink.stop();
                 set_playing(&app, &queue, false);
                 announce(&app, &queue);
@@ -498,9 +587,43 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                 // world answers rather than the user: whether the track ran
                 // out, and whether the speakers moved.
                 let playing = queue.lock().unwrap().playing;
+
+                // Close enough to the end to start the next track underneath
+                // this one. Only when the decoder knows how long the track is
+                // — without that there is no "five seconds from the end" to
+                // wait for, and the track simply plays out as before — and
+                // only for tracks long enough that a blend would not be most
+                // of the song.
+                if crossfade
+                    && playing
+                    && outgoing.is_none()
+                    && !audio.sink.is_paused()
+                    && !audio.sink.empty()
+                {
+                    if let Some(total) = length {
+                        let left = total.saturating_sub(audio.sink.get_pos());
+                        if total > CROSSFADE * 3 && left <= CROSSFADE {
+                            let next_sink = rodio::Sink::connect_new(audio.stream.mixer());
+                            next_sink.set_volume(0.0);
+                            let next = step(&queue, 1);
+                            length = load(&next_sink, &queue, next);
+
+                            // If the next file would not open, the current
+                            // track just plays out and the ordinary path below
+                            // skips past the broken one. It is not tried
+                            // again, since `length` went with it.
+                            if !next_sink.empty() {
+                                let previous = std::mem::replace(&mut audio.sink, next_sink);
+                                outgoing = Some((previous, std::time::Instant::now()));
+                                announce(&app, &queue);
+                            }
+                        }
+                    }
+                }
+
                 if playing && audio.sink.empty() {
                     let next = step(&queue, 1);
-                    load(&audio.sink, &queue, next);
+                    length = load(&audio.sink, &queue, next);
                     audio.sink.play();
                     announce(&app, &queue);
                 }
@@ -512,6 +635,10 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
                     // evidence that the speakers changed.
                     if let (Some(now), Some(then)) = (default_output_name(), &audio.device) {
                         if &now != then {
+                            // A blend spans two sinks on the old stream, and
+                            // only the one carrying the current track is worth
+                            // carrying across.
+                            outgoing = None;
                             follow_device(&mut audio, &queue, volume);
                         }
                     }
@@ -543,35 +670,92 @@ fn run(app: AppHandle, rx: Receiver<Cmd>, queue: Arc<Mutex<Queue>>) {
             },
             None => 1.0,
         };
-        audio.sink.set_volume(volume * gain);
+
+        // The two halves of a crossfade on an equal-power curve rather than a
+        // straight line. Crossed linearly, two tracks sum to a dip in the
+        // middle — loudness is not the sum of amplitudes — which is heard as
+        // a gap between songs, the very thing a crossfade is for removing.
+        let (rising, falling) = match &outgoing {
+            Some((_, started)) => {
+                let t = (started.elapsed().as_secs_f32() / CROSSFADE.as_secs_f32()).min(1.0);
+                let quarter = t * std::f32::consts::FRAC_PI_2;
+                (quarter.sin(), quarter.cos())
+            }
+            None => (1.0, 0.0),
+        };
+
+        audio.sink.set_volume(volume * gain * rising);
+
+        let finished = match &outgoing {
+            Some((old, _)) => {
+                old.set_volume(volume * gain * falling);
+                rising >= 1.0 || old.empty()
+            }
+            None => false,
+        };
+        // Dropping the sink is what stops whatever is left of the old track.
+        if finished {
+            outgoing = None;
+        }
+    }
+}
+
+/// Fisher–Yates, driven by xorshift seeded from the clock.
+///
+/// Not a random number crate, because this is choosing the order of an album
+/// and not a key: nobody is attacking it, and it only needs to differ from
+/// one day to the next. A dependency for that would be the largest thing in
+/// the function.
+fn shuffle(items: &mut [usize]) {
+    let mut state = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15)
+        | 1;
+
+    for i in (1..items.len()).rev() {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let j = (state % (i as u64 + 1)) as usize;
+        items.swap(i, j);
     }
 }
 
 /// Moves the cursor and returns where it landed. Wraps in both directions.
+/// Walks the play order, which is folder order unless shuffle is on.
 fn step(queue: &Arc<Mutex<Queue>>, by: i32) -> usize {
     let mut queue = queue.lock().unwrap();
-    let len = queue.tracks.len();
+    let len = queue.order.len();
     if len == 0 {
         return 0;
     }
 
     let len = len as i32;
-    queue.index = (((queue.index as i32 + by) % len + len) % len) as usize;
+    queue.cursor = (((queue.cursor as i32 + by) % len + len) % len) as usize;
+    queue.index = queue.order[queue.cursor];
     queue.index
 }
 
-/// Puts one track into the sink, stopped.
+/// Puts one track into the sink, stopped, and says how long it is — when the
+/// decoder knows, which for a crossfade is the whole question.
 ///
 /// A file that will not open or will not decode is skipped silently rather
 /// than thrown: half a folder of FLAC and one corrupt MP3 should be a folder
 /// that plays, not a player that stops.
-fn load(sink: &rodio::Sink, queue: &Arc<Mutex<Queue>>, index: usize) {
+fn load(sink: &rodio::Sink, queue: &Arc<Mutex<Queue>>, index: usize) -> Option<Duration> {
     let path = {
         let mut queue = queue.lock().unwrap();
         if queue.tracks.is_empty() {
-            return;
+            return None;
         }
         queue.index = index.min(queue.tracks.len() - 1);
+        // Jumping straight to a track has to move the place in the order with
+        // it, or the next skip would carry on from wherever it was before.
+        let at = queue.index;
+        if let Some(cursor) = queue.order.iter().position(|&i| i == at) {
+            queue.cursor = cursor;
+        }
         queue.tracks[queue.index].clone()
     };
 
@@ -580,8 +764,15 @@ fn load(sink: &rodio::Sink, queue: &Arc<Mutex<Queue>>, index: usize) {
         .and_then(|file| {
             rodio::Decoder::new(std::io::BufReader::new(file)).map_err(|e| e.to_string())
         }) {
-        Ok(source) => sink.append(source),
-        Err(error) => eprintln!("gloam: could not play {}: {error}", path.display()),
+        Ok(source) => {
+            let length = rodio::Source::total_duration(&source);
+            sink.append(source);
+            length
+        }
+        Err(error) => {
+            eprintln!("gloam: could not play {}: {error}", path.display());
+            None
+        }
     }
 }
 
@@ -630,6 +821,18 @@ pub fn music_at(app: AppHandle, index: usize, play: bool) {
 #[tauri::command]
 pub fn music_volume(app: AppHandle, volume: f32) {
     app.state::<Music>().send(Cmd::Volume(volume));
+}
+
+/// Changes what the next track will be, from now on.
+#[tauri::command]
+pub fn music_shuffle(app: AppHandle, on: bool) {
+    app.state::<Music>().set_shuffle(on);
+}
+
+/// Whether a track that ends on its own blends into the next.
+#[tauri::command]
+pub fn music_crossfade(app: AppHandle, on: bool) {
+    app.state::<Music>().send(Cmd::Crossfade(on));
 }
 
 /// The run has ended. See `Cmd::Finish`.

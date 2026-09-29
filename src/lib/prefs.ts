@@ -54,7 +54,7 @@ export interface Prefs {
    * Nothing plays on its own at startup. The folder is reopened so the queue
    * is ready; pressing play stays a decision somebody makes.
    */
-  music: { folder: string | null; volume: number };
+  music: { folder: string | null; volume: number; shuffle: boolean; crossfade: boolean };
   /**
    * Where the window was left, in physical desktop pixels, or null if it has
    * never been moved.
@@ -98,7 +98,9 @@ export const DEFAULT_PREFS: Prefs = {
   // sound here meant to sit underneath something else — a run's own phrases
   // have to carry over it, and the first impression of a feature should not be
   // having to turn it down.
-  music: { folder: null, volume: 0.5 },
+  // Both off. Folder order is how an album was meant to be heard, and a
+  // crossfade changes the music itself, so each is something to choose.
+  music: { folder: null, volume: 0.5, shuffle: false, crossfade: false },
   position: null,
   seenIntro: false,
 };
@@ -115,13 +117,20 @@ function readMusic(value: unknown): Prefs["music"] {
   const fallback = { ...DEFAULT_PREFS.music };
   if (typeof value !== "object" || value === null) return fallback;
 
-  const stored = value as { folder?: unknown; volume?: unknown };
+  const stored = value as {
+    folder?: unknown;
+    volume?: unknown;
+    shuffle?: unknown;
+    crossfade?: unknown;
+  };
   return {
     folder:
       typeof stored.folder === "string" && stored.folder.length > 0
         ? stored.folder
         : null,
     volume: readNumber(stored.volume, 0, 1, fallback.volume),
+    shuffle: stored.shuffle === true,
+    crossfade: stored.crossfade === true,
   };
 }
 

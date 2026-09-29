@@ -102,6 +102,8 @@ pub fn run() {
         music::music_volume,
         music::music_duck,
         music::music_finish,
+        music::music_shuffle,
+        music::music_crossfade,
         music::music_status,
     ]);
 

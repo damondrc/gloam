@@ -126,6 +126,14 @@ export const duck = (seconds: number): Promise<void> =>
  */
 export const finish = (): Promise<void> => ask<void>("music_finish");
 
+/** Plays the folder in a shuffled order, walked once through before repeating. */
+export const setShuffle = (on: boolean): Promise<void> =>
+  ask<void>("music_shuffle", { on });
+
+/** Blends a track that ends on its own into the next. Skips stay cuts. */
+export const setCrossfade = (on: boolean): Promise<void> =>
+  ask<void>("music_crossfade", { on });
+
 /** 0 to 1, and not the same control as the widget's own volume. */
 export const setVolume = (volume: number): Promise<void> =>
   ask<void>("music_volume", { volume });

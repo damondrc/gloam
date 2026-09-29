@@ -62,7 +62,7 @@ describe("round trip", () => {
       ambience: "light",
       horizon: "skyline",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
-      music: { folder: "D:/Music/Nocturnes", volume: 0.25 },
+      music: { folder: "D:/Music/Nocturnes", volume: 0.25, shuffle: true, crossfade: true },
       position: { x: 2400, y: 300 },
       seenIntro: true,
     },
@@ -74,7 +74,7 @@ describe("round trip", () => {
       ambience: "calm",
       horizon: "ridge",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
-      music: { folder: null, volume: 1 },
+      music: { folder: null, volume: 1, shuffle: false, crossfade: true },
       position: { x: -1200, y: -80 },
       seenIntro: false,
     },
@@ -217,6 +217,18 @@ describe("the music folder", () => {
     write({ music: { folder: "/music", volume: -9 } });
     expect(loadPrefs().music.volume).toBe(0);
   });
+
+  // Only a real true switches either on. A string "true" from a hand edit,
+  // or a 1 from some other tool, is not a choice anybody made in the panel.
+  it.each([["true"], [1], [null]] as const)(
+    "leaves shuffle and crossfade off for %p",
+    (stored) => {
+      write({ music: { folder: "/music", shuffle: stored, crossfade: stored } });
+
+      expect(loadPrefs().music.shuffle).toBe(false);
+      expect(loadPrefs().music.crossfade).toBe(false);
+    }
+  );
 
   // Everyone who used Gloam before 1.1 has preferences with no music block in
   // them, and none of them should be met by a broken panel.
