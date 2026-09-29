@@ -62,6 +62,30 @@ export async function startDragging(): Promise<void> {
 export async function setClickThrough(value: boolean): Promise<void> {
   const m = await api();
   await m?.getCurrentWindow().setIgnoreCursorEvents(value);
+
+  // Turning click-through off hands the whole window back to the pointer on
+  // Linux, band included, so the widget's own shape goes back on. Twice: the
+  // reset and this travel down different queues to the same thread, and the
+  // second pass is there in case the reset lands after the first.
+  if (!value) {
+    void fitInput();
+    setTimeout(() => void fitInput(), 150);
+  }
+}
+
+/** The size last asked for, which is what the input shape follows. */
+let fitted: { width: number; height: number } | null = null;
+
+/**
+ * Cuts the part of the window that catches clicks down to the widget.
+ *
+ * Only does anything on Linux, where GTK may make the window taller than the
+ * widget and the rest of it would otherwise swallow clicks. See `fit_input`.
+ */
+async function fitInput(): Promise<void> {
+  if (!fitted) return;
+  const bridge = await core();
+  await bridge?.invoke("fit_input", fitted).catch(() => {});
 }
 
 /**
@@ -81,14 +105,11 @@ export async function setClickThrough(value: boolean): Promise<void> {
  * So the flag is treated as momentary rather than permanent: opened for the
  * length of one resize and closed again.
  *
- * Closing it is also when GTK decides the size afresh, and it does not decide
- * from what it was just given: it takes the largest of the size hints and its
- * own default size, and a window with no default is 200 by 200. The pins
- * alone could not stop that — they set the smallest the window may be, not
- * the largest GTK may choose — which is why every height under 200 came back
- * as 200 on Linux, with the difference as a dead band below the widget. Rust
- * sets GTK's default to the same size just before the flag closes, so the
- * size GTK arrives at is the one that was asked for. See `hold_size`.
+ * Closing it is also when GTK settles on a size of its own, and on Linux that
+ * is never shorter than 200 pixels, whatever was asked for. Rather than fight
+ * that, the part of the window that takes clicks is cut down to the widget
+ * after every resize, so whatever GTK adds below it lets clicks through. See
+ * `fit_input`.
  */
 export async function setWindowSize(
   width: number,
@@ -107,10 +128,10 @@ export async function setWindowSize(
   await win.setMinSize(size);
   await win.setMaxSize(size);
 
-  const bridge = await core();
-  await bridge?.invoke("hold_size", { width, height }).catch(() => {});
-
   await win.setResizable(false);
+
+  fitted = { width, height };
+  await fitInput();
 }
 
 /**

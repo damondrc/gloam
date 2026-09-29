@@ -92,7 +92,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         dismiss,
         tray_present,
-        hold_size,
+        fit_input,
         music::music_open,
         music::music_play,
         music::music_pause,
@@ -107,7 +107,7 @@ pub fn run() {
 
     #[cfg(not(desktop))]
     let builder =
-        builder.invoke_handler(tauri::generate_handler![dismiss, tray_present, hold_size]);
+        builder.invoke_handler(tauri::generate_handler![dismiss, tray_present, fit_input]);
 
     builder
         .setup(|app| {
@@ -274,34 +274,45 @@ fn hide_to_tray(app: &tauri::AppHandle) {
 /// With a tray, closing hides: the run carries on, and the icon is the way
 /// back. Without one, hiding would be indistinguishable from losing the app,
 /// so it quits instead — which is what it has always done.
-/// Tells GTK what size the window is meant to be when nobody is asking.
+/// Makes only the widget's own rectangle catch the pointer.
 ///
-/// A window declared non-resizable is not left at the size it was given. GTK
-/// works its size out again from scratch — the largest of the size hints and
-/// its own default size — and a window nobody set a default size for gets
-/// 200 by 200. The widget asks for 149 pixels of height at 113%, so GTK handed
-/// back 200, and the difference was a band under the widget that nobody could
-/// see and that swallowed every click aimed at whatever was behind it.
-/// Measured rather than guessed: 200 with the flag closed, 46 with it open.
+/// On Linux the window can be taller than the widget drawn in it. GTK will not
+/// make a non-resizable window shorter than 200 pixels, and the widget at small
+/// scales and in compact is shorter than that, so an invisible band hung under
+/// it and swallowed every click meant for whatever was behind. Measured on
+/// Mint at 113%: 149 asked for, 200 delivered.
 ///
-/// The flag has to stay closed, because it is what stops a window manager
-/// offering an invisible resize border around an undecorated window. So the
-/// fix is to give GTK the right answer to the question it is going to ask
-/// anyway, rather than to stop it asking.
+/// The first fix tried to change the size, by giving GTK a default size just
+/// before the resizable flag closed. It did nothing, because GTK only reads a
+/// default size the first time a window is shown. So this stops arguing with
+/// the size and changes what the size means instead: the window's input shape
+/// — the region the X server delivers pointer events to — is cut down to the
+/// widget, and a click anywhere outside it falls through to the window
+/// beneath, exactly as if the band were not there.
 ///
-/// A no-op everywhere else. Windows keeps the size it is given, and has no
-/// such default to get wrong.
+/// Not a new mechanism for Gloam. Tauri implements click-through on Linux by
+/// shaping this same region, which is what lock mode has used since 0.2.0. It
+/// also means lock mode resets it — turning click-through off hands the whole
+/// window back — so the frontend reapplies this after every unlock.
+///
+/// A no-op everywhere else. Windows keeps the size it is given.
 #[tauri::command]
-fn hold_size(window: tauri::WebviewWindow, width: f64, height: f64) {
+fn fit_input(window: tauri::WebviewWindow, width: f64, height: f64) {
     #[cfg(target_os = "linux")]
     {
-        // Run on the GTK thread whichever thread this command arrived on:
-        // GTK objects may only be touched from the one that owns them.
+        // GTK objects may only be touched from the thread that owns them.
         let target = window.clone();
         let _ = window.run_on_main_thread(move || {
-            use gtk::prelude::GtkWindowExt;
+            use gtk::prelude::WidgetExt;
             if let Ok(gtk_window) = target.gtk_window() {
-                gtk_window.set_default_size(width.round() as i32, height.round() as i32);
+                let rect = gtk::cairo::RectangleInt::new(
+                    0,
+                    0,
+                    width.round() as i32,
+                    height.round() as i32,
+                );
+                let region = gtk::cairo::Region::create_rectangle(&rect);
+                gtk_window.input_shape_combine_region(Some(&region));
             }
         });
     }

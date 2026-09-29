@@ -50,7 +50,7 @@ tauri-plugin-dialog = "2"
 # and nothing in it is needed here.
 rodio = "0.21"
 
-# Linux only: the GTK window underneath, for the one thing tao does not reach.
+# Linux only: the GTK window underneath, to shape which part of it takes clicks.
 # Already compiled as part of Tauri, so this adds a name rather than a crate;
 # the version has to match the one Tauri builds, or there would be two GTKs.
 [target.'cfg(target_os = "linux")'.dependencies]
