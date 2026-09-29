@@ -114,7 +114,7 @@ reading A7.
 | D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
 | D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
 | D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |
-| D12 | The window is exactly the widget's size — nothing beside or below it catches clicks — at 80%, at 180% and in compact. See below | | |
+| D12 | Nothing beside or below the widget catches clicks — at 80%, at 180%, in compact, and again after locking and unlocking. See below | | |
 | D13 | Clouds at dusk have soft edges, with no vertical seams down the sides of a bank | | |
 | D14 | On water, the sun leaves a soft reflection as it comes down and none once it is under; the moon's, at the start of a break, is plainly fainter | | |
 
@@ -227,17 +227,13 @@ Which means glibc is not what decides the floor. The `.deb` also depends on
 the one this check was written to test. Worth knowing before anyone tries to
 widen the range by building somewhere older still.
 
-**D12, measured rather than eyeballed.** The band this row exists for was
-invisible by nature, so looking is not a test. In a development build, open the
-inspector over the widget and run this in its console:
-
-```js
-const f = document.querySelector('.frame').getBoundingClientRect(); [innerWidth, innerHeight, Math.round(f.width), Math.round(f.height)]
-```
-
-The first pair is the window and the second the widget, and they have to be
-equal. Before 1.1.0, on Linux, the height came back as 200 however small the
-widget was.
+**D12, tested by clicking rather than looking.** The band this row exists for
+is invisible by nature, and on Linux it is still there — GTK will not make the
+window shorter than 200 pixels — so measuring the window proves nothing. What
+has to hold is that the band is inert. Put something clickable just below the
+widget's bottom edge, a link or a folder icon, and click it: it has to respond.
+Then lock and unlock the widget and click it again, because unlocking is the
+moment the window's input region is reset and has to be cut back down.
 
 ### I · Music
 
@@ -269,6 +265,9 @@ document.
 | I11 | Unplugging them again comes back the same way | | |
 | I12 | Changing device while paused does not start the music | | |
 | I13 | Quitting Gloam stops the audio, with no process left holding the device | | |
+| I14 | Shuffle plays every track once before any repeats, and turning it off carries on in folder order from the current track | | |
+| I15 | With crossfade on, a track ending by itself blends into the next with no dip in the middle; next and previous still cut straight away | | |
+| I16 | Both switches survive a restart | | |
 
 **I10 on Linux** is the row most likely to behave differently. PulseAudio and
 PipeWire both move streams between devices on their own, which may mean the

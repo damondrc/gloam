@@ -160,10 +160,21 @@ every click aimed at what was behind it. It never showed at 180%, where the
 widget is already taller than that. The pins could not help, since they bound
 the smallest the window may be rather than the largest GTK may pick.
 
-The fix answers the question GTK is about to ask instead of stopping it from
-asking: just before the flag closes, Rust sets GTK's default size to the
-widget's. Leaving the flag open would also have worked, and would have brought
-the invisible resize border back.
+Leaving the flag open would have fixed the size and brought the invisible
+resize border back. Setting GTK's default size to the widget's just before the
+flag closed looked like the answer and did nothing, because GTK only consults a
+default size the first time a window is shown; it went out in 1.1.0's
+candidate and came straight back from the Linux machine.
+
+What works is to stop arguing with the size and change what it means. Every
+window on X11 has an input shape — the region pointer events are delivered to —
+and anything outside it falls through to the window beneath. After every
+resize, Rust cuts that shape down to the widget's rectangle, so whatever GTK
+adds below it is inert: still there, and no longer in the way. It is the same
+region Tauri shapes to implement click-through, which is how lock mode has
+worked on Linux since 0.2.0. That shared ownership is also the one thing to
+remember about it: turning click-through off hands the whole window back, so
+the widget's shape is reapplied after every unlock.
 
 ## Where the widget lives
 
@@ -334,7 +345,9 @@ is to be ignorable that is worth more than the simplicity it costs.
 ### A folder, not a library
 
 One folder, flat, sorted by file name. No descending into subfolders, no tags,
-no playlists, no shuffle, no seeking.
+no playlists, no seeking. Shuffle and a crossfade arrived late in 1.1.0 as two
+switches in the panel, and neither changes the shape: the folder is still the
+unit, and the face still has three buttons.
 
 Descending would turn "the album I picked" into a library, and a library needs
 more than three buttons to navigate — at which point Gloam is a music player
@@ -343,6 +356,25 @@ rather than by tag gets album order for free from the way albums are already
 numbered, and works on files nobody tagged. The track name shown is the file's,
 without directory or extension, which is what the folder already told you it
 was.
+
+Shuffle plays the folder in one fixed permutation, walked from start to end,
+rather than picking at random at every track. A pick can play the same song
+twice in an hour and never reach another, and nobody listening hears that as
+random — they hear it as broken. The order is kept beside the file list rather
+than made by shuffling it, so turning shuffle off goes back to the album as
+numbered, carrying on from whatever is playing. It is seeded from the clock
+with a few lines of xorshift, because choosing the order of an album is not a
+job for a random-number crate.
+
+A crossfade starts the next track five seconds before the current one ends,
+on a second sink playing into the same stream, and crosses the two on an
+equal-power curve. Crossed in a straight line, two tracks sum to a dip in the
+middle — loudness is not the sum of amplitudes — and a dip between songs is
+exactly what a crossfade is for removing. It only applies to a track ending by
+itself. A skip stays a cut, because fading into a song somebody just asked for
+makes them wait to hear it, and a pause or a device change ends a blend in
+progress. It needs the decoder to know how long the track is; where it cannot
+say, the track plays out and the next one follows as it always did.
 
 Anything unreadable is skipped rather than reported. A folder with one corrupt
 file and forty good ones should be a folder that plays.

@@ -203,7 +203,8 @@ standing on it.
 
 **Music.** Point Gloam at a folder and it plays what is in it — FLAC, MP3,
 Vorbis, WAV or AAC — with previous, play and next on the widget's face and the
-track name beside them. One folder, flat, in file-name order: a library needs
+track name beside them. The Music tab can shuffle it, and can blend each track
+into the next with a five-second crossfade. One folder, flat, in file-name order: a library needs
 more than three buttons to navigate, and at that point it stops being a timer
 that plays music.
 

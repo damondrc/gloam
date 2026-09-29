@@ -46,12 +46,12 @@ different beat from the WebView's repaint, and nothing above that layer can
 fix it — it is the same effect the widget already sidesteps by parking the
 window at its largest size for the length of a drag.
 
-**Until 1.1.0, the window could be taller than the widget.** GTK would not make
-it shorter than 200 pixels, so at small scales and in compact an invisible band
-under the widget caught clicks meant for whatever was behind it. Windows never
-did this. The cause and the fix are in [the architecture
-notes](architecture.md#scale), and the checklist now measures it rather than
-relying on anybody noticing.
+**The window can be taller than the widget.** GTK will not make it shorter
+than 200 pixels, so at small scales and in compact there is transparent window
+below the widget. Until 1.1.0 that band caught clicks meant for whatever was
+behind it; now only the widget's own rectangle takes the pointer, and the rest
+lets clicks through. Windows never did this. The cause, and the first fix that
+did not hold, are in [the architecture notes](architecture.md#scale).
 
 ### How far back a Linux release reaches
 

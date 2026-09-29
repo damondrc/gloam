@@ -32,6 +32,12 @@ commit that made the change, and in the architecture notes.
   read and never written to, and nothing plays on its own: the folder is
   remembered across restarts so the queue is ready, but pressing play stays
   something you do.
+- **Shuffle and crossfade**, as two switches in the Music tab, both off to
+  begin with. Shuffle plays the whole folder in a new order before repeating
+  anything, rather than picking at random each time, and turning it off goes
+  back to the album's own order from whatever is playing. Crossfade blends a
+  track that ends on its own into the next over five seconds; a skip is still
+  a cut, so the song you asked for starts when you ask.
 - **The music steps aside while Gloam speaks.** At a phase change or the end
   of a run it dips to about a fifth and comes back, rather than being talked
   over. Never to silence — a gap draws more attention than a dip, and you
@@ -57,9 +63,10 @@ commit that made the change, and in the architecture notes.
 
 ### Fixed
 
-- **No more invisible band under the widget on Linux.** GTK was quietly
-  making the window at least 200 pixels tall, and the part the widget did not
-  fill still caught every click meant for whatever was behind it.
+- **No more invisible band under the widget on Linux.** GTK makes the window
+  at least 200 pixels tall, and the part the widget did not fill caught every
+  click meant for whatever was behind it. Only the widget itself takes clicks
+  now; the rest of the window lets them through.
 - **The sun no longer shows through the sea.** The water band started
   partly transparent, so a setting sun stayed visible underneath it.
 - **Clouds no longer have hard edges on Linux.** Each bank's blur was being
