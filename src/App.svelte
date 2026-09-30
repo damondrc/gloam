@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { Timer } from "./lib/timer.svelte";
   import { LockController } from "./lib/lock.svelte";
   import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
@@ -11,6 +12,7 @@
     onBackendEvent,
     onWindowMoved,
     setWindowSize,
+    windowSettled,
     startDragging,
   } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
@@ -577,12 +579,53 @@
     lock.toggle();
   }
 
-  function onDoubleClick(): void {
-    if (lock.locked) return;
+  /**
+   * Hidden for the instant the widget changes shape.
+   *
+   * Folding and unfolding change the widget's size in the stylesheet at once,
+   * and the window's only when the window system gets round to it. Shrinking,
+   * the gap is transparent window nobody can see. Growing, it is the full-size
+   * widget drawn into the old, smaller window for a frame or two — its rounded
+   * corners cut off square by the window's edge, which is exactly what it
+   * looked like on Linux. No ordering of CSS and resize removes that frame for
+   * certain, because the window system decides when it lands.
+   *
+   * So the change happens while the widget is not showing: a short fade out,
+   * the change, a wait for the window to arrive at its new size, and a fade
+   * back in. Both directions, so that folding reads as one deliberate gesture
+   * rather than a jump one way and a dissolve the other.
+   */
+  let veiled = $state(false);
+  const VEIL_MS = 90;
+  /** However the window behaves, the widget does not stay invisible longer. */
+  const VEIL_CAP_MS = 700;
+
+  const pause = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+  const nextFrame = (): Promise<void> =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+  async function onDoubleClick(): Promise<void> {
+    if (lock.locked || veiled) return;
+
+    veiled = true;
+    await pause(VEIL_MS);
+
     // Compact has no room for the panel, so entering it closes what is open
     // rather than leaving a panel attached to a strip.
     if (!compact) panelOpen = false;
     compact = !compact;
+
+    // Let the size effect run and start the resize before asking for it, then
+    // two frames more so the compositor has shown the window at its new size.
+    await tick();
+    await nextFrame();
+    await Promise.race([
+      windowSettled().then(nextFrame).then(nextFrame),
+      pause(VEIL_CAP_MS),
+    ]);
+
+    veiled = false;
   }
 
   function togglePanel(): void {
@@ -665,6 +708,7 @@
   class="frame"
   class:locked={lock.locked}
   class:compact
+  class:veiled
   class:hovering
   class:open={panelOpen || tourOpen}
   class:spot-controls={spotlight === "controls"}
@@ -975,6 +1019,12 @@
     left: 0;
     width: calc(var(--frame-w) * 1rem);
     height: calc(var(--frame-h) * 1rem);
+    transition: opacity 0.09s ease;
+  }
+
+  /* See `veiled`: the widget is out of sight while it changes shape. */
+  .frame.veiled {
+    opacity: 0;
   }
 
   /* Two stacked zones: the stage holds the timer and its sky, the panel grows

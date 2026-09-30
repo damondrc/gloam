@@ -111,10 +111,20 @@ async function fitInput(): Promise<void> {
  * after every resize, so whatever GTK adds below it lets clicks through. See
  * `fit_input`.
  */
-export async function setWindowSize(
-  width: number,
-  height: number
-): Promise<void> {
+/** The resize most recently asked for, for anything that has to wait on it. */
+let settling: Promise<void> = Promise.resolve();
+
+/** Resolves once the last requested resize has been carried out. */
+export function windowSettled(): Promise<void> {
+  return settling;
+}
+
+export function setWindowSize(width: number, height: number): Promise<void> {
+  settling = resizeWindow(width, height);
+  return settling;
+}
+
+async function resizeWindow(width: number, height: number): Promise<void> {
   const m = await api();
   if (!m) return;
 
