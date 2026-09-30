@@ -66,6 +66,24 @@ struct ToggleEntry(tauri::menu::MenuItem<tauri::Wry>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKitGTK's newer DMA-BUF renderer, off unless somebody asks for it.
+    //
+    // Measured on a Mint laptop with Intel Iris Xe and Mesa — as well-supported
+    // a Linux graphics stack as exists — the default path ran 30 to 60 frames
+    // a second and flashed the whole widget every time the panel opened. With
+    // this set it ran 42 to 70 and the flash was gone. Nothing about how the
+    // widget looks depends on which renderer draws it, so the only cost is
+    // whatever the newer one would have been faster at on a machine where it
+    // behaves, and that has not been seen yet.
+    //
+    // Set before anything touches GTK, because WebKit reads it once at start.
+    // Left alone when already set, even to 0: someone who has chosen a renderer
+    // for their machine knows it better than this line does.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     let builder = tauri::Builder::default();
 
     // Must be registered before anything else, so a duplicate launch is turned
