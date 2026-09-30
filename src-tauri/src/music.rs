@@ -424,7 +424,7 @@ fn follow_device(audio: &mut Audio, queue: &Arc<Mutex<Queue>>, volume: f32) {
     // If the new default will not open, the old stream keeps the music going
     // on the old speakers. That is the wrong device but it is not silence, and
     // silence is the worse of the two.
-    let Some(mut next) = Audio::open() else {
+    let Some(next) = Audio::open() else {
         eprintln!("gloam: the new default output would not open; staying put");
         return;
     };
