@@ -398,6 +398,29 @@
   // numbers live in one place. Because 1rem is one scaled design pixel, the
   // frame written as `calc(var(--frame-w) * 1rem)` is exactly the size the
   // window is being asked for — without CSS having to know the constants.
+  /**
+   * The scale the layout is built at, and how far it is stretched on top.
+   *
+   * At rest these are the scale and nothing. While the grip is held, the
+   * layout stays built at the scale the drag began from and is stretched to
+   * follow the pointer instead.
+   *
+   * Everything in the stylesheet is sized in rem and one rem is one design
+   * pixel times the scale — which is what keeps text sharp at every size, and
+   * also what made dragging expensive. Every pointer event rebuilt the whole
+   * widget: every element laid out again, and every blurred layer painted
+   * again at its new size. On Linux that held the frame rate between 19 and
+   * 30 for as long as the grip was held, with several cores pinned.
+   *
+   * A transform is the compositor stretching what is already painted, which
+   * costs next to nothing. The price is that text is scaled as an image for
+   * the length of the drag, and so a touch soft if the drag goes far; nobody
+   * reads a widget while resizing it, and the real scale lands once, on
+   * release, sharp again.
+   */
+  const layoutScale = $derived(scale.dragging ? scale.from : scale.value);
+  const stretch = $derived(scale.dragging ? scale.value / scale.from : 1);
+
   const vars = $derived(
     [
       skyVars(sky),
@@ -405,7 +428,7 @@
       // widget should reveal more sky, not bigger birds. A square root is a
       // middle ground — at 180% the widget grows by four fifths and the flock
       // by a third.
-      `--ambient: ${Math.sqrt(scale.value).toFixed(3)}`,
+      `--ambient: ${Math.sqrt(layoutScale).toFixed(3)}`,
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
@@ -417,9 +440,10 @@
     ].join("; ")
   );
 
-  // One number drives every size in the stylesheet; see app.css.
+  // One number drives every size in the stylesheet; see app.css. The layout's
+  // scale rather than the grip's, so a drag stretches instead of rebuilding.
   $effect(() => {
-    document.documentElement.style.setProperty("--scale", String(scale.value));
+    document.documentElement.style.setProperty("--scale", String(layoutScale));
   });
 
   // While the grip is being dragged the window is parked at the largest size
@@ -709,11 +733,13 @@
   class:locked={lock.locked}
   class:compact
   class:veiled
+  class:stretching={scale.dragging}
   class:hovering
   class:open={panelOpen || tourOpen}
   class:spot-controls={spotlight === "controls"}
   class:spot-away={spotlight === "away"}
   style={vars}
+  style:transform={stretch === 1 ? null : `scale(${stretch.toFixed(4)})`}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
 >
@@ -1020,6 +1046,17 @@
     width: calc(var(--frame-w) * 1rem);
     height: calc(var(--frame-h) * 1rem);
     transition: opacity 0.09s ease;
+  }
+
+  /* Stretched from its top-left corner, which is where the window keeps it and
+     where it would grow from anyway; its own layer while that lasts, so the
+     compositor has something to stretch. See `stretch`. */
+  .frame {
+    transform-origin: 0 0;
+  }
+
+  .frame.stretching {
+    will-change: transform;
   }
 
   /* See `veiled`: the widget is out of sight while it changes shape. */

@@ -27,6 +27,16 @@ export class ScaleController {
   #baseHeight = 1;
 
   /**
+   * The scale the current drag started from. Only meaningful while dragging.
+   *
+   * Set before `dragging` turns true, so anything that reads both as a pair
+   * never sees a drag without its starting point.
+   */
+  get from(): number {
+    return this.#startValue;
+  }
+
+  /**
    * @param baseWidth  width of the current layout at scale 1
    * @param baseHeight height of the current layout at scale 1
    */

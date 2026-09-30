@@ -134,6 +134,16 @@ Folding these into a single "size" control is tempting and wrong: dragging to
 enlarge the clock would also unfold the settings, and collapsing them would
 shrink your type.
 
+While the grip is held, scale is the one thing that is not laid out for real.
+Because every size is in rem, a new scale rebuilds the whole widget — every
+element laid out again and every blurred layer painted again at its new size —
+and doing that on every pointer event held Linux between 19 and 30 frames a
+second with several cores pinned. So a drag keeps the layout built at the scale
+it started from and stretches it with a transform, which is the compositor
+scaling what is already painted. Text is scaled as an image for the length of
+the drag, a little soft if the drag goes far; the real scale lands once, on
+release, and everything is sharp again.
+
 The window is declared non-resizable, and `setWindowSize` opens that flag for
 the length of one resize before closing it again. The dance is not decoration:
 the two platforms read the same flag differently.

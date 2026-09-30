@@ -67,6 +67,10 @@ commit that made the change, and in the architecture notes.
 
 ### Fixed
 
+- **Resizing with the corner grip keeps up.** Every movement of the grip used
+  to rebuild and repaint the whole widget, which on Linux dropped it to 19–30
+  frames a second while dragging. The widget is now stretched while the grip
+  is held and rebuilt once, sharp, when it is let go.
 - **Smoother on Linux.** Gloam now asks WebKitGTK for its classic renderer
   rather than the newer DMA-BUF one. On the machine it was measured on, that
   took it from 30–60 frames a second to 42–70 and stopped the whole widget
