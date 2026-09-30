@@ -58,11 +58,20 @@ commit that made the change, and in the architecture notes.
 
 ### Changed
 
+- **Folding to compact and back is a quick fade**, rather than a jump. The
+  window takes a moment to arrive at its new size, and unfolding used to show
+  the full widget cut square by the old window's edges for a frame or two.
+
 - **`S` opens settings**, beside `C` for compact, instead of `,`. The comma is
   the settings key on a Mac and a guess everywhere else.
 
 ### Fixed
 
+- **Smoother on Linux.** Gloam now asks WebKitGTK for its classic renderer
+  rather than the newer DMA-BUF one. On the machine it was measured on, that
+  took it from 30–60 frames a second to 42–70 and stopped the whole widget
+  flashing whenever the panel opened. Setting `WEBKIT_DISABLE_DMABUF_RENDERER`
+  yourself, to anything, still wins.
 - **No more invisible band under the widget on Linux.** GTK makes the window
   at least 200 pixels tall, and the part the widget did not fill caught every
   click meant for whatever was behind it. Only the widget itself takes clicks

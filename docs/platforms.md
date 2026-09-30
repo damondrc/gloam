@@ -22,8 +22,15 @@ beside the download is the answer to that, and the README says how to check it.
 **Supported.** Verified against 1.0.0 on Linux Mint 22 (Cinnamon, X11), single
 monitor and dual.
 
-Everything in the checklist passes, with three things worth knowing — and a
-fourth that was a defect, now fixed.
+Everything in the checklist passes, with three things worth knowing — and two
+that were defects, now fixed.
+
+**Gloam picks WebKitGTK's renderer for you.** It starts with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1`, which selects the classic renderer over the
+newer DMA-BUF one. Measured on Intel Iris Xe with Mesa, the default ran 30 to
+60 frames a second and flashed the widget whenever the panel opened; the
+classic one ran 42 to 70 and did not flash. If you have set the variable
+yourself, to anything, Gloam leaves it alone.
 
 **A run left going will announce its end whenever it reaches it**, including
 with the lid shut on a machine set not to suspend, and including at the instant
