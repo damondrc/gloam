@@ -49,6 +49,23 @@ decisions that were deliberately deferred, and each says what would unblock it.
 
 ## Waiting on a decision
 
+- [ ] **Make every frame cheaper to paint.** Three effects are recomputed on
+      every frame in which anything moves beneath them: a `backdrop-filter`
+      blur behind the buttons, the chevron and the padlock; `mix-blend-mode` on
+      the grain, which covers the whole widget; and the same on both drifting
+      hazes. With the GPU doing it they are trivial, which is why Windows never
+      noticed. On Linux they were part of why the widget ran at 30 to 60 frames
+      a second, until the renderer change and the drawn-large drag took it
+      well past that. Neither of those removed the cost; they stopped it
+      showing.
+
+      The blur behind the buttons sits on a sky that is nearly flat, so taking
+      it away should change almost nothing on screen, and the two blends can
+      be approximated without blending. But all three are visual, and none
+      should change without a before-and-after to look at. Worth doing for
+      what it would save at rest on a laptop running on battery — see D15 in
+      the checklist for the number that would justify it.
+
 - [ ] **How to reach the distributions that are not Debian.** Gloam ships a
       `.deb` and nothing else, so Fedora, openSUSE and Arch have no package.
       There are two routes and they are not equal.

@@ -117,6 +117,7 @@ reading A7.
 | D12 | Nothing beside or below the widget catches clicks — at 80%, at 180%, in compact, and again after locking and unlocking. See below | | |
 | D13 | Clouds at dusk have soft edges, with no vertical seams down the sides of a bank | | |
 | D14 | On water, the sun leaves a soft reflection as it comes down and none once it is under; the moon's, at the start of a break, is plainly fainter | | |
+| D15 | At rest, the processor cost is recorded. Not a pass or a fail — a number, so the next version has something to be compared with. See below | | |
 
 **D8 is the one to look at first.** The panel is one height for every tab,
 sized to the tallest, and that height is a constant somebody has to keep in
@@ -234,6 +235,23 @@ has to hold is that the band is inert. Put something clickable just below the
 widget's bottom edge, a link or a folder icon, and click it: it has to respond.
 Then lock and unlock the widget and click it again, because unlocking is the
 moment the window's input region is reset and has to be cut back down.
+
+**D15, the cost of sitting there.** Gloam is meant to stay open all day, often
+on a laptop, so what it costs while nobody is touching it matters more than
+what it costs while somebody is. On the installed build, with no inspector
+open, let a focus run go, keep the pointer off the widget, and wait a minute.
+Then sample for thirty seconds:
+
+```bash
+top -b -d 1 -n 31 | awk '/^top -/ {i++} i > 1 && tolower($0) ~ /gloam|webkit/ {s += $9} END {printf "%.1f%% of one core, averaged\n", s / (i - 1)}'
+```
+
+On Linux the widget is several processes — `gloam`, and the `WebKitWebProcess`
+that draws it among others — and the line adds every one of them, sample by
+sample. The first sample is dropped, because `top` measures it from when each
+process started rather than over the last second. On Windows, Task Manager's Details tab shows
+`gloam.exe` and the `msedgewebview2.exe` entries under it; add those. Write the
+number in the row as it came out.
 
 ### I · Music
 
