@@ -71,7 +71,11 @@ export interface Shortcut {
 const BINDINGS: Record<string, Action | undefined> = {
   " ": "toggleTimer",
   c: "toggleCompact",
-  ",": "togglePanel",
+  // S for settings, beside C for compact: two letters that say what they do.
+  // It replaces `,`, which is the settings key on a Mac and a guess anywhere
+  // else. S once skipped a segment and was taken away for it; see the test
+  // for why the same letter is allowed back for this.
+  s: "togglePanel",
   "+": "scaleUp",
   "=": "scaleUp",
   "-": "scaleDown",
@@ -84,7 +88,7 @@ export function resolveShortcut(key: string, context: Context): Shortcut | null 
 
   // Space is the only key a focused control also claims. Every other binding
   // is a character no button has a meaning for, so they stay global — pressing
-  // `s` with the focus left on the play button should still skip.
+  // `c` with the focus left on the play button should still fold the widget.
   if (action === "toggleTimer") {
     if (context.ownsSpace) return null;
     return { action, preventDefault: true };
@@ -116,7 +120,7 @@ export interface ShownShortcut {
 export const SHORTCUTS: readonly ShownShortcut[] = [
   { keys: "Space", does: "Start or pause", actions: ["toggleTimer"] },
   { keys: "C", does: "Fold to compact", actions: ["toggleCompact"] },
-  { keys: ",", does: "Open settings", actions: ["togglePanel"] },
+  { keys: "S", does: "Open settings", actions: ["togglePanel"] },
   { keys: "+ / −", does: "Resize", actions: ["scaleUp", "scaleDown"] },
   { keys: "Ctrl+Alt+G", does: "Lock, from anywhere", actions: [] },
 ];

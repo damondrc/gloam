@@ -13,6 +13,85 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+## [1.1.0]
+
+### Added
+
+- **A music player.** Point Gloam at a folder and it plays what is in it —
+  FLAC, MP3, Vorbis, WAV or AAC. Previous, play and next appear on the
+  widget's face with the track name beside them; the folder and its volume
+  live in a new **Music** tab in the panel. One folder, flat, in file-name
+  order: descending into subfolders would make it a library, and a library
+  needs more than three buttons to navigate.
+  Decoding happens inside the app rather than through the browser engine.
+  That is the whole shape of the feature and not a detail — a web page's audio
+  goes through a media stack that depends on what the machine happens to have
+  installed, which is precisely what made Gloam's AppImage ship silent. FLAC
+  plays here whether or not the system has a codec for it.
+  The music has its own volume, separate from the widget's. Your folder is
+  read and never written to, and nothing plays on its own: the folder is
+  remembered across restarts so the queue is ready, but pressing play stays
+  something you do.
+- **Shuffle and crossfade**, as two switches in the Music tab, both off to
+  begin with. Shuffle plays the whole folder in a new order before repeating
+  anything, rather than picking at random each time, and turning it off goes
+  back to the album's own order from whatever is playing. Crossfade blends a
+  track that ends on its own into the next over five seconds; a skip is still
+  a cut, so the song you asked for starts when you ask.
+- **The music steps aside while Gloam speaks.** At a phase change or the end
+  of a run it dips to about a fifth and comes back, rather than being talked
+  over. Never to silence — a gap draws more attention than a dip, and you
+  should be able to tell the music never stopped. Button clicks never do this;
+  only the sounds that mean something.
+- **The music follows your interruptions.** Pausing or resetting the timer
+  pauses the music, and starting it again resumes it — but only music the
+  timer paused: an album you paused yourself stays paused. At the end of a run
+  it fades out with the alarm and waits where it was, so play carries on.
+  Breaks and skips leave it alone, and starting the timer never starts music
+  you had not started.
+
+- **The sun leaves a reflection on the water.** Short and soft, under
+  whichever body is in the sky, strongest as the sun comes down to meet the
+  sea and gone once it is under, with a thread of light along the waterline
+  where the two touch. The moon leaves a fainter one, a third as bright,
+  which fades as it climbs.
+
+### Changed
+
+- **Folding to compact and back is a quick fade**, rather than a jump. The
+  window takes a moment to arrive at its new size, and unfolding used to show
+  the full widget cut square by the old window's edges for a frame or two.
+
+- **`S` opens settings**, beside `C` for compact, instead of `,`. The comma is
+  the settings key on a Mac and a guess everywhere else.
+
+### Fixed
+
+- **Resizing with the corner grip keeps up.** Every movement of the grip used
+  to rebuild and repaint the whole widget, which on Linux dropped it to 19–30
+  frames a second while dragging. While the grip is held the widget is now
+  drawn once at its largest size and shrunk to follow it, which keeps it sharp
+  at any size, and rebuilt once when it is let go — without the sun and the
+  readout easing to their new size half a second behind everything else.
+- **Smoother on Linux.** Gloam now asks WebKitGTK for its classic renderer
+  rather than the newer DMA-BUF one. On the machine it was measured on, that
+  took it from 30–60 frames a second to 42–70 and stopped the whole widget
+  flashing whenever the panel opened. Setting `WEBKIT_DISABLE_DMABUF_RENDERER`
+  yourself, to anything, still wins.
+- **No more invisible band under the widget on Linux.** GTK makes the window
+  at least 200 pixels tall, and the part the widget did not fill caught every
+  click meant for whatever was behind it. Only the widget itself takes clicks
+  now; the rest of the window lets them through.
+- **The sun no longer shows through the sea.** The water band started
+  partly transparent, so a setting sun stayed visible underneath it.
+- **Clouds no longer have hard edges on Linux.** Each bank's blur was being
+  cut off at the edges of its own layer, which showed as vertical seams in the
+  sky at dusk.
+- **Music now follows the default output device.** Plugging in headphones
+  mid-track used to move every sound on the machine except the music, which
+  carried on in the speakers. It now moves across within a couple of seconds,
+  resuming near where it was rather than starting the track again.
+
 ## [1.0.0] — 2026-09-14
 
 ### Added
@@ -302,7 +381,8 @@ commit that made the change, and in the architecture notes.
 - Fixed 30/10 focus and break cycles.
 - An ambient sky whose state encodes progress, and chimes on each transition.
 
-[Unreleased]: https://github.com/damondrc/gloam/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/damondrc/gloam/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/damondrc/gloam/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/damondrc/gloam/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/damondrc/gloam/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/damondrc/gloam/compare/v0.4.0...v0.5.0

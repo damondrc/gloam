@@ -128,11 +128,29 @@ Scale is kept independent of the other two size-ish concepts on purpose:
 | --- | --- | --- |
 | Scale | How big is everything drawn? | Corner grip, `+` / `-` |
 | Layout | Which elements exist? | Double-click for compact |
-| Panels | How much content is there? | The chevron, `,` |
+| Panels | How much content is there? | The chevron, `S` |
 
 Folding these into a single "size" control is tempting and wrong: dragging to
 enlarge the clock would also unfold the settings, and collapsing them would
 shrink your type.
+
+While the grip is held, scale is the one thing that is not laid out for real.
+Because every size is in rem, a new scale rebuilds the whole widget — every
+element laid out again and every blurred layer painted again at its new size —
+and doing that on every pointer event held Linux between 19 and 30 frames a
+second with several cores pinned. So a drag builds the layout once at the
+largest scale there is and shrinks it with a transform to follow the pointer,
+which is the compositor resizing what is already painted. Shrinking rather than
+stretching is the point: an earlier version built the drag at the scale it
+started from and enlarged it, and an image enlarged two and a quarter times is
+plainly pixelated. A reduced one has resolution to spare. The real scale lands
+once, on release.
+
+That moment has one more thing to get right. The sun eases its size over a
+session and the readout eases into compact, and both took a scale arriving in
+one step as a change of size to animate, so they trailed half a second behind
+the rest of the widget. Transitions are switched off for the frame in which
+the scale changes.
 
 The window is declared non-resizable, and `setWindowSize` opens that flag for
 the length of one resize before closing it again. The dance is not decoration:
@@ -149,6 +167,32 @@ widget drawn inside it, since the frame carries its own dimensions.
 Pinning the minimum and maximum is not enough on its own: a window manager may
 still offer the grip it will then refuse. So the flag stays shut except for the
 instant a resize needs it.
+
+Closing it was a problem of its own, found in 1.1.0 by measuring rather than
+guessing. Closing the flag is when GTK works a window's size out afresh, and it
+does not use the size it was just given: it takes the largest of the size hints
+and its own default size, and a window nobody gave a default is 200 by 200. So
+on Linux the window was never shorter than 200 pixels — 149 asked for at 113%,
+200 delivered — and the difference was a band under the widget that caught
+every click aimed at what was behind it. It never showed at 180%, where the
+widget is already taller than that. The pins could not help, since they bound
+the smallest the window may be rather than the largest GTK may pick.
+
+Leaving the flag open would have fixed the size and brought the invisible
+resize border back. Setting GTK's default size to the widget's just before the
+flag closed looked like the answer and did nothing, because GTK only consults a
+default size the first time a window is shown; it went out in 1.1.0's
+candidate and came straight back from the Linux machine.
+
+What works is to stop arguing with the size and change what it means. Every
+window on X11 has an input shape — the region pointer events are delivered to —
+and anything outside it falls through to the window beneath. After every
+resize, Rust cuts that shape down to the widget's rectangle, so whatever GTK
+adds below it is inert: still there, and no longer in the way. It is the same
+region Tauri shapes to implement click-through, which is how lock mode has
+worked on Linux since 0.2.0. That shared ownership is also the one thing to
+remember about it: turning click-through off hands the whole window back, so
+the widget's shape is reapplied after every unlock.
 
 ## Where the widget lives
 
@@ -253,8 +297,10 @@ back is starting lost.
 
 ## Sound
 
-Everything is synthesised. No audio files means nothing to license, nothing to
-decode, no binaries in the repository, and a timbre that stays editable as code.
+Everything Gloam says in its own voice is synthesised. No audio files of its
+own means nothing to license, nothing to ship, no binaries in the repository,
+and a timbre that stays editable as code. Music you choose is a separate
+system, decoded in Rust — see [Music](#music).
 
 The module splits along one line: an *instrument* decides how a single note
 sounds, a *phrase* decides which notes and in what order. That split is why
@@ -294,6 +340,176 @@ control is for.
 Every gesture fades out whatever is still ringing before it starts. Auditioning
 a setting is the reason: you are there to hear the thing you picked, not the
 thing you picked over the last two.
+
+## Music
+
+A folder of music, decoded in Rust and never touched by the WebView.
+
+That last part is the whole shape of the feature rather than an optimisation.
+WebKitGTK routes every sound a web page makes through gstreamer, and FLAC lives
+in a plugin package a machine may or may not have installed — which is exactly
+what made Gloam's AppImage ship silent. A player built the obvious way would
+work on the machine it was written on and be a coin toss everywhere else.
+Decoding with symphonia and writing to the device with cpal means the only
+thing between a file and the speakers is code that shipped inside the binary.
+
+It costs a thread. `rodio::OutputStream` owns a `cpal::Stream`, which is
+`!Send`: it cannot move between threads, so it cannot sit in Tauri's managed
+state and be touched by whichever thread happens to service a command. One
+thread owns it and everything else talks down a channel — which also means
+nothing happening in the interface can stall playback, and for an app whose job
+is to be ignorable that is worth more than the simplicity it costs.
+
+### A folder, not a library
+
+One folder, flat, sorted by file name. No descending into subfolders, no tags,
+no playlists, no seeking. Shuffle and a crossfade arrived late in 1.1.0 as two
+switches in the panel, and neither changes the shape: the folder is still the
+unit, and the face still has three buttons.
+
+Descending would turn "the album I picked" into a library, and a library needs
+more than three buttons to navigate — at which point Gloam is a music player
+that keeps time rather than a timer that plays music. Sorting by file name
+rather than by tag gets album order for free from the way albums are already
+numbered, and works on files nobody tagged. The track name shown is the file's,
+without directory or extension, which is what the folder already told you it
+was.
+
+Shuffle plays the folder in one fixed permutation, walked from start to end,
+rather than picking at random at every track. A pick can play the same song
+twice in an hour and never reach another, and nobody listening hears that as
+random — they hear it as broken. The order is kept beside the file list rather
+than made by shuffling it, so turning shuffle off goes back to the album as
+numbered, carrying on from whatever is playing. It is seeded from the clock
+with a few lines of xorshift, because choosing the order of an album is not a
+job for a random-number crate.
+
+A crossfade starts the next track five seconds before the current one ends,
+on a second sink playing into the same stream, and crosses the two on an
+equal-power curve. Crossed in a straight line, two tracks sum to a dip in the
+middle — loudness is not the sum of amplitudes — and a dip between songs is
+exactly what a crossfade is for removing. It only applies to a track ending by
+itself. A skip stays a cut, because fading into a song somebody just asked for
+makes them wait to hear it, and a pause or a device change ends a blend in
+progress. It needs the decoder to know how long the track is; where it cannot
+say, the track plays out and the next one follows as it always did.
+
+Anything unreadable is skipped rather than reported. A folder with one corrupt
+file and forty good ones should be a folder that plays.
+
+### Following the speakers
+
+An audio stream is bound to the device it was opened against and stays there
+for as long as it lives. Nothing in the documentation hides this; it simply
+never came up, because the browser had been following the system's default
+output on Gloam's behalf for every other sound in the app. Taking playback out
+of the WebView meant inheriting that job, and until it was inherited, plugging
+in headphones moved every sound on the machine except the music.
+
+There is no cross-platform notification to subscribe to, so the thread asks. It
+already wakes every hundred milliseconds to notice a track running out; every
+two seconds it also asks which device the system would hand a new stream today,
+and compares by name — a name being the only thing here that survives being
+compared, since two handles to the same speakers are separate values with no
+equality between them. On a change it opens a new stream, reloads the track and
+seeks to where the old one had got to, which is the difference between a seam
+and an interruption.
+
+Three ways that can fail, each answered rather than propagated. A new default
+that will not open leaves the old stream alone, because the wrong speakers beat
+silence. A seek the decoder will not support restarts the track instead of
+giving up. A name that cannot be read is not evidence of anything, so nothing
+happens.
+
+### Ducking
+
+When Gloam speaks, the music leans out of the way: down to about a fifth over
+140 milliseconds, held while the phrase plays, and back over 900.
+
+Never to silence. A gap draws more attention than a dip does, and the point is
+for the phrase to be heard *over* the music rather than instead of it — someone
+listening should be able to tell the album never stopped. The alternative was
+to make the transitions loud enough to carry over an album, which is a
+transition that is too loud every other time.
+
+The asymmetry between the two fades is the one every compressor has, for the
+same reason: a fast recovery sounds like a mistake being undone. And while a
+fade is running the thread quickens from a hundred milliseconds to twenty,
+because a ramp stepped at the ordinary rate is heard as a staircase rather than
+a fade. The ear catches steps in loudness far better than the eye catches them
+in brightness.
+
+Buttons cannot trigger it, and not by convention: the announcement hangs off
+the function that plays a phrase, which the button sounds do not go through, so
+it is structurally impossible for a click to duck the music. A tick that leaned
+on the album every time you pressed pause would make the music unlistenable and
+the clicks sinister.
+
+Two levels are kept apart in the thread — what the person set, and what reaches
+the sink, which is that multiplied by whatever the duck is asking for. Storing
+only the product would mean a phrase arriving mid-drag either loses the new
+setting or restores an old one when the slider is let go.
+
+Which sounds duck is a decision the app makes, not the synthesiser. `sound.ts`
+offers a hook and knows nothing about music; `App.svelte` wires it to the
+player. Whether there is an album underneath the widget's voice is not a
+question synthesis has any business having an opinion about.
+
+### Following the timer
+
+The music keeps time with the run without being run by it, and the line
+between the two is who did what.
+
+Pausing the timer pauses the music, and resuming brings it back. That is not
+the timer taking charge of the album: a pause is the person stepping out of
+their own session, and the music steps out with them. Resetting counts the
+same. But the timer only ever gives back what it took — one flag remembers
+whether the music was paused by the timer or by hand, so an album paused on
+purpose stays paused through any number of pauses and resumes of the run.
+Touching the music's own buttons clears the flag and takes it back.
+
+Breaks and skips leave it alone. A break is part of a session rather than an
+interruption of one, and the earlier idea of silencing the music for every
+break was the version that handed the timer control over something the person
+chose. Starting a run never starts music nobody started.
+
+At the end of a run the alarm ducks the music as every phrase does, and the
+duck ends differently: instead of rising back it fades to nothing over nearly
+two seconds and the player pauses where it was. The record finishes with the
+run rather than being switched off by it, and carrying on is the same play
+button it is anywhere else. The fade lives in the audio thread with the rest
+of the ramp, because a fade has to happen where the samples are.
+
+### Where the controls are
+
+Split by how often they are used. The folder and the volume are chosen once and
+live in the panel; previous, play and next are the most frequent thing anybody
+does to a music player and live on the face, appearing on hover like every
+other control.
+
+They sit in the top strip, which is the only clear span there — and turns out
+to be right rather than merely available, because the timer's own play button
+is in the bottom corner. Two play buttons within an inch of each other make a
+widget you have to read before pressing, and distance settles that better than
+any pair of icons could. They are drawn lighter than the timer's controls for
+the same reason: Gloam is a timer that can play music, and the hierarchy should
+say so before anyone reads a label.
+
+Nothing is drawn until there is something to play, and nothing appears in
+compact, where that strip does not exist.
+
+### What the frontend does not keep
+
+No copy of the queue. What is playing and where in the folder it sits lives in
+Rust and arrives as a whole snapshot — as a command's return, or on the track
+event. Two copies would be two copies to hold in agreement, and they would
+first disagree the moment a track ended while nobody was watching, which is
+also the one change no click will ever report.
+
+Everything in the bridge fails soft. A missing audio device, a folder that has
+gone, a file nothing can decode: each logs and returns rather than throwing.
+Gloam is a timer that can play music, not a music player that keeps time, and
+none of those is a reason for a countdown to stop.
 
 ## The backdrop
 

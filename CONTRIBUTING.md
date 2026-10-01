@@ -38,8 +38,13 @@ or Ubuntu:
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
-  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+  libasound2-dev
 ```
+
+The last one is for the music player. Playback goes through ALSA on Linux
+whichever sound server the machine runs — PulseAudio and PipeWire both sit
+behind it — so the build stops at `alsa-sys` without the headers.
 
 Then:
 

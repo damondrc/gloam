@@ -1,6 +1,6 @@
 [package]
 name = "gloam"
-version = "1.0.0"
+version = "1.1.0"
 description = "A floating, ambient focus timer that lives in the corner of your screen."
 authors = ["Damond"]
 license = "MIT"
@@ -34,6 +34,27 @@ serde_json = "1"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-dialog = "2"
+
+# Decoding and playback, deliberately not through the WebView.
+#
+# WebKitGTK routes all web audio through gstreamer, and FLAC lives in a plugin
+# package a machine may or may not have — which is exactly what made the
+# AppImage ship silent. rodio decodes with symphonia, which is pure Rust and
+# inside the binary, and writes to the device through cpal. The only thing
+# between a file and the speakers is code that shipped with the app.
+#
+# Default features carry FLAC, MP3, Vorbis, WAV and AAC, which is the whole
+# list this player claims. Held at 0.21 by the crate's own rust-version rule
+# rather than by preference: 0.22 wants a newer compiler than Gloam asks for,
+# and nothing in it is needed here.
+rodio = "0.21"
+
+# Linux only: the GTK window underneath, to shape which part of it takes clicks.
+# Already compiled as part of Tauri, so this adds a name rather than a crate;
+# the version has to match the one Tauri builds, or there would be two GTKs.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
 
 # The widget sits idle for long stretches, so favour a small, fast binary over
 # compile time in release builds.
