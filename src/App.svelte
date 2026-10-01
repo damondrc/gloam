@@ -412,14 +412,20 @@
    * again at its new size. On Linux that held the frame rate between 19 and
    * 30 for as long as the grip was held, with several cores pinned.
    *
-   * A transform is the compositor stretching what is already painted, which
-   * costs next to nothing. The price is that text is scaled as an image for
-   * the length of the drag, and so a touch soft if the drag goes far; nobody
-   * reads a widget while resizing it, and the real scale lands once, on
-   * release, sharp again.
+   * A transform is the compositor resizing what is already painted, which
+   * costs next to nothing. The first version built the drag at the scale it
+   * started from and stretched that, and stretching an image is enlarging it:
+   * from 80% to 180% is two and a quarter times, and held there long enough
+   * the widget was plainly pixelated.
+   *
+   * So the drag is built at the largest scale there is and shrunk instead. A
+   * reduced image is never pixelated — it has more resolution than it needs
+   * rather than less — and the window is already parked at that largest size
+   * for the length of a drag, so the layout fits it exactly. One rebuild when
+   * the grip is taken, one when it is let go, and only the compositor between.
    */
-  const layoutScale = $derived(scale.dragging ? scale.from : scale.value);
-  const stretch = $derived(scale.dragging ? scale.value / scale.from : 1);
+  const layoutScale = $derived(scale.dragging ? MAX_SCALE : scale.value);
+  const stretch = $derived(scale.dragging ? scale.value / MAX_SCALE : 1);
 
   const vars = $derived(
     [
@@ -428,7 +434,11 @@
       // widget should reveal more sky, not bigger birds. A square root is a
       // middle ground — at 180% the widget grows by four fifths and the flock
       // by a third.
-      `--ambient: ${Math.sqrt(layoutScale).toFixed(3)}`,
+      // Divided by the stretch so the flock is the size it should be at the
+      // scale on screen, not the one being drawn at: the square root does not
+      // survive a uniform transform. Only the birds read it, so keeping it
+      // exact through a drag costs nothing unless a flock is crossing.
+      `--ambient: ${(Math.sqrt(scale.value) / stretch).toFixed(3)}`,
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
@@ -441,9 +451,28 @@
   );
 
   // One number drives every size in the stylesheet; see app.css. The layout's
-  // scale rather than the grip's, so a drag stretches instead of rebuilding.
+  // scale rather than the grip's, so a drag resizes instead of rebuilding.
+  //
+  // Transitions are switched off for the frame it changes in. The sun eases
+  // its size over a session and the readout eases into compact, and both read
+  // a change of scale as a change of size worth animating — so when the scale
+  // arrived in one step at the end of a drag, they spent half a second growing
+  // or shrinking to where everything else already was. The class goes on in
+  // the same mutation as the new scale, so no frame can see one without the
+  // other, and comes off two frames later.
   $effect(() => {
-    document.documentElement.style.setProperty("--scale", String(layoutScale));
+    const root = document.documentElement;
+    root.classList.add("rescaling");
+    root.style.setProperty("--scale", String(layoutScale));
+
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => root.classList.remove("rescaling"));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   });
 
   // While the grip is being dragged the window is parked at the largest size
@@ -1048,9 +1077,9 @@
     transition: opacity 0.09s ease;
   }
 
-  /* Stretched from its top-left corner, which is where the window keeps it and
+  /* Resized from its top-left corner, which is where the window keeps it and
      where it would grow from anyway; its own layer while that lasts, so the
-     compositor has something to stretch. See `stretch`. */
+     compositor has something to resize. See `stretch`. */
   .frame {
     transform-origin: 0 0;
   }

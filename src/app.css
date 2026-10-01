@@ -24,6 +24,14 @@ html {
   font-size: calc(var(--scale) * 1px);
 }
 
+/* For the frame in which the scale changes, nothing animates. Every size is in
+   rem, so a new scale changes every size at once, and anything with a size
+   transition would otherwise ease toward its new size while the rest of the
+   widget is already there. See the scale effect in App.svelte. */
+html.rescaling * {
+  transition: none !important;
+}
+
 * {
   box-sizing: border-box;
 }

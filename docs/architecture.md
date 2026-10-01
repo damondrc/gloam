@@ -138,11 +138,19 @@ While the grip is held, scale is the one thing that is not laid out for real.
 Because every size is in rem, a new scale rebuilds the whole widget — every
 element laid out again and every blurred layer painted again at its new size —
 and doing that on every pointer event held Linux between 19 and 30 frames a
-second with several cores pinned. So a drag keeps the layout built at the scale
-it started from and stretches it with a transform, which is the compositor
-scaling what is already painted. Text is scaled as an image for the length of
-the drag, a little soft if the drag goes far; the real scale lands once, on
-release, and everything is sharp again.
+second with several cores pinned. So a drag builds the layout once at the
+largest scale there is and shrinks it with a transform to follow the pointer,
+which is the compositor resizing what is already painted. Shrinking rather than
+stretching is the point: an earlier version built the drag at the scale it
+started from and enlarged it, and an image enlarged two and a quarter times is
+plainly pixelated. A reduced one has resolution to spare. The real scale lands
+once, on release.
+
+That moment has one more thing to get right. The sun eases its size over a
+session and the readout eases into compact, and both took a scale arriving in
+one step as a change of size to animate, so they trailed half a second behind
+the rest of the widget. Transitions are switched off for the frame in which
+the scale changes.
 
 The window is declared non-resizable, and `setWindowSize` opens that flag for
 the length of one resize before closing it again. The dance is not decoration:
