@@ -48,7 +48,7 @@ tauri-plugin-dialog = "2"
 # list this player claims. Held at 0.21 by the crate's own rust-version rule
 # rather than by preference: 0.22 wants a newer compiler than Gloam asks for,
 # and nothing in it is needed here.
-rodio = "0.21"
+rodio = "0.22"
 
 # Linux only: the GTK window underneath, to shape which part of it takes clicks.
 # Already compiled as part of Tauri, so this adds a name rather than a crate;
