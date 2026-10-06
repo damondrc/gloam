@@ -248,9 +248,44 @@ const TOP = 587.33;
 /** Long enough for a note to speak, short enough to read as one gesture. */
 const GAP = 0.42;
 
+/**
+ * How long after the last note starts the music should still be held down.
+ *
+ * Measured from where notes begin rather than where they end, because a
+ * strike's length is mostly its decay and the tail is inaudible well before
+ * the number says it is over. Holding for the full duration would keep the
+ * music underwater for five seconds after a phrase anyone stopped hearing in
+ * two; the release fade covers whatever is still ringing.
+ */
+const TAIL = 0.9;
+
+/**
+ * Told when Gloam is about to speak, and for how long.
+ *
+ * A hook rather than a call into the player, so that nothing about music
+ * exists in this file: what should happen to other sound while the widget
+ * talks is a question about the app, not about synthesis. The app wires it.
+ */
+let speaking: ((seconds: number) => void) | null = null;
+
+export function onSpeak(handler: ((seconds: number) => void) | null): void {
+  speaking = handler;
+}
+
+/**
+ * Plays a phrase, and says so.
+ *
+ * Buttons do not come through here, which is the whole reason the announcement
+ * lives at this level rather than beside the volume: a tick that ducked the
+ * music on every click would make the music unlistenable and the clicks
+ * sinister. Only the sounds that mean something get to interrupt.
+ */
 function play(strikes: Strike[]): void {
   const { instrument } = SETS[current];
   for (const strike of strikes) instrument(strike);
+
+  const last = strikes.reduce((latest, strike) => Math.max(latest, strike.at), 0);
+  speaking?.(last + TAIL);
 }
 
 /**

@@ -60,8 +60,8 @@
       {#each PUFFS as puff, j (j)}
         <i
           style="
-            left: calc({puff.x}rem * var(--s));
-            top: calc({puff.y}rem * var(--s));
+            left: calc({puff.x}rem * var(--s) + var(--pad));
+            top: calc({puff.y}rem * var(--s) + var(--pad));
             width: calc({puff.w}rem * var(--s));
             height: calc({puff.h}rem * var(--s));
           "
@@ -82,6 +82,27 @@
   .bank {
     position: absolute;
     left: 0;
+    /* A real box around the puffs, with room for the blur to spread into.
+
+       The bank used to have no size of its own — every puff inside it is
+       absolutely positioned, so it collapsed to nothing at its top-left
+       corner. Chromium works out how far a blur reaches from what the
+       children draw and never noticed. WebKitGTK, on a layer composited for
+       the drift animation, clipped the blurred result to the edges of the
+       layer instead, and every bank crossed the sky with hard vertical seams
+       down both sides of it: a cloud cut out with scissors after being
+       softened. It only showed at dusk, because that is when the clouds are
+       light enough against the sky for an edge to read.
+
+       The box is the puffs' extent (64 by 23 at scale 1) plus three times the
+       blur on every side, which is where a gaussian has faded to nothing. The
+       negative margin puts the puffs back exactly where they were drawn, so
+       nothing moves — the bank simply stops being smaller than its own
+       picture. */
+    --pad: calc(var(--blur) * 3);
+    width: calc(64rem * var(--s) + var(--pad) * 2);
+    height: calc(23rem * var(--s) + var(--pad) * 2);
+    margin: calc(var(--pad) * -1) 0 0 calc(var(--pad) * -1);
     /* The blur is applied once to the whole bank rather than to each puff:
        four blurred layers per cloud would be four composited surfaces to
        animate instead of one. */
@@ -106,7 +127,7 @@
       transform: translateX(calc(var(--frame-w) * 1rem));
     }
     to {
-      transform: translateX(-90rem);
+      transform: translateX(calc(-90rem - var(--pad) * 2));
     }
   }
 

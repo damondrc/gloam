@@ -1,15 +1,18 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { Timer } from "./lib/timer.svelte";
   import { LockController } from "./lib/lock.svelte";
   import { MAX_SCALE, MIN_SCALE, SCALE_STEP, ScaleController } from "./lib/scale.svelte";
   import { skyFor, skyVars } from "./lib/sky";
   import * as sound from "./lib/sound";
+  import * as music from "./lib/music";
   import {
     dismissWindow,
     hasTray,
     onBackendEvent,
     onWindowMoved,
     setWindowSize,
+    windowSettled,
     startDragging,
   } from "./lib/window";
   import { loadPrefs, savePrefs } from "./lib/prefs";
@@ -27,6 +30,7 @@
   import Grain from "./lib/Grain.svelte";
   import Controls from "./lib/Controls.svelte";
   import Padlock from "./lib/Padlock.svelte";
+  import MusicBar from "./lib/MusicBar.svelte";
   import Grip from "./lib/Grip.svelte";
   import Panel from "./lib/Panel.svelte";
   import Tour from "./lib/Tour.svelte";
@@ -47,8 +51,10 @@
   // needs to act on, and it keeps the sound vocabulary and the phrase names
   // describing the same thing.
   timer.onSegmentEnd = (_done, next) => {
-    if (!next) sound.runComplete();
-    else if (next.phase === "focus") sound.enterFocus();
+    if (!next) {
+      sound.runComplete();
+      endMusicWithRun();
+    } else if (next.phase === "focus") sound.enterFocus();
     else sound.enterBreak();
   };
 
@@ -99,6 +105,140 @@
   let soundSet = $state(stored.sound);
   let ambience = $state(stored.ambience);
   let horizon = $state(stored.horizon);
+
+  // The folder as a preference, and the queue as whatever Rust made of it.
+  // Kept apart because they can disagree: a path that was good last week can
+  // name a folder that is gone, and the honest thing to show then is the
+  // folder somebody chose alongside a count of nothing, rather than quietly
+  // forgetting the choice.
+  let musicFolder = $state(stored.music.folder);
+  let musicVolume = $state(stored.music.volume);
+  let musicShuffle = $state(stored.music.shuffle);
+  let musicCrossfade = $state(stored.music.crossfade);
+
+  $effect(() => {
+    void music.setShuffle(musicShuffle);
+  });
+
+  $effect(() => {
+    void music.setCrossfade(musicCrossfade);
+  });
+
+  // The whole snapshot rather than the parts of it this file happens to need
+  // today. Rust owns what is playing and says so on one event; keeping a field
+  // here per question would be several copies to hold in agreement, and they
+  // would first disagree the moment a track ended while nobody was watching.
+  let player = $state<music.MusicState>(music.EMPTY);
+
+  /**
+   * Whether the music is paused because the timer was, rather than because
+   * somebody paused the music.
+   *
+   * The music follows the person's own interruptions. Pausing the timer is
+   * stepping out of the session, and the music steps out with it; resuming
+   * brings it back. But only music the timer took away — pause the album by
+   * hand, then pause and resume the run, and the album stays where you left
+   * it. Without this one flag the timer would be overruling the other button.
+   *
+   * Breaks and skips do not touch it. A break is part of a session, not an
+   * interruption of one, and starting the timer never starts music nobody
+   * started. Plain `let`: nothing on screen depends on it.
+   */
+  let heldByTimer = false;
+
+  function holdMusic(): void {
+    if (!player.playing) return;
+    heldByTimer = true;
+    void music.pause();
+  }
+
+  function releaseMusic(): void {
+    if (!heldByTimer) return;
+    heldByTimer = false;
+    void music.play();
+  }
+
+  /**
+   * The run is over, and so is the soundtrack to it.
+   *
+   * The alarm ducks the music as every phrase does; this changes how that duck
+   * ends, fading to nothing rather than back up, and leaves the player paused
+   * where it was. Carrying on is a decision for whoever is sitting there, and
+   * it is one button away — the same one that would carry on anywhere else.
+   */
+  function endMusicWithRun(): void {
+    heldByTimer = false;
+    void music.finish();
+  }
+
+  /** Touching the music directly takes it back from the timer. */
+  function byHand(act: () => Promise<void>): void {
+    heldByTimer = false;
+    void act();
+  }
+
+  // Every route to a different track ends in Rust announcing the new one — a
+  // button, a folder being opened, or a file simply running out. Subscribing
+  // is how the last of those three gets here at all.
+  $effect(() => {
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+
+    void music.onTrack((state) => (player = state)).then((fn) => {
+      if (cancelled) fn();
+      else stop = fn;
+    });
+
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  });
+
+  $effect(() => {
+    void music.setVolume(musicVolume);
+  });
+
+  // Gloam speaking is the one thing allowed to interrupt the music, and it
+  // interrupts by leaning on it rather than by stopping it. Wired here rather
+  // than inside sound.ts, because what should happen to other sound while the
+  // widget talks is a question about the app: synthesis has no opinion about
+  // whether there is an album underneath. Buttons never reach this — a tick
+  // that ducked on every click would make both unbearable.
+  $effect(() => {
+    sound.onSpeak((seconds) => void music.duck(seconds));
+    return () => sound.onSpeak(null);
+  });
+
+  // Reopened once, so the queue is ready and the panel can say how much is in
+  // it. Nothing starts playing: a widget that begins the day with music
+  // nobody asked for is a widget that gets closed.
+  $effect(() => {
+    if (!musicFolder) return;
+    let cancelled = false;
+
+    void music.openFolder(musicFolder).then((state) => {
+      if (!cancelled) player = state;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  /**
+   * Opens the picker, and writes the answer down only if there was one.
+   *
+   * Cancelling leaves everything alone — including a folder chosen earlier,
+   * which is the whole reason this does not clear anything before asking.
+   */
+  async function chooseMusicFolder(): Promise<void> {
+    const picked = await music.pickFolder();
+    if (!picked) return;
+
+    musicFolder = picked;
+    player = await music.openFolder(picked);
+  }
   let position = $state(stored.position);
 
   const backdrop = $derived(ambienceSettings(ambience));
@@ -179,6 +319,74 @@
   const sky = $derived(skyFor(timer.phase, timer.progress, timer.finished));
   const baseSize = $derived(compact ? COMPACT_SIZE : NORMAL_SIZE);
 
+  /** How much of the sun's light on the water the moon gives back. */
+  const MOONLIGHT = 0.34;
+
+  /**
+   * The sun's reflection in the water — or the moon's, which is the same
+   * element in a different colour.
+   *
+   * Light hanging from the waterline directly under the body, brightest
+   * where it meets the line and dissolving downward. It strengthens as the
+   * body comes down toward the water, because a low sun reflects hardest, and
+   * it is gone once the body has gone under — nothing left above the line
+   * means nothing to mirror.
+   *
+   * The first version placed a mirrored disc half the body's height below
+   * the line, which is geometrically right and looked wrong on screen: a
+   * dark gap between horizon and reflection made it read as an object
+   * floating under the water rather than as light on top of it. A reflection
+   * seen from a shore starts at the waterline, so this one does too.
+   *
+   * The moon gets the same light at a third of the strength, because it has
+   * a fraction of the sun's to give. It matters more than it sounds: the moon
+   * opens every break already low over the water, so without the difference
+   * the brightest reflection in the widget would arrive at the start of the
+   * one segment meant to be dimmer. It fades as the moon climbs, the same way
+   * the sun's grows as it sinks.
+   *
+   * Short and diffuse rather than a column. The longer shapes read as a
+   * feature of the scene; this reads as light, which is all it should be.
+   * Worked out here rather than in CSS because it needs the waterline and
+   * the body's radius together, and a calc() holding both would be harder to
+   * read than the arithmetic it replaced.
+   */
+  const reflection = $derived.by(() => {
+    const clamp = (x: number): number => Math.min(1, Math.max(0, x));
+    // The body is the moon for the whole of a break and after the run, which
+    // is exactly how skyFor chooses between the two.
+    const light = timer.finished || timer.phase === "break" ? MOONLIGHT : 1;
+    const stage = baseSize.height;
+    // Compact draws the sun smaller; see `.frame.compact .celestial`.
+    const r = sky.bodyR * (compact ? 0.72 : 1);
+    const above = (1 - HORIZON_SHARE) * stage - sky.bodyY * stage;
+    const d = above / r;
+
+    const strength = clamp((d + 1) / 0.9) * (0.5 + 0.5 * clamp((3.4 - d) / 2.4));
+    const width = r * 2.6;
+    const height = r * 1.6;
+    // A touch above the line, so the brightest part is under the lip rather
+    // than starting a pixel below it; the water's own clip takes the rest.
+    const top = -r * 0.15;
+
+    // The waterline's own light, peaking as the body touches the water.
+    // Without it the sun's glow ends in a hard edge against the sea, now that
+    // the sea is opaque — the halo is drawn in the sky, and the sky stops at
+    // the water. This is what sews the two together.
+    const touch = clamp(1 - Math.abs(d - 0.2) / 2.6);
+
+    return {
+      width,
+      height,
+      top,
+      strength: strength * 0.6 * light,
+      touch: touch * light,
+      lip: r * (3.4 + 1.2 * touch),  // size follows position, not brightness
+      lipHeight: r * 0.34,
+      bloom: r * 4.2,
+    };
+  });
+
   /** The stage is the timer; the panel grows the window beneath it. */
   const stageHeight = $derived(baseSize.height);
   const panelHeight = $derived(
@@ -190,6 +398,35 @@
   // numbers live in one place. Because 1rem is one scaled design pixel, the
   // frame written as `calc(var(--frame-w) * 1rem)` is exactly the size the
   // window is being asked for — without CSS having to know the constants.
+  /**
+   * The scale the layout is built at, and how far it is stretched on top.
+   *
+   * At rest these are the scale and nothing. While the grip is held, the
+   * layout stays built at the scale the drag began from and is stretched to
+   * follow the pointer instead.
+   *
+   * Everything in the stylesheet is sized in rem and one rem is one design
+   * pixel times the scale — which is what keeps text sharp at every size, and
+   * also what made dragging expensive. Every pointer event rebuilt the whole
+   * widget: every element laid out again, and every blurred layer painted
+   * again at its new size. On Linux that held the frame rate between 19 and
+   * 30 for as long as the grip was held, with several cores pinned.
+   *
+   * A transform is the compositor resizing what is already painted, which
+   * costs next to nothing. The first version built the drag at the scale it
+   * started from and stretched that, and stretching an image is enlarging it:
+   * from 80% to 180% is two and a quarter times, and held there long enough
+   * the widget was plainly pixelated.
+   *
+   * So the drag is built at the largest scale there is and shrunk instead. A
+   * reduced image is never pixelated — it has more resolution than it needs
+   * rather than less — and the window is already parked at that largest size
+   * for the length of a drag, so the layout fits it exactly. One rebuild when
+   * the grip is taken, one when it is let go, and only the compositor between.
+   */
+  const layoutScale = $derived(scale.dragging ? MAX_SCALE : scale.value);
+  const stretch = $derived(scale.dragging ? scale.value / MAX_SCALE : 1);
+
   const vars = $derived(
     [
       skyVars(sky),
@@ -197,7 +434,11 @@
       // widget should reveal more sky, not bigger birds. A square root is a
       // middle ground — at 180% the widget grows by four fifths and the flock
       // by a third.
-      `--ambient: ${Math.sqrt(scale.value).toFixed(3)}`,
+      // Divided by the stretch so the flock is the size it should be at the
+      // scale on screen, not the one being drawn at: the square root does not
+      // survive a uniform transform. Only the birds read it, so keeping it
+      // exact through a drag costs nothing unless a flock is crossing.
+      `--ambient: ${(Math.sqrt(scale.value) / stretch).toFixed(3)}`,
       `--frame-w: ${baseSize.width}`,
       `--frame-h: ${frameHeight}`,
       `--stage-h: ${stageHeight}`,
@@ -209,9 +450,29 @@
     ].join("; ")
   );
 
-  // One number drives every size in the stylesheet; see app.css.
+  // One number drives every size in the stylesheet; see app.css. The layout's
+  // scale rather than the grip's, so a drag resizes instead of rebuilding.
+  //
+  // Transitions are switched off for the frame it changes in. The sun eases
+  // its size over a session and the readout eases into compact, and both read
+  // a change of scale as a change of size worth animating — so when the scale
+  // arrived in one step at the end of a drag, they spent half a second growing
+  // or shrinking to where everything else already was. The class goes on in
+  // the same mutation as the new scale, so no frame can see one without the
+  // other, and comes off two frames later.
   $effect(() => {
-    document.documentElement.style.setProperty("--scale", String(scale.value));
+    const root = document.documentElement;
+    root.classList.add("rescaling");
+    root.style.setProperty("--scale", String(layoutScale));
+
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => root.classList.remove("rescaling"));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   });
 
   // While the grip is being dragged the window is parked at the largest size
@@ -252,6 +513,12 @@
       ambience,
       horizon,
       config: timer.config,
+      music: {
+        folder: musicFolder,
+        volume: musicVolume,
+        shuffle: musicShuffle,
+        crossfade: musicCrossfade,
+      },
       position,
       seenIntro,
     });
@@ -335,8 +602,11 @@
     // The first click doubles as the user gesture that unlocks WebAudio, so the
     // end-of-segment sounds are guaranteed to be audible later.
     sound.unlockAudio();
-    sound.press(timer.running ? "pause" : "start");
+    const pausing = timer.running;
+    sound.press(pausing ? "pause" : "start");
     timer.toggle();
+    if (pausing) holdMusic();
+    else releaseMusic();
   }
 
   // Manual actions get the faint interface tick, never a transition phrase.
@@ -345,6 +615,8 @@
   function resetTimer(): void {
     sound.press("reset");
     timer.reset();
+    // An interruption like pausing, and undone the same way: starting again.
+    holdMusic();
   }
 
   function skipSegment(): void {
@@ -360,12 +632,53 @@
     lock.toggle();
   }
 
-  function onDoubleClick(): void {
-    if (lock.locked) return;
+  /**
+   * Hidden for the instant the widget changes shape.
+   *
+   * Folding and unfolding change the widget's size in the stylesheet at once,
+   * and the window's only when the window system gets round to it. Shrinking,
+   * the gap is transparent window nobody can see. Growing, it is the full-size
+   * widget drawn into the old, smaller window for a frame or two — its rounded
+   * corners cut off square by the window's edge, which is exactly what it
+   * looked like on Linux. No ordering of CSS and resize removes that frame for
+   * certain, because the window system decides when it lands.
+   *
+   * So the change happens while the widget is not showing: a short fade out,
+   * the change, a wait for the window to arrive at its new size, and a fade
+   * back in. Both directions, so that folding reads as one deliberate gesture
+   * rather than a jump one way and a dissolve the other.
+   */
+  let veiled = $state(false);
+  const VEIL_MS = 90;
+  /** However the window behaves, the widget does not stay invisible longer. */
+  const VEIL_CAP_MS = 700;
+
+  const pause = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+  const nextFrame = (): Promise<void> =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+  async function onDoubleClick(): Promise<void> {
+    if (lock.locked || veiled) return;
+
+    veiled = true;
+    await pause(VEIL_MS);
+
     // Compact has no room for the panel, so entering it closes what is open
     // rather than leaving a panel attached to a strip.
     if (!compact) panelOpen = false;
     compact = !compact;
+
+    // Let the size effect run and start the resize before asking for it, then
+    // two frames more so the compositor has shown the window at its new size.
+    await tick();
+    await nextFrame();
+    await Promise.race([
+      windowSettled().then(nextFrame).then(nextFrame),
+      pause(VEIL_CAP_MS),
+    ]);
+
+    veiled = false;
   }
 
   function togglePanel(): void {
@@ -448,11 +761,14 @@
   class="frame"
   class:locked={lock.locked}
   class:compact
+  class:veiled
+  class:stretching={scale.dragging}
   class:hovering
   class:open={panelOpen || tourOpen}
   class:spot-controls={spotlight === "controls"}
   class:spot-away={spotlight === "away"}
   style={vars}
+  style:transform={stretch === 1 ? null : `scale(${stretch.toFixed(4)})`}
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
 >
@@ -490,7 +806,33 @@
            its place, so the bottom of the frame is one mass with a silhouette
            for a top edge rather than a band with something standing on it. -->
       {#if horizon === "water"}
-        <div class="ground"></div>
+        <!-- Outside the water, because it is light in the sky: anchored to
+             the waterline from below and fading upward into the halo. -->
+        {#if reflection.touch > 0.005}
+          <i
+            class="bloom"
+            style="width: {reflection.bloom.toFixed(2)}rem; --touch: {reflection.touch.toFixed(3)};"
+          ></i>
+        {/if}
+        <div class="ground">
+          {#if reflection.touch > 0.005}
+            <i
+              class="lip"
+              style="width: {reflection.lip.toFixed(2)}rem; height: {reflection.lipHeight.toFixed(2)}rem; --touch: {reflection.touch.toFixed(3)};"
+            ></i>
+          {/if}
+          {#if reflection.strength > 0.005}
+            <i
+              class="reflection"
+              style="
+                width: {reflection.width.toFixed(2)}rem;
+                height: {reflection.height.toFixed(2)}rem;
+                top: {reflection.top.toFixed(2)}rem;
+                --strength: {reflection.strength.toFixed(3)};
+              "
+            ></i>
+          {/if}
+        </div>
       {/if}
 
       <!-- After the ground, because its reflection has to land on the water
@@ -595,6 +937,20 @@
         </svg>
       </button>
 
+      <!-- Only once there is something to play. An empty transport is three
+           buttons that do nothing and a blank where a name should be, which is
+           furniture rather than an interface. Not in compact either: the strip
+           it lives in does not exist there. -->
+      {#if !compact && player.count > 0}
+        <MusicBar
+          name={player.name}
+          playing={player.playing}
+          onPrevious={() => byHand(music.previous)}
+          onToggle={() => byHand(player.playing ? music.pause : music.play)}
+          onNext={() => byHand(music.next)}
+        />
+      {/if}
+
       <div class="dock">
         <Controls
           running={timer.running}
@@ -688,6 +1044,15 @@
        {atLoginKnown}
        {tray}
        onAtLogin={setAtLogin}
+       {musicFolder}
+       musicCount={player.count}
+       onPickFolder={chooseMusicFolder}
+       {musicVolume}
+       onMusicVolume={(next) => (musicVolume = next)}
+       shuffle={musicShuffle}
+       onShuffle={(next) => (musicShuffle = next)}
+       crossfade={musicCrossfade}
+       onCrossfade={(next) => (musicCrossfade = next)}
        onTour={startTour}
      />
    {/if}
@@ -709,6 +1074,23 @@
     left: 0;
     width: calc(var(--frame-w) * 1rem);
     height: calc(var(--frame-h) * 1rem);
+    transition: opacity 0.09s ease;
+  }
+
+  /* Resized from its top-left corner, which is where the window keeps it and
+     where it would grow from anyway; its own layer while that lasts, so the
+     compositor has something to resize. See `stretch`. */
+  .frame {
+    transform-origin: 0 0;
+  }
+
+  .frame.stretching {
+    will-change: transform;
+  }
+
+  /* See `veiled`: the widget is out of sight while it changes shape. */
+  .frame.veiled {
+    opacity: 0;
   }
 
   /* Two stacked zones: the stage holds the timer and its sky, the panel grows
@@ -863,12 +1245,110 @@
     right: 0;
     bottom: 0;
     height: var(--horizon);
+    overflow: hidden;
+    /* Opaque from the waterline down. It used to start at 72% and let the
+       sky show through the top of the sea, which also let the sun show
+       through it: a sun that sets into water and stays visible under the
+       surface is not setting. The ridge learnt the same lesson first —
+       a mountain you can see the moon through is not a mountain.
+
+       The sky still tints the top of the water, which is what the
+       transparency had been for. It is mixed in rather than shown through:
+       --ground-mid is the ground already carried a quarter of the way toward
+       the sky's own colour, so the band keeps its lighter lip without being
+       a window onto whatever is behind it. */
     background: linear-gradient(
       to bottom,
-      rgb(var(--ground) / 0.72),
+      rgb(var(--ground-mid)),
       rgb(var(--ground)) 62%
     );
     border-top: 1px solid rgb(var(--accent) / 0.2);
+  }
+
+  /* Why the first version looked dry, and what answers each part.
+
+     Its falloff was a straight line from centre to edge, and a linear ramp
+     shows the shape it is ramping over: you could see the oval. These stops
+     trace a bell instead — dropping fast from the centre and trailing a long
+     way before they reach nothing — which is what makes an edge stop being an
+     edge.
+
+     It was painted over the water, and a sun's colour at part opacity over
+     dark purple is grey. Light does not cover what it lands on, it adds to
+     it; `screen` lightens the water toward the sun's colour instead of mixing
+     the two into mud.
+
+     And it has a blur again, which the first version had removed on account
+     of the clouds. The clouds' seams came from a box with no size, clipped
+     exactly where the picture was. Here the gradient is already at zero by
+     the time it reaches its own edge, so wherever WebKitGTK decides to cut
+     the blur off, it is cutting through nothing. */
+  .reflection {
+    position: absolute;
+    left: 75%;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      ellipse 50% 100% at 50% 0%,
+      rgb(var(--body) / 0.9) 0%,
+      rgb(var(--body) / 0.62) 22%,
+      rgb(var(--body) / 0.32) 45%,
+      rgb(var(--body) / 0.12) 66%,
+      rgb(var(--body) / 0.03) 82%,
+      rgb(var(--body) / 0) 92%
+    );
+    mix-blend-mode: screen;
+    filter: blur(3rem);
+    opacity: calc(var(--strength) * var(--dim, 1));
+    pointer-events: none;
+    transition: opacity 0.4s linear;
+  }
+
+  /* A thread of light on the surface where the body meets it. Centred on the
+     waterline rather than hung below it, and with the same bell of a falloff
+     as the reflection, so it reads as a glint rather than a ruled line. A
+     little whiter than the body at its core, the way a highlight is. */
+  .lip {
+    position: absolute;
+    left: 75%;
+    top: 0;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      ellipse 50% 50% at 50% 50%,
+      rgb(255 236 210 / 0.95) 0%,
+      rgb(var(--body) / 0.55) 30%,
+      rgb(var(--body) / 0.18) 60%,
+      rgb(var(--body) / 0) 100%
+    );
+    mix-blend-mode: screen;
+    opacity: calc(var(--touch) * 0.6 * var(--dim, 1));
+    pointer-events: none;
+  }
+
+  /* And the same light caught in the air just above it, low and wide. */
+  .bloom {
+    position: absolute;
+    bottom: var(--horizon);
+    left: 75%;
+    height: 14rem;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at 50% 100%,
+      rgb(var(--body) / 0.35),
+      rgb(var(--body) / 0) 70%
+    );
+    opacity: calc(var(--touch) * 0.9 * var(--dim, 1));
+    pointer-events: none;
+  }
+
+  /* All three follow the sun in compact: moved in, and stepping back on hover
+     with it, so a reflection is never brighter than the thing it reflects. */
+  .frame.compact :is(.reflection, .lip, .bloom) {
+    left: 58%;
+  }
+
+  .frame.compact.hovering :is(.reflection, .lip, .bloom) {
+    --dim: 0.3;
   }
 
   /* --- readout --------------------------------------------------------- */

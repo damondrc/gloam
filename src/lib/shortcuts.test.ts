@@ -10,7 +10,7 @@ import type { Action } from "./shortcuts";
 const BOUND: readonly [string, Action][] = [
   [" ", "toggleTimer"],
   ["c", "toggleCompact"],
-  [",", "togglePanel"],
+  ["s", "togglePanel"],
   ["+", "scaleUp"],
   ["=", "scaleUp"],
   ["-", "scaleDown"],
@@ -27,7 +27,11 @@ const BOUND: readonly [string, Action][] = [
  * shortcut would be convenient.
  */
 const REFUSED = [
-  ["s", "skipping a segment throws away time already served"],
+  // S is not here any more, and the reason is the rule rather than an
+  // exception to it. It was refused while it skipped a segment, which throws
+  // away time already served. It now opens the settings panel, which costs
+  // nothing and is undone by pressing it again — so the letter came back for
+  // a job the rule allows.
   ["r", "resetting discards the run"],
   ["l", "locking hides the close button and stops clicks landing"],
   ["0", "the grip resets the scale, and has Home for it"],
@@ -49,7 +53,7 @@ describe("resolveShortcut", () => {
     );
   });
 
-  it.each(["a", "z", "1", "Escape", "Enter", "Tab", "ArrowUp", "."])(
+  it.each(["a", "z", "1", "Escape", "Enter", "Tab", "ArrowUp", ".", ","])(
     "leaves %j alone",
     (key) => {
       expect(resolveShortcut(key, free)).toBeNull();

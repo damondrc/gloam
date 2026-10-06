@@ -1,5 +1,8 @@
 use tauri::Manager;
 
+#[cfg(desktop)]
+mod music;
+
 /// Emitted to the frontend when the user asks to toggle lock mode from outside
 /// the window. Locking makes the widget click-through, so this shortcut is the
 /// guaranteed way back in if hit-testing the padlock ever fails.
@@ -63,6 +66,24 @@ struct ToggleEntry(tauri::menu::MenuItem<tauri::Wry>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKitGTK's newer DMA-BUF renderer, off unless somebody asks for it.
+    //
+    // Measured on a Mint laptop with Intel Iris Xe and Mesa — as well-supported
+    // a Linux graphics stack as exists — the default path ran 30 to 60 frames
+    // a second and flashed the whole widget every time the panel opened. With
+    // this set it ran 42 to 70 and the flash was gone. Nothing about how the
+    // widget looks depends on which renderer draws it, so the only cost is
+    // whatever the newer one would have been faster at on a machine where it
+    // behaves, and that has not been seen yet.
+    //
+    // Set before anything touches GTK, because WebKit reads it once at start.
+    // Left alone when already set, even to 0: someone who has chosen a renderer
+    // for their machine knows it better than this line does.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     let builder = tauri::Builder::default();
 
     // Must be registered before anything else, so a duplicate launch is turned
@@ -76,8 +97,39 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(autostart_plugin());
 
+    // Only ever opened by the Choose button in the Music tab. The picker is
+    // the operating system's because the path has to reach Rust, and a path is
+    // the one thing the WebView's own file input will not give up.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_dialog::init());
+
+    // Two lists rather than one with attributes in it: `generate_handler!`
+    // takes paths, not conditionally-compiled items, and the music commands
+    // only exist where there is an audio device to write to.
+    #[cfg(desktop)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        dismiss,
+        tray_present,
+        fit_input,
+        music::music_open,
+        music::music_play,
+        music::music_pause,
+        music::music_next,
+        music::music_prev,
+        music::music_at,
+        music::music_volume,
+        music::music_duck,
+        music::music_finish,
+        music::music_shuffle,
+        music::music_crossfade,
+        music::music_status,
+    ]);
+
+    #[cfg(not(desktop))]
+    let builder =
+        builder.invoke_handler(tauri::generate_handler![dismiss, tray_present, fit_input]);
+
     builder
-        .invoke_handler(tauri::generate_handler![dismiss, tray_present])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 // The window is also declared always-on-top in tauri.conf.json,
@@ -108,6 +160,13 @@ pub fn run() {
 
             app.manage(TrayPresence(tray));
             app.manage(HiddenAt(std::sync::Mutex::new(None)));
+
+            // Started here rather than on first use, because the thread owns
+            // an output device and opening one takes long enough to be felt if
+            // it happens under a button press. Costs a thread and no device
+            // until something is actually played.
+            #[cfg(desktop)]
+            app.manage(music::Music::start(app.handle().clone()));
 
             // Started by the session, and there is somewhere to be started
             // into. Both halves matter: on a desktop with no tray, hiding at
@@ -235,6 +294,53 @@ fn hide_to_tray(app: &tauri::AppHandle) {
 /// With a tray, closing hides: the run carries on, and the icon is the way
 /// back. Without one, hiding would be indistinguishable from losing the app,
 /// so it quits instead — which is what it has always done.
+/// Makes only the widget's own rectangle catch the pointer.
+///
+/// On Linux the window can be taller than the widget drawn in it. GTK will not
+/// make a non-resizable window shorter than 200 pixels, and the widget at small
+/// scales and in compact is shorter than that, so an invisible band hung under
+/// it and swallowed every click meant for whatever was behind. Measured on
+/// Mint at 113%: 149 asked for, 200 delivered.
+///
+/// The first fix tried to change the size, by giving GTK a default size just
+/// before the resizable flag closed. It did nothing, because GTK only reads a
+/// default size the first time a window is shown. So this stops arguing with
+/// the size and changes what the size means instead: the window's input shape
+/// — the region the X server delivers pointer events to — is cut down to the
+/// widget, and a click anywhere outside it falls through to the window
+/// beneath, exactly as if the band were not there.
+///
+/// Not a new mechanism for Gloam. Tauri implements click-through on Linux by
+/// shaping this same region, which is what lock mode has used since 0.2.0. It
+/// also means lock mode resets it — turning click-through off hands the whole
+/// window back — so the frontend reapplies this after every unlock.
+///
+/// A no-op everywhere else. Windows keeps the size it is given.
+#[tauri::command]
+fn fit_input(window: tauri::WebviewWindow, width: f64, height: f64) {
+    #[cfg(target_os = "linux")]
+    {
+        // GTK objects may only be touched from the thread that owns them.
+        let target = window.clone();
+        let _ = window.run_on_main_thread(move || {
+            use gtk::prelude::WidgetExt;
+            if let Ok(gtk_window) = target.gtk_window() {
+                let rect = gtk::cairo::RectangleInt::new(
+                    0,
+                    0,
+                    width.round() as i32,
+                    height.round() as i32,
+                );
+                let region = gtk::cairo::Region::create_rectangle(&rect);
+                gtk_window.input_shape_combine_region(Some(&region));
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    let _ = (window, width, height);
+}
+
 #[tauri::command]
 fn dismiss(app: tauri::AppHandle, tray: tauri::State<'_, TrayPresence>) {
     if tray.0 {

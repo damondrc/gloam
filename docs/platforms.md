@@ -22,7 +22,15 @@ beside the download is the answer to that, and the README says how to check it.
 **Supported.** Verified against 1.0.0 on Linux Mint 22 (Cinnamon, X11), single
 monitor and dual.
 
-Everything in the checklist passes, with three things worth knowing.
+Everything in the checklist passes, with three things worth knowing — and two
+that were defects, now fixed.
+
+**Gloam picks WebKitGTK's renderer for you.** It starts with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1`, which selects the classic renderer over the
+newer DMA-BUF one. Measured on Intel Iris Xe with Mesa, the default ran 30 to
+60 frames a second and flashed the widget whenever the panel opened; the
+classic one ran 42 to 70 and did not flash. If you have set the variable
+yourself, to anything, Gloam leaves it alone.
 
 **A run left going will announce its end whenever it reaches it**, including
 with the lid shut on a machine set not to suspend, and including at the instant
@@ -44,6 +52,13 @@ edges shimmer slightly as it drags. The compositor resizes the surface on a
 different beat from the WebView's repaint, and nothing above that layer can
 fix it — it is the same effect the widget already sidesteps by parking the
 window at its largest size for the length of a drag.
+
+**The window can be taller than the widget.** GTK will not make it shorter
+than 200 pixels, so at small scales and in compact there is transparent window
+below the widget. Until 1.1.0 that band caught clicks meant for whatever was
+behind it; now only the widget's own rectangle takes the pointer, and the rest
+lets clicks through. Windows never did this. The cause, and the first fix that
+did not hold, are in [the architecture notes](architecture.md#scale).
 
 ### How far back a Linux release reaches
 

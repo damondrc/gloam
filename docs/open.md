@@ -40,7 +40,31 @@ decisions that were deliberately deferred, and each says what would unblock it.
 - [ ] **Open it on macOS.** Nothing in the code is written for one platform.
       Nobody has run it there, so nothing is claimed.
 
+- [ ] **Refresh the README's recordings.** They were made against 1.0.0, so
+      the panel in them has three tabs, the face has no transport and the sun
+      still sets through the water. Nothing in them is false — it is all
+      still there — but a reader deciding whether to download is shown less
+      than they would get. Needs a Windows machine and a quiet afternoon, and
+      is worth doing once the face has stopped changing.
+
 ## Waiting on a decision
+
+- [ ] **Make every frame cheaper to paint.** Three effects are recomputed on
+      every frame in which anything moves beneath them: a `backdrop-filter`
+      blur behind the buttons, the chevron and the padlock; `mix-blend-mode` on
+      the grain, which covers the whole widget; and the same on both drifting
+      hazes. With the GPU doing it they are trivial, which is why Windows never
+      noticed. On Linux they were part of why the widget ran at 30 to 60 frames
+      a second, until the renderer change and the drawn-large drag took it
+      well past that. Neither of those removed the cost; they stopped it
+      showing.
+
+      The blur behind the buttons sits on a sky that is nearly flat, so taking
+      it away should change almost nothing on screen, and the two blends can
+      be approximated without blending. But all three are visual, and none
+      should change without a before-and-after to look at. Worth doing for
+      what it would save at rest on a laptop running on battery — see D15 in
+      the checklist for the number that would justify it.
 
 - [ ] **How to reach the distributions that are not Debian.** Gloam ships a
       `.deb` and nothing else, so Fedora, openSUSE and Arch have no package.
@@ -78,14 +102,52 @@ decisions that were deliberately deferred, and each says what would unblock it.
 - [ ] **Preferences in a file rather than `localStorage`.** The seam is marked
       in `prefs.ts`. Nothing needs it yet; the validation on the way in already
       does the job that moving would be meant to do.
+- [ ] **What the face shows when there is more to show than room.** The
+      readout and a track title both want the middle of a 320-pixel widget,
+      and in compact there are 180. Three shapes have been considered and two
+      were set aside, which is the part worth keeping.
+
+      **Swapping one for the other by size** was the first idea and it fails
+      on its own premise. The argument for dropping the digits is that the sky
+      already carries the time — but compact is 180×58, and at that size the
+      gradient stops being legible as progress: nobody reads early dusk off
+      late dusk in a band 58 pixels tall. The digits are needed *more* there,
+      not less. As a setting it also multiplies: compact against readout
+      against whether music is loaded is eight states to document and test.
+
+      **A title that appears when the track changes and leaves again** is the
+      shape that fits. It costs no setting and no space, it answers "what is
+      this?" at the moment the question occurs, and it is the same grammar as
+      the flock and the shooting star — things that happen rather than things
+      that sit there.
+
+      **A resting face with no readout on it** is worth doing and worth
+      renaming. Hiding the clock outright would break the one job: the sky
+      says "about half way", never whether three minutes are left or six, and
+      that number is exactly what somebody wants before starting something.
+      But the controls already appear on hover and withdraw at rest, so the
+      readout can join them — at rest the widget is scenery, and the number
+      stays one gesture away. Not hidden, just not resident.
+
+      Whatever is built, none of it keys off whether music is loaded. Having
+      chosen a folder and wanting to see the digits are unrelated questions,
+      and tying them together means plugging in music silently changes the
+      clock.
 
 ## Planned
 
-- [ ] **A local music player** — 1.1.0. Decoding in Rust rather than through
-      the WebView, for the reason the AppImage demonstrated: anything routed
-      through WebKitGTK's media stack depends on what the machine happens to
-      have. A folder rather than a library, and the music ducks for a
-      transition rather than competing with it.
+- [x] **A local music player** — landed in 1.1.0. Decoding in Rust rather than
+      through the WebView, for the reason the AppImage demonstrated: anything
+      routed through WebKitGTK's media stack depends on what the machine
+      happens to have. A folder rather than a library, and the music ducks for
+      a transition rather than competing with it. `src-tauri/src/music.rs`,
+      `src/lib/music.ts`.
+
+      It also collected a bill nobody had written down. An audio stream is
+      bound to the device it was opened against, and the browser had been
+      following the system's default on our behalf — so owning playback meant
+      owning that too. Fixed in the same version; the reasoning is in
+      `architecture.md`.
 - [x] **Alternative horizons** — landed in 1.0.0. A skyline whose windows come
       on as the sun goes down and out again through the break, and a mountain
       ridge in three ranges. Generated from a seed rather than drawn, so

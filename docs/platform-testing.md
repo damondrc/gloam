@@ -110,10 +110,14 @@ reading A7.
 | D5 | No resize border or resize cursor appears around the widget | OK | OK |
 | D6 | The bottom corners stay rounded with the panel open and closed | OK | OK |
 | D7 | Locking with the panel open closes the panel, leaving only the dimmed backdrop | OK | OK |
-| D8 | All three tabs fit the panel without clipping at the bottom — at 80% and at 180% | OK | OK |
+| D8 | All four tabs fit the panel without clipping at the bottom — at 80% and at 180% | | |
 | D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
 | D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
 | D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |
+| D12 | Nothing beside or below the widget catches clicks — at 80%, at 180%, in compact, and again after locking and unlocking. See below | | |
+| D13 | Clouds at dusk have soft edges, with no vertical seams down the sides of a bank | | |
+| D14 | On water, the sun leaves a soft reflection as it comes down and none once it is under; the moon's, at the start of a break, is plainly fainter | | |
+| D15 | At rest, the processor cost is recorded. Not a pass or a fail — a number, so the next version has something to be compared with. See below | | |
 
 **D8 is the one to look at first.** The panel is one height for every tab,
 sized to the tallest, and that height is a constant somebody has to keep in
@@ -223,6 +227,76 @@ Which means glibc is not what decides the floor. The `.deb` also depends on
 12 — so those remain the oldest supported releases, for a different reason than
 the one this check was written to test. Worth knowing before anyone tries to
 widen the range by building somewhere older still.
+
+**D12, tested by clicking rather than looking.** The band this row exists for
+is invisible by nature, and on Linux it is still there — GTK will not make the
+window shorter than 200 pixels — so measuring the window proves nothing. What
+has to hold is that the band is inert. Put something clickable just below the
+widget's bottom edge, a link or a folder icon, and click it: it has to respond.
+Then lock and unlock the widget and click it again, because unlocking is the
+moment the window's input region is reset and has to be cut back down.
+
+**D15, the cost of sitting there.** Gloam is meant to stay open all day, often
+on a laptop, so what it costs while nobody is touching it matters more than
+what it costs while somebody is. On the installed build, with no inspector
+open, let a focus run go, keep the pointer off the widget, and wait a minute.
+Then sample for thirty seconds:
+
+```bash
+top -b -d 1 -n 31 | awk '/^top -/ {i++} i > 1 && tolower($0) ~ /gloam|webkit/ {s += $9} END {printf "%.1f%% of one core, averaged\n", s / (i - 1)}'
+```
+
+On Linux the widget is several processes — `gloam`, and the `WebKitWebProcess`
+that draws it among others — and the line adds every one of them, sample by
+sample. The first sample is dropped, because `top` measures it from when each
+process started rather than over the last second. On Windows, Task Manager's Details tab shows
+`gloam.exe` and the `msedgewebview2.exe` entries under it; add those. Write the
+number in the row as it came out.
+
+### I · Music
+
+Appended rather than slotted in after F, where it belongs by subject. The
+letters are positional, and renaming two sections would rewrite a table of
+results somebody actually observed — which is a worse trade than a list that
+grew in the order the features did.
+
+This section carries more weight than its length suggests. Everything else here
+is drawn by the WebView, which behaves the same on both machines because it is
+the same engine. Playback is not: it is Rust talking to WASAPI on one side and
+to ALSA, PulseAudio or PipeWire on the other, depending on what the machine
+happens to run. Audio on Linux is also the exact ground that made the AppImage
+ship silent, so a pass here is worth more than a pass anywhere else in this
+document.
+
+| # | Check | Win 11 | Linux |
+| --- | --- | --- | --- |
+| I1 | The folder picker opens, and the folder chosen appears in the panel with the right number of tracks | | |
+| I2 | FLAC plays. So does anything else in the folder | | |
+| I3 | Previous, play/pause and next all do what they say, and the name on the face follows | | |
+| I4 | A track ending on its own moves to the next one, with no gap worth noticing | | |
+| I5 | The music volume moves the music and nothing else; the widget's own volume moves the widget and nothing else | | |
+| I6 | The folder survives a restart, and **nothing plays until asked** | | |
+| I7 | A folder that has been renamed or unplugged since says so, rather than pretending | | |
+| I8 | A phase boundary ducks the music and lets it back up, with no step audible in either fade | | |
+| I9 | Pressing buttons during a phrase does not make the music bounce | | |
+| I10 | Plugging in headphones mid-track moves the music within a couple of seconds, near where it was — **and stops the old device** | | |
+| I11 | Unplugging them again comes back the same way | | |
+| I12 | Changing device while paused does not start the music | | |
+| I13 | Quitting Gloam stops the audio, with no process left holding the device | | |
+| I14 | Shuffle plays every track once before any repeats, and turning it off carries on in folder order from the current track | | |
+| I15 | With crossfade on, a track ending by itself blends into the next with no dip in the middle; next and previous still cut straight away | | |
+| I16 | Both switches survive a restart | | |
+
+**I10 on Linux** is the row most likely to behave differently. PulseAudio and
+PipeWire both move streams between devices on their own, which may mean the
+music follows before Gloam has noticed anything — a pass either way, as long as
+it ends up in the headphones and leaves the speakers. What would be a failure
+is hearing it in both.
+
+**I2 on Linux** is the AppImage's ghost. FLAC decodes inside the binary now, so
+a machine with no gstreamer plugin for it should be no different from one with;
+if FLAC is silent here and plays elsewhere, that assumption is wrong and the
+whole shape of the feature needs revisiting.
 
 ### Notes
 
