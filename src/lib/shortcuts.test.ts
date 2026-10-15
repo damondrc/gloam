@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveShortcut, SHORTCUTS } from "./shortcuts";
+import { en } from "./i18n/en";
 import type { Action } from "./shortcuts";
 
 /**
@@ -132,13 +133,22 @@ describe("what the panel shows", () => {
     const global = SHORTCUTS.filter((row) => row.actions.length === 0);
 
     expect(global).toHaveLength(1);
-    expect(global[0].keys).toBe("Ctrl+Alt+G");
+    expect(en.shortcuts[global[0].id].keys).toBe("Ctrl+Alt+G");
   });
 
   it("says what each one does", () => {
     for (const row of SHORTCUTS) {
-      expect(row.keys.length).toBeGreaterThan(0);
-      expect(row.does.length).toBeGreaterThan(0);
+      expect(en.shortcuts[row.id].keys.length).toBeGreaterThan(0);
+      expect(en.shortcuts[row.id].does.length).toBeGreaterThan(0);
     }
+  });
+
+  // Every entry in the dictionary's table is a row somebody can see, and a
+  // row in the dictionary that no shortcut points at is wording for a key that
+  // does not exist.
+  it("shows every row the dictionary has, once", () => {
+    const ids = SHORTCUTS.map((row) => row.id);
+
+    expect([...ids].sort()).toEqual(Object.keys(en.shortcuts).sort());
   });
 });

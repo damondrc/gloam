@@ -64,6 +64,20 @@ struct HiddenAt(std::sync::Mutex<Option<tauri::PhysicalPosition<i32>>>);
 /// a click on an icon.
 struct ToggleEntry(tauri::menu::MenuItem<tauri::Wry>);
 
+/// The rest of the tray menu, kept so the frontend can rename it.
+struct TrayEntries {
+    recover: tauri::menu::MenuItem<tauri::Wry>,
+    quit: tauri::menu::MenuItem<tauri::Wry>,
+}
+
+/// What the toggle entry says in each of its two states.
+///
+/// Rust builds the menu before the interface has chosen a language, and has
+/// no dictionary of its own: the words live in the frontend, in one place, and
+/// arrive through `tray_text`. Until they do, this is English — which is also
+/// what the menu says on a machine where the frontend never gets that far.
+struct ToggleWords(std::sync::Mutex<(String, String)>);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // WebKitGTK's newer DMA-BUF renderer, off unless somebody asks for it.
@@ -111,6 +125,7 @@ pub fn run() {
         dismiss,
         tray_present,
         fit_input,
+        tray_text,
         music::music_open,
         music::music_play,
         music::music_pause,
@@ -127,7 +142,12 @@ pub fn run() {
 
     #[cfg(not(desktop))]
     let builder =
-        builder.invoke_handler(tauri::generate_handler![dismiss, tray_present, fit_input]);
+        builder.invoke_handler(tauri::generate_handler![
+            dismiss,
+            tray_present,
+            fit_input,
+            tray_text
+        ]);
 
     builder
         .setup(|app| {
@@ -145,8 +165,9 @@ pub fn run() {
             // that closing goes back to meaning what it used to.
             #[cfg(desktop)]
             let tray = match build_tray(app.handle()) {
-                Ok(entry) => {
+                Ok((entry, entries)) => {
                     app.manage(ToggleEntry(entry));
+                    app.manage(entries);
                     true
                 }
                 Err(error) => {
@@ -159,6 +180,10 @@ pub fn run() {
             let tray = false;
 
             app.manage(TrayPresence(tray));
+            app.manage(ToggleWords(std::sync::Mutex::new((
+                "Show Gloam".to_string(),
+                "Hide Gloam".to_string(),
+            ))));
             app.manage(HiddenAt(std::sync::Mutex::new(None)));
 
             // Started here rather than on first use, because the thread owns
@@ -257,11 +282,44 @@ fn toggle_window(app: &tauri::AppHandle) {
 
 /// Keeps the menu entry describing what it will do next.
 fn set_toggle_entry(app: &tauri::AppHandle, showing: bool) {
-    if let Some(entry) = app.try_state::<ToggleEntry>() {
-        let _ = entry
-            .0
-            .set_text(if showing { "Hide Gloam" } else { "Show Gloam" });
+    let Some(entry) = app.try_state::<ToggleEntry>() else {
+        return;
+    };
+    let (show, hide) = match app.try_state::<ToggleWords>() {
+        Some(words) => words.0.lock().map(|w| w.clone()).unwrap_or_default(),
+        None => (String::new(), String::new()),
+    };
+    let text = if showing { hide } else { show };
+    // Never blank: a menu entry with no words is a menu entry nobody can use.
+    let text = if text.is_empty() {
+        (if showing { "Hide Gloam" } else { "Show Gloam" }).to_string()
+    } else {
+        text
+    };
+    let _ = entry.0.set_text(text);
+}
+
+/// Renames the tray menu into the interface's language.
+///
+/// The toggle is set from whichever state the window is in now, so renaming
+/// it never also flips what it offers to do.
+#[tauri::command]
+fn tray_text(app: tauri::AppHandle, show: String, hide: String, recover: String, quit: String) {
+    if let Some(words) = app.try_state::<ToggleWords>() {
+        if let Ok(mut current) = words.0.lock() {
+            *current = (show, hide);
+        }
     }
+    if let Some(entries) = app.try_state::<TrayEntries>() {
+        let _ = entries.recover.set_text(recover);
+        let _ = entries.quit.set_text(quit);
+    }
+
+    let showing = app
+        .get_webview_window("main")
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(true);
+    set_toggle_entry(&app, showing);
 }
 
 /// Reads and clears the position the window was last hidden from.
@@ -379,7 +437,7 @@ fn tray_present(tray: tauri::State<'_, TrayPresence>) -> bool {
 #[cfg(desktop)]
 fn build_tray(
     app: &tauri::AppHandle,
-) -> Result<tauri::menu::MenuItem<tauri::Wry>, Box<dyn std::error::Error>> {
+) -> Result<(tauri::menu::MenuItem<tauri::Wry>, TrayEntries), Box<dyn std::error::Error>> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
     use tauri::Emitter;
@@ -439,7 +497,7 @@ fn build_tray(
         })
         .build(app)?;
 
-    Ok(toggle)
+    Ok((toggle, TrayEntries { recover, quit }))
 }
 
 /// Registers the app with whatever the platform uses for a startup list.

@@ -8,6 +8,8 @@
    * mistype. The engine still guards its inputs, but the interface stops
    * being a source of them.
    */
+  import { language } from "./i18n.svelte";
+
   interface Props {
     label: string;
     value: number;
@@ -41,6 +43,8 @@
     onChange,
   }: Props = $props();
 
+  const t = $derived(language.messages);
+
   /** The lowest reachable value, which is the extra stop when there is one. */
   const bottom = $derived(floor !== undefined && floor < min ? floor : min);
 
@@ -66,7 +70,7 @@
   <button
     onclick={() => nudge(-1)}
     disabled={!canGoDown}
-    aria-label="Decrease {label}"
+    aria-label={t.controls.decrease(label)}
   >
     <svg viewBox="0 0 12 12" aria-hidden="true">
       <path d="M2.6 6h6.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -88,7 +92,7 @@
   <button
     onclick={() => nudge(1)}
     disabled={!canGoUp}
-    aria-label="Increase {label}"
+    aria-label={t.controls.increase(label)}
   >
     <svg viewBox="0 0 12 12" aria-hidden="true">
       <path d="M6 2.6v6.8M2.6 6h6.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />

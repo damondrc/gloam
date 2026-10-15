@@ -7,6 +7,8 @@
    * longest label, and a native select looks borrowed from another
    * application — cycling keeps the panel's one control idiom.
    */
+  import { language } from "./i18n.svelte";
+
   interface Option {
     value: T;
     label: string;
@@ -21,6 +23,8 @@
 
   let { label, value, options, onChange }: Props = $props();
 
+  const t = $derived(language.messages);
+
   const index = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
   const current = $derived(options[index]?.label ?? "");
 
@@ -34,7 +38,7 @@
 <div class="cycler">
   <span class="label">{label}</span>
 
-  <button onclick={() => step(-1)} aria-label="Previous {label}">
+  <button onclick={() => step(-1)} aria-label={t.controls.previousOf(label)}>
     <svg viewBox="0 0 12 12" aria-hidden="true">
       <path d="M7.4 2.6 4 6l3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
@@ -42,7 +46,7 @@
 
   <span class="value" aria-live="polite">{current}</span>
 
-  <button onclick={() => step(1)} aria-label="Next {label}">
+  <button onclick={() => step(1)} aria-label={t.controls.nextOf(label)}>
     <svg viewBox="0 0 12 12" aria-hidden="true">
       <path d="M4.6 2.6 8 6l-3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>

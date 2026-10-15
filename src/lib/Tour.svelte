@@ -12,6 +12,7 @@
    * anything, and one click ends it.
    */
   import { TOUR } from "./tour";
+  import { language } from "./i18n.svelte";
 
   interface Props {
     step: number;
@@ -21,17 +22,18 @@
 
   let { step, onStep, onDone }: Props = $props();
 
+  const t = $derived(language.messages);
   const current = $derived(TOUR[step] ?? TOUR[0]);
   const first = $derived(step === 0);
   const last = $derived(step === TOUR.length - 1);
 </script>
 
 <div class="tour">
-  <p class="say">{current.text}</p>
+  <p class="say">{t.tour.steps[current.id]}</p>
 
   <div class="foot">
     <!-- Where you are, without a number. Four dots is a length you can feel. -->
-    <div class="dots" aria-label="Step {step + 1} of {TOUR.length}">
+    <div class="dots" aria-label={t.tour.stepOf(step + 1, TOUR.length)}>
       {#each TOUR as _, i (i)}
         <i class:here={i === step}></i>
       {/each}
@@ -39,13 +41,13 @@
 
     <!-- Ends the whole thing rather than stepping past it. Somebody who wants
          out wants out, not three more clicks of wanting out. -->
-    <button class="skip" onclick={onDone}>Skip</button>
+    <button class="skip" onclick={onDone}>{t.tour.skip}</button>
 
     <button
       class="arrow"
       onclick={() => onStep(step - 1)}
       disabled={first}
-      aria-label="Previous"
+      aria-label={t.tour.previous}
     >
       <svg viewBox="0 0 12 12" aria-hidden="true">
         <path d="M7.4 2.6 4 6l3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -57,7 +59,7 @@
     <button
       class="arrow"
       onclick={() => (last ? onDone() : onStep(step + 1))}
-      aria-label={last ? "Finish" : "Next"}
+      aria-label={last ? t.tour.finish : t.tour.next}
     >
       {#if last}
         <svg viewBox="0 0 12 12" aria-hidden="true">

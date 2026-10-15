@@ -17,6 +17,8 @@
    * contrast. The hierarchy is the point — this is a timer that can play
    * music, and the controls should say so before anybody reads them.
    */
+  import { language } from "./i18n.svelte";
+
   interface Props {
     /** The current track, without path or extension, or null for none. */
     name: string | null;
@@ -27,10 +29,12 @@
   }
 
   let { name, playing, onPrevious, onToggle, onNext }: Props = $props();
+
+  const t = $derived(language.messages);
 </script>
 
 <div class="music">
-  <button onclick={onPrevious} title="Previous track" aria-label="Previous track">
+  <button onclick={onPrevious} title={t.music.previous} aria-label={t.music.previous}>
     <svg viewBox="0 0 16 16" aria-hidden="true">
       <rect x="3.4" y="4" width="1.6" height="8" rx="0.8" />
       <path d="M12.6 4.5v7a.5.5 0 0 1-.78.41l-5-3.5a.5.5 0 0 1 0-.82l5-3.5a.5.5 0 0 1 .78.41Z" />
@@ -39,8 +43,8 @@
 
   <button
     onclick={onToggle}
-    title={playing ? "Pause music" : "Play music"}
-    aria-label={playing ? "Pause music" : "Play music"}
+    title={playing ? t.music.pause : t.music.play}
+    aria-label={playing ? t.music.pause : t.music.play}
   >
     {#if playing}
       <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -54,7 +58,7 @@
     {/if}
   </button>
 
-  <button onclick={onNext} title="Next track" aria-label="Next track">
+  <button onclick={onNext} title={t.music.next} aria-label={t.music.next}>
     <svg viewBox="0 0 16 16" aria-hidden="true">
       <path d="M3.4 4.5v7a.5.5 0 0 0 .78.41l5-3.5a.5.5 0 0 0 0-.82l-5-3.5a.5.5 0 0 0-.78.41Z" />
       <rect x="11" y="4" width="1.6" height="8" rx="0.8" />

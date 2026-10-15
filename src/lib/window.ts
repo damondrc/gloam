@@ -273,3 +273,21 @@ export async function onBackendEvent(
   const { listen } = await import("@tauri-apps/api/event");
   return listen(name, handler);
 }
+
+/**
+ * Tells the tray what to call its entries.
+ *
+ * The tray menu is built in Rust at startup, before any language has been
+ * chosen, and Rust has no dictionary — one source of truth for the words is
+ * the point. So it starts out in English and is renamed from here, once the
+ * interface knows its language and again whenever that changes.
+ */
+export async function setTrayText(text: {
+  show: string;
+  hide: string;
+  recover: string;
+  quit: string;
+}): Promise<void> {
+  const bridge = await core();
+  await bridge?.invoke("tray_text", text).catch(() => {});
+}

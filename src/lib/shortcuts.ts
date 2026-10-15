@@ -27,6 +27,8 @@
  * resizes. Every one of them is undone by pressing it again.
  */
 
+import type { Messages } from "./i18n.svelte";
+
 export type Action =
   | "toggleTimer"
   | "toggleCompact"
@@ -62,6 +64,7 @@ export interface Shortcut {
    */
   preventDefault: boolean;
 }
+
 
 /**
  * Lower-cased keys. `+` and `=` are the same physical key with and without
@@ -109,18 +112,23 @@ export function resolveShortcut(key: string, context: Context): Shortcut | null 
  * action the bindings can produce has to appear here, so adding a shortcut
  * without documenting it fails rather than shipping a key nobody is told
  * about.
+ *
+ * The wording itself lives in the dictionary — the key's name as well as what
+ * it does, since even "Space" is a word — and each row names its entry. The
+ * order of the rows and the actions behind them are the same in every
+ * language, so they stay here.
  */
 export interface ShownShortcut {
-  keys: string;
-  does: string;
+  /** Which row of `shortcuts` in the dictionary says what this is. */
+  id: keyof Messages["shortcuts"];
   /** Empty for the global shortcut, which is not one of these bindings. */
   actions: readonly Action[];
 }
 
 export const SHORTCUTS: readonly ShownShortcut[] = [
-  { keys: "Space", does: "Start or pause", actions: ["toggleTimer"] },
-  { keys: "C", does: "Fold to compact", actions: ["toggleCompact"] },
-  { keys: "S", does: "Open settings", actions: ["togglePanel"] },
-  { keys: "+ / −", does: "Resize", actions: ["scaleUp", "scaleDown"] },
-  { keys: "Ctrl+Alt+G", does: "Lock, from anywhere", actions: [] },
+  { id: "toggleTimer", actions: ["toggleTimer"] },
+  { id: "toggleCompact", actions: ["toggleCompact"] },
+  { id: "togglePanel", actions: ["togglePanel"] },
+  { id: "scale", actions: ["scaleUp", "scaleDown"] },
+  { id: "lock", actions: [] },
 ];

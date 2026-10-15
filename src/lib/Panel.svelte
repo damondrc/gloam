@@ -17,6 +17,7 @@
   import Cycler from "./Cycler.svelte";
   import { folderName } from "./music";
   import { SHORTCUTS } from "./shortcuts";
+  import { language } from "./i18n.svelte";
 
   /**
    * Four tabs, answering four questions: how long a run is, what the widget
@@ -43,12 +44,7 @@
   // Music sits after Ambience because it is the same kind of question — what
   // this thing is like to sit beside — and before Keys, which stays last for
   // being the only tab that changes nothing.
-  const TABS: readonly { id: Tab; label: string }[] = [
-    { id: "general", label: "General" },
-    { id: "ambience", label: "Ambience" },
-    { id: "music", label: "Music" },
-    { id: "keys", label: "Keys" },
-  ];
+  const TABS: readonly Tab[] = ["general", "ambience", "music", "keys"];
 
   let tab = $state<Tab>("general");
 
@@ -121,29 +117,23 @@
     onTour,
   }: Props = $props();
 
+  const t = $derived(language.messages);
+
   /**
    * What launching at login will actually do, which is not obvious and is
    * exactly the sort of thing somebody discovers by rebooting and concluding
    * the setting is broken.
    */
-  const startupHint = $derived(
-    tray
-      ? "Gloam waits in the tray. Ctrl+Alt+G brings it out."
-      : "Gloam opens on screen: this desktop has no tray to wait in."
+  const startupHint = $derived(tray ? t.panel.startsInTray : t.panel.startsOnScreen);
+
+  // The options are the values in a fixed order; their names come from the
+  // dictionary, so they follow a change of language like everything else.
+  const AMBIENCE_OPTIONS = $derived(
+    (["full", "calm", "light"] as const).map((value) => ({
+      value,
+      label: t.panel.backdrops[value],
+    }))
   );
-
-  const AMBIENCE_OPTIONS = [
-    { value: "full", label: "Full" },
-    { value: "calm", label: "Calm" },
-    { value: "light", label: "Light" },
-  ] as const satisfies readonly { value: Ambience; label: string }[];
-
-  /** Says what each mode is for, since the names alone do not. */
-  const AMBIENCE_HINTS: Record<Ambience, string> = {
-    full: "Clouds and the occasional flock.",
-    calm: "Clouds only. Nothing crosses quickly.",
-    light: "A flat sky, for a modest machine.",
-  };
 
   /**
    * No hint line under this one, unlike the two above it.
@@ -153,24 +143,17 @@
    * three things, and a line explaining that Skyline is a skyline would be
    * furniture.
    */
-  const HORIZON_OPTIONS = [
-    { value: "water", label: "Water" },
-    { value: "skyline", label: "Skyline" },
-    { value: "ridge", label: "Ridge" },
-  ] as const satisfies readonly { value: Horizon; label: string }[];
+  const HORIZON_OPTIONS = $derived(
+    (["water", "skyline", "ridge"] as const satisfies readonly Horizon[]).map(
+      (value) => ({ value, label: t.panel.horizons[value] })
+    )
+  );
 
-  const SOUND_OPTIONS = [
-    { value: "bowl", label: "Bowl" },
-    { value: "bell", label: "Bell" },
-    { value: "felt", label: "Felt" },
-  ] as const satisfies readonly { value: SoundSet; label: string }[];
-
-  /** Says what each set is for, since the material alone does not. */
-  const SOUND_HINTS: Record<SoundSet, string> = {
-    bowl: "The widget's own voice. Warm, and slow to fade.",
-    bell: "Metal, announced in three notes. Hard to miss.",
-    felt: "Wood and felt, fading into itself. Barely there.",
-  };
+  const SOUND_OPTIONS = $derived(
+    (["bowl", "bell", "felt"] as const satisfies readonly SoundSet[]).map(
+      (value) => ({ value, label: t.panel.sounds[value] })
+    )
+  );
 
   const percent = $derived(Math.round(volume * 100));
   const musicPercent = $derived(Math.round(musicVolume * 100));
@@ -185,9 +168,9 @@
    * lets the person tell which.
    */
   const folderHint = $derived.by(() => {
-    if (!musicFolder) return "Anything Gloam can decode. Read, never changed.";
-    if (musicCount === 0) return "Nothing playable here, or the folder has moved.";
-    return musicCount === 1 ? "1 track" : `${musicCount} tracks`;
+    if (!musicFolder) return t.panel.noFolder;
+    if (musicCount === 0) return t.panel.emptyFolder;
+    return t.panel.tracks(musicCount);
   });
 
   function set(key: keyof TimerConfig, value: number): void {
@@ -197,49 +180,49 @@
 
 <div class="panel">
   <div class="tabs" role="tablist">
-    {#each TABS as item (item.id)}
+    {#each TABS as id (id)}
       <button
         role="tab"
-        aria-selected={tab === item.id}
-        class:active={tab === item.id}
-        onclick={() => (tab = item.id)}
+        aria-selected={tab === id}
+        class:active={tab === id}
+        onclick={() => (tab = id)}
       >
-        {item.label}
+        {t.panel.tabs[id]}
       </button>
     {/each}
   </div>
 
   {#if tab === "general"}
     <p class="section">
-      Cycle
+      {t.panel.cycle}
       {#if frozen}
-        <span class="note">pause to edit</span>
+        <span class="note">{t.panel.pauseToEdit}</span>
       {:else if willReset}
-        <span class="note">changing restarts the run</span>
+        <span class="note">{t.panel.changeRestarts}</span>
       {/if}
     </p>
 
     <div class="rows">
       <Stepper
-        label="Focus"
+        label={t.panel.focus}
         value={config.focusMinutes}
         {...LIMITS.focusMinutes}
         floor={TEST_FLOOR.focusMinutes}
-        suffix=" min"
+        suffix={t.panel.minutes}
         disabled={frozen}
         onChange={(value) => set("focusMinutes", value)}
       />
       <Stepper
-        label="Break"
+        label={t.panel.break}
         value={config.breakMinutes}
         {...LIMITS.breakMinutes}
         floor={TEST_FLOOR.breakMinutes}
-        suffix=" min"
+        suffix={t.panel.minutes}
         disabled={frozen}
         onChange={(value) => set("breakMinutes", value)}
       />
       <Stepper
-        label="Sessions"
+        label={t.panel.sessions}
         value={config.focusSessions}
         {...LIMITS.focusSessions}
         disabled={frozen}
@@ -251,11 +234,11 @@
          is and whether the machine opens Gloam by itself are not the same
          question, and a run of controls with no seam between them invites the
          reader to assume they are. -->
-    <p class="section apart">Startup</p>
+    <p class="section apart">{t.panel.startup}</p>
 
     <div class="rows">
       <Toggle
-        label="Launch at login"
+        label={t.panel.launchAtLogin}
         checked={atLogin}
         pending={!atLoginKnown}
         onChange={onAtLogin}
@@ -266,7 +249,7 @@
   {:else if tab === "ambience"}
     <div class="rows">
       <label class="row">
-        <span class="name">Volume</span>
+        <span class="name">{t.panel.volume}</span>
         <input
           type="range"
           min="0"
@@ -274,7 +257,7 @@
           step="1"
           value={percent}
           oninput={(event) => onVolume(Number(event.currentTarget.value) / 100)}
-          aria-label="Volume"
+          aria-label={t.panel.volume}
         />
         <span class="value">{percent}%</span>
       </label>
@@ -283,28 +266,28 @@
            line saying what the choice is for: the names are materials and
            degrees, and neither says on its own what it is good for. -->
       <Cycler
-        label="Sound"
+        label={t.panel.sound}
         value={sound}
         options={SOUND_OPTIONS}
         onChange={onSound}
       />
 
-      <p class="hint">{SOUND_HINTS[sound]}</p>
+      <p class="hint">{t.panel.soundHints[sound]}</p>
 
       <Cycler
-        label="Backdrop"
+        label={t.panel.backdrop}
         value={ambience}
         options={AMBIENCE_OPTIONS}
         onChange={onAmbience}
       />
 
-      <p class="hint">{AMBIENCE_HINTS[ambience]}</p>
+      <p class="hint">{t.panel.backdropHints[ambience]}</p>
 
       <!-- How much of the backdrop moves, then what the backdrop is of. Last
            because it is the one that changes least often: a horizon is picked
            once and lived with, where the other two get adjusted by mood. -->
       <Cycler
-        label="Horizon"
+        label={t.panel.horizon}
         value={horizon}
         options={HORIZON_OPTIONS}
         onChange={onHorizon}
@@ -315,16 +298,16 @@
       <!-- The whole row is the button. A path is not a label with a control
            beside it — the path is what you press to change the path. -->
       <button class="folder" onclick={onPickFolder} title={musicFolder ?? ""}>
-        <span class="name">Folder</span>
+        <span class="name">{t.panel.folder}</span>
         <span class="path" class:empty={!musicFolder}>
-          {musicFolder ? folderName(musicFolder) : "Choose\u2026"}
+          {musicFolder ? folderName(musicFolder) : t.panel.choose}
         </span>
       </button>
 
       <p class="hint">{folderHint}</p>
 
       <label class="row apart">
-        <span class="name">Volume</span>
+        <span class="name">{t.panel.volume}</span>
         <input
           type="range"
           min="0"
@@ -333,33 +316,33 @@
           value={musicPercent}
           oninput={(event) =>
             onMusicVolume(Number(event.currentTarget.value) / 100)}
-          aria-label="Music volume"
+          aria-label={t.panel.musicVolume}
         />
         <span class="value">{musicPercent}%</span>
       </label>
 
       <!-- One line rather than two: the tab already says whose volume this
            is, and the two switches below need the room. -->
-      <p class="hint">Ducked while Gloam has something to say.</p>
+      <p class="hint">{t.panel.ducked}</p>
 
       <!-- Here rather than on the face. They are chosen once and lived with,
            which is what the panel is for; the face keeps only what gets
            pressed while listening. -->
-      <Toggle label="Shuffle" checked={shuffle} onChange={onShuffle} />
-      <Toggle label="Crossfade" checked={crossfade} onChange={onCrossfade} />
+      <Toggle label={t.panel.shuffle} checked={shuffle} onChange={onShuffle} />
+      <Toggle label={t.panel.crossfade} checked={crossfade} onChange={onCrossfade} />
     </div>
   {:else}
     <!-- Reference rather than settings: the one tab with nothing to change.
          Which is why it can hold the way back to the tour without that
          reading as a setting either. -->
     <dl class="keys">
-      {#each SHORTCUTS as row (row.keys)}
-        <dt>{row.keys}</dt>
-        <dd>{row.does}</dd>
+      {#each SHORTCUTS as row (row.id)}
+        <dt>{t.shortcuts[row.id].keys}</dt>
+        <dd>{t.shortcuts[row.id].does}</dd>
       {/each}
     </dl>
 
-    <button class="again" onclick={onTour}>Show the tour again</button>
+    <button class="again" onclick={onTour}>{t.panel.tourAgain}</button>
   {/if}
 </div>
 

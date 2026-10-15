@@ -4,6 +4,8 @@
    * only a drag, so it is exposed as a slider that the keyboard can also
    * drive.
    */
+  import { language } from "./i18n.svelte";
+
   interface Props {
     value: number;
     min: number;
@@ -27,6 +29,8 @@
     onNudge,
     onReset,
   }: Props = $props();
+
+  const t = $derived(language.messages);
 
   function onKeydown(event: KeyboardEvent): void {
     const step = event.shiftKey ? 0.2 : 0.05;
@@ -55,7 +59,7 @@
   class:dragging
   role="slider"
   tabindex="0"
-  aria-label="Widget size"
+  aria-label={t.grip.label}
   aria-valuemin={min}
   aria-valuemax={max}
   aria-valuenow={value}
@@ -66,7 +70,7 @@
   onpointercancel={onEnd}
   ondblclick={onReset}
   onkeydown={onKeydown}
-  title="Drag to resize · double-click to reset"
+  title={t.grip.title}
 >
   <svg viewBox="0 0 14 14" aria-hidden="true">
     <path

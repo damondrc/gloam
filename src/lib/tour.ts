@@ -25,10 +25,12 @@
  */
 export type Spotlight = "none" | "controls" | "away";
 
+import type { Messages } from "./i18n.svelte";
+
 export interface TourStep {
+  /** Which sentence is said, from `tour.steps` in the dictionary. */
+  id: keyof Messages["tour"]["steps"];
   spotlight: Spotlight;
-  /** Three lines at the panel's width. Longer and nobody reads it. */
-  text: string;
 }
 
 /**
@@ -41,31 +43,13 @@ export interface TourStep {
  * folds itself away if the widget goes compact or gets locked, and comes back
  * on the same step — an instruction you are not allowed to follow is worse
  * than no instruction.
+ *
+ * The words are in the dictionary; this is only the order and what each step
+ * lights up, which is the same in every language.
  */
 export const TOUR: readonly TourStep[] = [
-  {
-    spotlight: "none",
-    text:
-      "Gloam keeps time in the corner of your screen. The sky is the clock — " +
-      "the sun sinks while you focus, and the moon comes up while you rest.",
-  },
-  {
-    spotlight: "controls",
-    text:
-      "There is no title bar: drag it from anywhere on its face. The corner " +
-      "resizes it, and the arrow below opens the settings.",
-  },
-  {
-    spotlight: "none",
-    text:
-      "Too big? A double-click folds it into a single row — the clock, play " +
-      "and the padlock. Try it: double-click again to bring it back.",
-  },
-  {
-    spotlight: "away",
-    text:
-      "Still in the way? The padlock lets clicks pass right through, and " +
-      "closing tucks Gloam into the tray with the run going. Ctrl+Alt+G " +
-      "brings it back.",
-  },
+  { id: "sky", spotlight: "none" },
+  { id: "handles", spotlight: "controls" },
+  { id: "compact", spotlight: "none" },
+  { id: "away", spotlight: "away" },
 ];

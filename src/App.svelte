@@ -6,6 +6,8 @@
   import { skyFor, skyVars } from "./lib/sky";
   import * as sound from "./lib/sound";
   import * as music from "./lib/music";
+  import { language } from "./lib/i18n.svelte";
+  import { setTrayText } from "./lib/window";
   import {
     dismissWindow,
     hasTray,
@@ -96,6 +98,26 @@
     atLogin = await setLaunchAtLogin(value);
     atLoginKnown = true;
   }
+
+  const t = $derived(language.messages);
+
+  /**
+   * The phase over the readout.
+   *
+   * Chosen here rather than by the timer, which used to return the English
+   * word itself. What phase the run is in is the timer's business; what that
+   * phase is called is the dictionary's.
+   */
+  const phaseLabel = $derived(
+    timer.finished ? t.phase.done : t.phase[timer.phase]
+  );
+
+  // The tray is built in Rust, which has no dictionary of its own. It is
+  // told what to call things now and again whenever the language changes, so
+  // the menu cannot end up in a different language from the widget.
+  $effect(() => {
+    void setTrayText(t.tray);
+  });
 
   const stored = loadPrefs();
   let compact = $state(stored.compact);
@@ -868,13 +890,13 @@
     </div>
 
     <div class="content">
-      <span class="label">{timer.label}</span>
+      <span class="label">{phaseLabel}</span>
 
       <span class="time" class:idle={!timer.running && !timer.finished}>
         {timer.display}
       </span>
 
-      <div class="dots" aria-label="Session {timer.focusIndex} of {timer.config.focusSessions}">
+      <div class="dots" aria-label={t.widget.sessionOf(timer.focusIndex, timer.config.focusSessions)}>
         {#each { length: timer.config.focusSessions } as _, i (i)}
           <i class:filled={i < timer.focusIndex}></i>
         {/each}
@@ -903,7 +925,7 @@
         class="drag"
         role="button"
         tabindex="-1"
-        aria-label="Widget background. Drag to move, double-click to toggle compact mode."
+        aria-label={t.widget.background}
         onmousedown={onDragStart}
         ondblclick={onDoubleClick}
       ></div>
@@ -923,8 +945,8 @@
       <button
         class="close"
         onclick={dismissWindow}
-        title={tray ? "Hide — Gloam keeps running in the tray" : "Quit Gloam"}
-        aria-label={tray ? "Hide" : "Quit"}
+        title={tray ? t.widget.hideTitle : t.widget.quitTitle}
+        aria-label={tray ? t.widget.hide : t.widget.quit}
       >
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path
@@ -978,8 +1000,8 @@
         <button
           class="disclose"
           onclick={togglePanel}
-          title={panelOpen ? "Close settings" : "Open settings"}
-          aria-label={panelOpen ? "Close settings" : "Open settings"}
+          title={panelOpen ? t.widget.closeSettings : t.widget.openSettings}
+          aria-label={panelOpen ? t.widget.closeSettings : t.widget.openSettings}
           aria-expanded={panelOpen}
         >
           <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -997,7 +1019,7 @@
     </div>
 
     {#if showLockHint}
-      <div class="hint">Ctrl<span>+</span>Alt<span>+</span>G to unlock</div>
+      <div class="hint">Ctrl<span>+</span>Alt<span>+</span>G {t.widget.toUnlock}</div>
     {/if}
 
     <!-- Outside .ui: the padlock has to stay reachable when everything else

@@ -4,6 +4,8 @@
    * larger and brighter than the rest and sits in a corner, where it is the
    * easiest target on screen to hit.
    */
+  import { language } from "./i18n.svelte";
+
   interface Props {
     locked: boolean;
     /** True while the cursor is inside the hotspot and clicks will land. */
@@ -16,6 +18,8 @@
   }
 
   let { locked, hot, onToggle, register, small = false }: Props = $props();
+
+  const t = $derived(language.messages);
 
   let element: HTMLButtonElement | null = $state(null);
 
@@ -32,8 +36,8 @@
   class:hot
   class:small
   onclick={onToggle}
-  title={locked ? "Unlock (Ctrl+Alt+G)" : "Lock and let clicks pass through (Ctrl+Alt+G)"}
-  aria-label={locked ? "Unlock widget" : "Lock widget"}
+  title={locked ? t.padlock.unlockTitle : t.padlock.lockTitle}
+  aria-label={locked ? t.padlock.unlock : t.padlock.lock}
   aria-pressed={locked}
 >
   <svg viewBox="0 0 20 20" aria-hidden="true">

@@ -59,10 +59,6 @@ export class Timer {
     return Math.max(1, n);
   });
 
-  label = $derived.by(() => {
-    if (this.finished) return "DONE";
-    return this.phase === "focus" ? "FOCUS" : "BREAK";
-  });
 
   display = $derived(formatDuration(this.remainingMs));
 
