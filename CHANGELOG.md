@@ -13,7 +13,7 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
-## [1.1.0]
+## [1.1.0]  — 2026-10-15
 
 ### Added
 
