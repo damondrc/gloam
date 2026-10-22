@@ -13,6 +13,17 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+### Added
+
+- **Spanish.** Every line of the interface has a Spanish version — the
+  panel, the tour, the tooltips, what a screen reader announces and the tray
+  menu — in neutral Latin American Spanish. FOCUS, BREAK and DONE stay as
+  they are: they read as marks on the sky rather than as words, and the
+  Spanish for them does not fit beside the music controls.
+  Gloam speaks whichever of its languages your system prefers, from the
+  first frame, and English when it has none of them. Any Spanish counts,
+  whatever the region.
+
 ## [1.1.0]  — 2026-10-15
 
 ### Added

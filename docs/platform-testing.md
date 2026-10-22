@@ -298,6 +298,23 @@ a machine with no gstreamer plugin for it should be no different from one with;
 if FLAC is silent here and plays elsewhere, that assumption is wrong and the
 whole shape of the feature needs revisiting.
 
+### J · Language
+
+Gloam asks the WebView which languages the system prefers, and the WebView
+does not get the answer the same way on both platforms. On Windows it is the
+display language set in Settings. On Linux, WebKitGTK reads it from the
+environment — `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` or `LANG` — which is what
+a desktop sets from its region settings and what a terminal can override
+for one launch: `LANG=es_MX.UTF-8 gloam`. The automated tests cover what
+Gloam does with the list. These rows cover whether the list arrives at all.
+
+| # | Check | Win 11 | Linux |
+| --- | --- | --- | --- |
+| J1 | With the system in Spanish (any region), the **first frame** is in Spanish — the tour, the tooltips, the panel — with no English shown first | | |
+| J2 | With the system in any other language, it opens in English | | |
+| J3 | The tray menu is in the same language as the widget the first time it is opened | | |
+| J4 | FOCUS, BREAK and DONE stay as they are in Spanish, and with music loaded the label does not run under the transport controls on hover | | |
+
 ### Notes
 
 **D1 · Linux** — resizing with the grip is noticeably less smooth than on

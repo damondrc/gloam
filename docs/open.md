@@ -37,6 +37,13 @@ decisions that were deliberately deferred, and each says what would unblock it.
       always-on-top, the global shortcut and window positioning, since the app
       becomes an X11 client. If it holds, the packages could set it and the
       Wayland row would change from a limitation to a footnote.
+- [ ] **Confirm the language arrives on Linux.** Gloam starts in whichever
+      language `navigator.languages` puts first, and on Linux WebKitGTK is
+      expected to build that list from `LANG` and its relatives. Expected,
+      not watched. Section J of the checklist settles it. If the list comes
+      back empty or always English, the fallback is to ask Rust instead,
+      through the `sys-locale` crate, and hand the answer to the frontend
+      the way the work area already is.
 - [ ] **Open it on macOS.** Nothing in the code is written for one platform.
       Nobody has run it there, so nothing is claimed.
 

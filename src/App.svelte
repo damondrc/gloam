@@ -119,6 +119,13 @@
     void setTrayText(t.tray);
   });
 
+  // The page's own language, which is what a screen reader pronounces every
+  // label with. Left at index.html's "en", it would read the Spanish with
+  // English vowels.
+  $effect(() => {
+    document.documentElement.lang = language.locale;
+  });
+
   const stored = loadPrefs();
   let compact = $state(stored.compact);
   let hovering = $state(false);

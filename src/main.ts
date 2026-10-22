@@ -50,22 +50,25 @@ try {
 }
 
 /**
- * A handle on the music player, for a build that is being worked on.
+ * Handles on the parts being worked on, for a build that is being worked on.
  *
- * The player has no interface yet, and the way to find out whether it decodes
- * a real folder of real FLAC on a real machine should not be to build one
- * first. `import.meta.env.DEV` is the literal `false` in a release build, so
- * the bundler removes this entirely: in a shipped Gloam there is no
- * `window.gloam` to find.
+ * The music player was first driven from here, before it had an interface,
+ * because the way to find out whether it decodes a real folder of real FLAC on
+ * a real machine should not be to build one first. The language is here for
+ * the same reason: a dictionary exists before anything lets a person choose
+ * it, and reading every line in place is how it gets checked.
+ * `import.meta.env.DEV` is the literal `false` in a release build, so the
+ * bundler removes this entirely: in a shipped Gloam there is no `window.gloam`
+ * to find.
  *
  *   await gloam.music.openFolder("C:/Users/you/Music/Something")
  *   await gloam.music.play()
- *   await gloam.music.next()
- *   await gloam.music.status()
+ *   gloam.language.locale = "es"
  */
 if (import.meta.env.DEV) {
   const music = await import("./lib/music");
-  Object.assign(window, { gloam: { music } });
+  const { language } = await import("./lib/i18n.svelte");
+  Object.assign(window, { gloam: { music, language } });
 }
 
 const target = document.getElementById("app");
