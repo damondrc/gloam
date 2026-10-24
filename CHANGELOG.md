@@ -24,6 +24,16 @@ commit that made the change, and in the architecture notes.
   first frame, and English when it has none of them. Any Spanish counts,
   whatever the region.
 
+### Changed
+
+- **The panel has three tabs: Cycle, Music and Settings.** Cycle holds the
+  three durations and nothing else, since it is the tab opened before every
+  session. Everything set once and lived with moved into Settings, a short
+  list of Ambience, Startup and Keys that opens a page per line and says on
+  each line what it is set to. A page taller than the panel scrolls inside
+  it, so the panel itself got shorter rather than taller, from 214 design
+  pixels to 189.
+
 ## [1.1.0]  — 2026-10-15
 
 ### Added

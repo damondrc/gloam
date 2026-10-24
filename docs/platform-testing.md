@@ -60,7 +60,7 @@ about it is inference, and the README says so.
 | A9 | The tour appears on that first run, unfolded below the widget and entirely on screen | OK | OK |
 | A10 | Its four steps move forward and back, and `Skip` ends it | OK | OK |
 | A11 | Locking, folding to compact or closing the panel **suspends** the tour and returns to the same step; only `Skip` and the last arrow end it | OK | OK |
-| A12 | It does not appear on the next launch, and **Keys → Show the tour again** brings it back | OK | OK |
+| A12 | It does not appear on the next launch, and **Settings → Keys → Show the tour again** brings it back | | |
 
 **A7 to A12 are the exception to the release-build rule at the top**, and it is
 worth saying why rather than leaving it to be worked out. A first run means no
@@ -110,7 +110,7 @@ reading A7.
 | D5 | No resize border or resize cursor appears around the widget | OK | OK |
 | D6 | The bottom corners stay rounded with the panel open and closed | OK | OK |
 | D7 | Locking with the panel open closes the panel, leaving only the dimmed backdrop | OK | OK |
-| D8 | All four tabs fit the panel without clipping at the bottom — at 80% and at 180% | | |
+| D8 | Cycle and Music fit the panel without clipping at the bottom, in English and in Spanish — at 80% and at 180%. A Settings page that runs longer scrolls with the wheel, and its bottom edge fades while there is more below | | |
 | D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
 | D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
 | D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |

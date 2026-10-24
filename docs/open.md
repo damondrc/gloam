@@ -48,8 +48,9 @@ decisions that were deliberately deferred, and each says what would unblock it.
       Nobody has run it there, so nothing is claimed.
 
 - [ ] **Refresh the README's recordings.** They were made against 1.0.0, so
-      the panel in them has three tabs, the face has no transport and the sun
-      still sets through the water. Nothing in them is false — it is all
+      the panel in them has the old General and Ambience tabs rather than
+      Cycle, Music and Settings, the face has no transport and the sun still
+      sets through the water. Nothing in them is false — it is all
       still there — but a reader deciding whether to download is shown less
       than they would get. Needs a Windows machine and a quiet afternoon, and
       is worth doing once the face has stopped changing.

@@ -103,22 +103,32 @@ export const en = {
 
   panel: {
     tabs: {
-      general: "General",
-      ambience: "Ambience",
+      cycle: "Cycle",
       music: "Music",
-      keys: "Keys",
+      settings: "Settings",
     },
 
-    cycle: "Cycle",
-    pauseToEdit: "pause to edit",
-    changeRestarts: "changing restarts the run",
+    /** The lines of the Settings index, and the titles of their pages. */
+    pages: {
+      ambience: "Ambience",
+      startup: "Startup",
+      keys: "Keys",
+    },
+    /** Read aloud for the page title, which is also the way back. */
+    back: "Back to settings",
+    /** What the Startup line of the index says it is set to. */
+    on: "On",
+    off: "Off",
+
+    /** A line of its own under the durations, so a whole sentence. */
+    pauseToEdit: "Pause to edit.",
+    changeRestarts: "Changing a duration restarts the run.",
     focus: "Focus",
     break: "Break",
     sessions: "Sessions",
     /** Follows a number directly, so it carries its own leading space. */
     minutes: " min",
 
-    startup: "Startup",
     launchAtLogin: "Launch at login",
     startsInTray: "Gloam waits in the tray. Ctrl+Alt+G brings it out.",
     startsOnScreen: "Gloam opens on screen: this desktop has no tray to wait in.",
@@ -168,7 +178,7 @@ export const en = {
     tourAgain: "Show the tour again",
   },
 
-  /** The Keys tab, one row per shortcut. */
+  /** The Keys page, one row per shortcut. */
   shortcuts: {
     toggleTimer: { keys: "Space", does: "Start or pause" },
     toggleCompact: { keys: "C", does: "Fold to compact" },

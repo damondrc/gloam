@@ -169,10 +169,18 @@ the timer, the ground is where the machinery lives.
 
 | Tab | |
 | --- | --- |
-| **General** | How long a run is, and whether the machine opens Gloam by itself. |
+| **Cycle** | How long a run is: focus, break and how many sessions. Nothing else, because it is the one opened before every session. |
+| **Music** | Which folder to play, how loud, shuffle and crossfade. |
+| **Settings** | Everything set once and lived with, as a short list that opens a page per line. |
+
+| Settings | |
+| --- | --- |
 | **Ambience** | What the widget is like to sit beside: volume, the material it sounds like, how alive the sky is, and what the horizon is. |
-| **Music** | Which folder to play, and how loud. |
+| **Startup** | Whether the machine opens Gloam by itself. |
 | **Keys** | Every shortcut, and the way back to the tour. |
+
+Each line of the list says what it is currently set to, so most of the time
+there is no need to open it.
 
 **Sound.** Three sets, each an instrument, a phrase and a kit of button sounds
 picked together and named for their material.
@@ -230,8 +238,8 @@ says which of the two you will get.
 The first time, bottom right at 150% — inside the usable area rather than
 behind the taskbar, and big enough to read at a glance from across the desk.
 And it introduces itself once: four steps, each of which can be followed while
-it is being described, and then never again unless you ask for it from the Keys
-tab.
+it is being described, and then never again unless you ask for it from
+**Settings → Keys**.
 
 After that it remembers where you left it, and checks that position against the
 screens actually attached before using it — unplugging a monitor is an ordinary

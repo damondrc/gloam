@@ -97,21 +97,27 @@ export const es: Messages = {
 
   panel: {
     tabs: {
-      general: "General",
-      ambience: "Ambiente",
+      cycle: "Ciclo",
       music: "Música",
-      keys: "Teclas",
+      settings: "Ajustes",
     },
 
-    cycle: "Ciclo",
-    pauseToEdit: "pausa para editar",
-    changeRestarts: "cambiarlo reinicia el ciclo",
+    pages: {
+      ambience: "Ambiente",
+      startup: "Arranque",
+      keys: "Teclas",
+    },
+    back: "Volver a ajustes",
+    on: "Activado",
+    off: "Desactivado",
+
+    pauseToEdit: "Pausa para editar.",
+    changeRestarts: "Cambiar una duración reinicia el ciclo.",
     focus: "Enfoque",
     break: "Descanso",
     sessions: "Sesiones",
     minutes: " min",
 
-    startup: "Arranque",
     launchAtLogin: "Abrir al iniciar sesión",
     startsInTray: "Gloam espera en la bandeja. Ctrl+Alt+G lo muestra.",
     startsOnScreen: "Gloam se abre en pantalla: este escritorio no tiene bandeja.",

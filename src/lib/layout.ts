@@ -22,15 +22,20 @@ export const COMPACT_SIZE = { width: 180, height: 58 } as const;
  *
  * One height for every tab, sized to the tallest — a panel that resized as you
  * moved between tabs would make the window jump under the pointer that was
- * navigating it. General is the tall one now, at two headings: the cycle's
- * three durations, and whether the machine opens Gloam by itself.
+ * navigating it. Music is the tall one, measured in both languages: its last
+ * switch plus the panel's bottom padding, with nothing to spare.
+ *
+ * Settings does not count towards it. Its index is shorter than Music, and a
+ * page that runs longer scrolls inside the panel instead, so adding a setting
+ * never makes every tab taller. That is why the number went down when the
+ * panel was regrouped, from the 214 that four tabs needed.
  *
  * The cost of this being a single number is that the shortest tab carries the
- * tallest one's height, and Keys has the emptiest bottom edge of the four.
+ * tallest one's height, and Cycle has the emptiest bottom edge of the three.
  * That is the trade, and the alternative was measured and rejected rather than
  * overlooked.
  */
-export const PANEL_HEIGHT = 214;
+export const PANEL_HEIGHT = 189;
 
 /**
  * And with the tour unfolded, which uses the same place.

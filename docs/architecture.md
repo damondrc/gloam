@@ -247,35 +247,52 @@ placement is deliberate: the sky is the timer, the ground is where the
 machinery lives. Controls laid over the gradient would be hard to read and
 would break the one idea the backdrop carries.
 
-**Keys** is the odd tab and earned its place by being odd: it is the only one
-with nothing to change. Folding a reference table in among controls would have
-made it look like a setting and made the controls harder to scan, so it is kept
-apart — which is also why it can hold *Show the tour again* without that
-reading as a preference either.
+Three tabs, split by how often each is reached for. **Cycle** is opened before
+a session, so it holds the three durations and nothing else. **Music** is the
+other thing touched while working. **Settings** holds everything that is set
+once and lived with: the ambience, launching at login, and the keys.
 
-The other two were three for a while, with sound and the backdrop apart. They
-were apart because they were built at different times, not because anyone
-choosing between them thinks of them as different: both answer how much of
-itself the widget should make you aware of. Reuniting them left the panel
-describing the widget instead of its own history — and the tab that replaced
-theirs is the one that is not a setting at all.
+Until 1.2 there were four tabs — General, Ambience, Music and Keys — and
+General carried the startup switch under the durations. That put the least
+frequent setting on the most frequent page, and it left no room for anything
+new: the panel is one height for every tab, so a fifth row anywhere would have
+made all of them taller. Grouping by frequency answered both. Before that, the
+backdrop and the sound had been tabs of their own, apart only because they were
+built at different times; both answer how much of itself the widget should make
+you aware of, and they are still one page.
 
-Tabs rather than one column, because stacked the sections run past 280 design
-pixels — at 180% scale, most of a laptop screen. The tab is navigation rather
-than preference, so it is not remembered.
+Settings is an index rather than a page. Each line opens a page of its own and
+says what it is currently set to, so most visits end at the index: the answer
+is read off the line. A long list with headings and sections that fold open in
+place were both drawn beside it first. The list needed the most scrolling, and
+the folding sections still scrolled with Ambience open while hiding the values
+of the ones that were shut. The index costs one more click to change anything,
+which suits things that rarely change.
+
+**Keys** is still the odd one and still kept apart: it is the only page with
+nothing to change, and as the last line of an index it no longer sits among
+controls, which is what earned it a tab of its own before. That is also why it
+can hold *Show the tour again* without that reading as a preference.
 
 The panel is one height for every tab, sized to the tallest, because a panel
 that resized as you moved between tabs would make the window jump under the
-pointer that was navigating it. The cost is that the shortest tab carries the
-tallest one's height, and it is a constant somebody has to keep in step by eye —
-which is why the platform checklist has a row for it.
+pointer that was navigating it. Settings does not count towards it: a page
+that runs longer than the panel scrolls inside it, with the edge that has more
+behind it fading out, so a new setting costs a line of the index rather than
+height on every tab. Music is the tallest now, and the panel went from 214
+design pixels to 189. The cost is that the shortest tab carries the tallest
+one's height, and it is a constant somebody has to keep in step by eye — which
+is why the platform checklist has a row for it.
+
+Neither the tab nor the page is remembered. Both are navigation rather than
+preference, and the panel always opens on Cycle.
 
 Durations are steppers rather than number fields. At this size a form input
 looks borrowed from another application, and more usefully a stepper cannot
 produce an invalid value — there is no empty state and nothing to mistype. They
 freeze while the timer runs, so a stray click cannot discard a session; when
-the run is paused part-way the panel says that applying a change will restart
-it, rather than letting the cost be discovered.
+the run is paused part-way a line under them says that applying a change will
+restart it, rather than letting the cost be discovered.
 
 ### Launch at login
 
