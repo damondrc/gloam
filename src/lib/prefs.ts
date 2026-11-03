@@ -20,6 +20,8 @@ import { AMBIENCE_MODES } from "./ambience";
 import type { Ambience } from "./ambience";
 import { HORIZONS } from "./horizon";
 import type { Horizon } from "./horizon";
+import { LANGUAGE_PREFERENCES } from "./i18n.svelte";
+import type { LanguagePreference } from "./i18n.svelte";
 
 const KEY = "gloam.prefs.v1";
 
@@ -41,6 +43,15 @@ export interface Prefs {
   /** What stands on the far shore: nothing, a city, or a ridge. */
   horizon: Horizon;
   config: TimerConfig;
+  /**
+   * "system", or a language chosen in Settings. Never the language "system"
+   * happened to resolve to; see `i18n.svelte.ts`.
+   *
+   * New in 1.2. A file written by 1.1 has no such field, reads back as
+   * "system", and so opens in the system's language like a fresh install —
+   * which is what 1.1 did, since it had only one.
+   */
+  language: LanguagePreference;
   /**
    * The music folder and how loud it plays.
    *
@@ -94,6 +105,7 @@ export const DEFAULT_PREFS: Prefs = {
   // horizon is the one that says nothing about where you are.
   horizon: "water",
   config: { ...DEFAULT_CONFIG },
+  language: "system",
   // No folder, and half volume rather than the widget's 0.6. Music is the one
   // sound here meant to sit underneath something else — a run's own phrases
   // have to carry over it, and the first impression of a feature should not be
@@ -244,6 +256,10 @@ export function loadPrefs(): Prefs {
       ),
       horizon: readOption(value.horizon, HORIZONS, DEFAULT_PREFS.horizon),
       config: readConfig(value.config),
+      // A language whose dictionary has since gone falls back to following
+      // the system, not to English: the system is the better guess at what
+      // somebody can read.
+      language: readOption(value.language, LANGUAGE_PREFERENCES, DEFAULT_PREFS.language),
       music: readMusic(value.music),
       position: readPosition(value.position),
       seenIntro: value.seenIntro === true,

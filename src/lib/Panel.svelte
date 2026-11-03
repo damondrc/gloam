@@ -18,7 +18,8 @@
   import Cycler from "./Cycler.svelte";
   import { folderName } from "./music";
   import { SHORTCUTS } from "./shortcuts";
-  import { language } from "./i18n.svelte";
+  import { LANGUAGE_NAMES, LANGUAGE_PREFERENCES, language } from "./i18n.svelte";
+  import type { LanguagePreference, Locale } from "./i18n.svelte";
 
   /**
    * Three tabs, split by how often each is reached for.
@@ -62,9 +63,11 @@
    * preference, and the panel is unmounted when it closes, so it always opens
    * on Cycle.
    */
-  type Page = "ambience" | "startup" | "keys";
+  type Page = "ambience" | "language" | "startup" | "keys";
 
-  const PAGES: readonly Page[] = ["ambience", "startup", "keys"];
+  // Language after Ambience and before Startup: the two most likely to be
+  // looked for come first, and Keys stays last for changing nothing.
+  const PAGES: readonly Page[] = ["ambience", "language", "startup", "keys"];
 
   let tab = $state<Tab>("cycle");
   let page = $state<Page | null>(null);
@@ -158,6 +161,11 @@
     onCrossfade: (value: boolean) => void;
     /** Starts the first-run tour again, for anyone who wants it back. */
     onTour: () => void;
+    /** "system", or the language chosen here. */
+    languagePreference: LanguagePreference;
+    /** What the system alone would pick, so "System" can say what it means. */
+    systemLanguage: Locale;
+    onLanguage: (value: LanguagePreference) => void;
   }
 
   let {
@@ -187,6 +195,9 @@
     crossfade,
     onCrossfade,
     onTour,
+    languagePreference,
+    systemLanguage,
+    onLanguage,
   }: Props = $props();
 
   const t = $derived(language.messages);
@@ -227,6 +238,30 @@
     )
   );
 
+  /**
+   * Every language under its own name, whatever the interface is speaking;
+   * see `LANGUAGE_NAMES`. Only "System" is translated, since it is the one
+   * option that is a word rather than a language.
+   */
+  const languageLabel = (value: LanguagePreference): string =>
+    value === "system" ? t.panel.system : LANGUAGE_NAMES[value];
+
+  const LANGUAGE_OPTIONS = $derived(
+    LANGUAGE_PREFERENCES.map((value) => ({ value, label: languageLabel(value) }))
+  );
+
+  /**
+   * "System" on its own leaves open which language that is, so the line
+   * under it answers. A language picked by hand gets a line saying it will
+   * stay, because the difference between the two is exactly what somebody
+   * will wonder about the next time the system changes.
+   */
+  const languageHint = $derived(
+    languagePreference === "system"
+      ? t.panel.followsSystem(LANGUAGE_NAMES[systemLanguage])
+      : t.panel.keepsLanguage
+  );
+
   const percent = $derived(Math.round(volume * 100));
   const musicPercent = $derived(Math.round(musicVolume * 100));
 
@@ -257,6 +292,7 @@
       t.panel.backdrops[ambience],
       t.panel.horizons[horizon],
     ].join(" · "),
+    language: languageLabel(languagePreference),
     startup: atLoginKnown ? (atLogin ? t.panel.on : t.panel.off) : "",
     keys: "",
   });
@@ -442,6 +478,20 @@
                   options={HORIZON_OPTIONS}
                   onChange={onHorizon}
                 />
+              </div>
+            {:else if page === "language"}
+              <!-- Changes the moment it is cycled, this page included, so the
+                   choice is judged by reading it rather than by trusting a
+                   name. -->
+              <div class="rows">
+                <Cycler
+                  label={t.panel.pages.language}
+                  value={languagePreference}
+                  options={LANGUAGE_OPTIONS}
+                  onChange={onLanguage}
+                />
+
+                <p class="hint">{languageHint}</p>
               </div>
             {:else if page === "startup"}
               <div class="rows">

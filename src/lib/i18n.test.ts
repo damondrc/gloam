@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DICTIONARIES, pickLocale, type Locale, type Messages } from "./i18n.svelte";
+import {
+  DICTIONARIES,
+  LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCES,
+  pickLocale,
+  resolveLocale,
+  type Locale,
+  type Messages,
+} from "./i18n.svelte";
 import { TOUR } from "./tour";
 
 /**
@@ -32,6 +40,7 @@ const ARGUMENTS: Record<string, (m: Messages) => unknown[]> = {
   "controls.increase": (m) => [m.panel.focus],
   "tour.stepOf": () => [2, 4],
   "panel.tracks": () => [34],
+  "panel.followsSystem": () => ["Español"],
 };
 
 /**
@@ -120,5 +129,33 @@ describe("the language Gloam starts in", () => {
   // in them.
   it("is not fooled by what every object has", () => {
     expect(pickLocale(["constructor", "toString", "__proto__"])).toBe("en");
+  });
+});
+
+describe("the language somebody chose", () => {
+  // Chosen means chosen: the system does not get a say, whatever it prefers.
+  it.each(LOCALES)("is %s whatever the system prefers, once chosen", (locale) => {
+    for (const system of [[], ["en-US"], ["es-MX"], ["de-DE", "fr"]]) {
+      expect(resolveLocale(locale, system)).toBe(locale);
+    }
+  });
+
+  it("is whatever the system would pick when left to the system", () => {
+    for (const system of [[], ["en-US"], ["es-MX"], ["de-DE", "es", "en"]]) {
+      expect(resolveLocale("system", system)).toBe(pickLocale(system));
+    }
+  });
+
+  it("can be any language there is a dictionary for, or the system", () => {
+    expect([...LANGUAGE_PREFERENCES].sort()).toEqual(["system", ...LOCALES].sort());
+  });
+
+  // Each name is the language's own, and identical in every dictionary,
+  // because it is what somebody lost in the wrong language looks for.
+  it("names every language in itself, and differently", () => {
+    const names = LOCALES.map((locale) => LANGUAGE_NAMES[locale]);
+
+    expect(new Set(names).size).toBe(LOCALES.length);
+    for (const name of names) expect(name.trim().length).toBeGreaterThan(0);
   });
 });

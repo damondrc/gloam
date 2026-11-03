@@ -22,7 +22,9 @@ commit that made the change, and in the architecture notes.
   Spanish for them does not fit beside the music controls.
   Gloam speaks whichever of its languages your system prefers, from the
   first frame, and English when it has none of them. Any Spanish counts,
-  whatever the region.
+  whatever the region. **Settings → Language** picks one by hand instead,
+  and keeps it whatever the system says; each language is listed under its
+  own name, so the way back is readable from either one.
 
 ### Changed
 

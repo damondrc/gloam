@@ -54,16 +54,17 @@ try {
  *
  * The music player was first driven from here, before it had an interface,
  * because the way to find out whether it decodes a real folder of real FLAC on
- * a real machine should not be to build one first. The language is here for
- * the same reason: a dictionary exists before anything lets a person choose
- * it, and reading every line in place is how it gets checked.
+ * a real machine should not be to build one first. The language is here
+ * because it was in the same position, a dictionary before anything let a
+ * person choose it, and because switching it from the console is still the
+ * quickest way to read every line in place without opening Settings.
  * `import.meta.env.DEV` is the literal `false` in a release build, so the
  * bundler removes this entirely: in a shipped Gloam there is no `window.gloam`
  * to find.
  *
  *   await gloam.music.openFolder("C:/Users/you/Music/Something")
  *   await gloam.music.play()
- *   gloam.language.locale = "es"
+ *   gloam.language.preference = "es"
  */
 if (import.meta.env.DEV) {
   const music = await import("./lib/music");

@@ -176,6 +176,7 @@ the timer, the ground is where the machinery lives.
 | Settings | |
 | --- | --- |
 | **Ambience** | What the widget is like to sit beside: volume, the material it sounds like, how alive the sky is, and what the horizon is. |
+| **Language** | English or Español. Left on **System**, Gloam speaks whichever of the two your system prefers, and English if it prefers neither. |
 | **Startup** | Whether the machine opens Gloam by itself. |
 | **Keys** | Every shortcut, and the way back to the tour. |
 

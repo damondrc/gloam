@@ -111,9 +111,20 @@ export const en = {
     /** The lines of the Settings index, and the titles of their pages. */
     pages: {
       ambience: "Ambience",
+      language: "Language",
       startup: "Startup",
       keys: "Keys",
     },
+    /**
+     * The one language option that is a word rather than a language. The
+     * languages themselves are named in their own words, outside the
+     * dictionaries; see `LANGUAGE_NAMES`.
+     */
+    system: "System",
+    /** Under "System": which language that turned out to be. */
+    followsSystem: (name: string) => `Follows your system, which is in ${name}.`,
+    /** Under a language picked by hand. */
+    keepsLanguage: "Stays this way, whatever your system is set to.",
     /** Read aloud for the page title, which is also the way back. */
     back: "Back to settings",
     /** What the Startup line of the index says it is set to. */

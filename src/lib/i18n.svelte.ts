@@ -11,9 +11,10 @@
  * Components read `language.messages` through a `$derived`, which makes every
  * word on screen follow a change of language without anything being reloaded.
  *
- * It starts in the system's language. Nothing is stored yet, so there is
- * nothing to disagree with: the first launch and every launch after it ask the
- * same question and get the same answer until the system changes.
+ * What is stored is a preference, not a language: "system", or one language
+ * chosen in Settings. Somebody who never opens Settings keeps following the
+ * system, including after the system changes, which would stop being true the
+ * moment the language it happened to resolve to was written down instead.
  */
 import { en } from "./i18n/en";
 import type { Messages } from "./i18n/en";
@@ -59,8 +60,43 @@ export function pickLocale(preferred: readonly string[]): Locale {
 const systemLanguages = (): readonly string[] =>
   typeof navigator === "undefined" ? [] : navigator.languages;
 
+/** What can be chosen in Settings: follow the system, or one language. */
+export type LanguagePreference = "system" | Locale;
+
+/**
+ * In the order Settings cycles through them. Built from the dictionaries, so
+ * a new language becomes choosable the moment it has one.
+ */
+export const LANGUAGE_PREFERENCES: readonly LanguagePreference[] = [
+  "system",
+  ...(Object.keys(DICTIONARIES) as Locale[]),
+];
+
+/**
+ * Each language's name in itself, the same in every dictionary.
+ *
+ * Kept out of the dictionaries on purpose. Somebody who has ended up in a
+ * language they cannot read has to be able to find their own in the list,
+ * and "Spanish" written in Japanese does not help a Spanish speaker. Keyed by
+ * every locale, so a new language does not compile until it has named itself.
+ */
+export const LANGUAGE_NAMES: Record<Locale, string> = {
+  en: "English",
+  es: "Español",
+};
+
+export function resolveLocale(
+  preference: LanguagePreference,
+  preferred: readonly string[]
+): Locale {
+  return preference === "system" ? pickLocale(preferred) : preference;
+}
+
 class Language {
-  locale = $state<Locale>(pickLocale(systemLanguages()));
+  preference = $state<LanguagePreference>("system");
+  /** What the system alone would pick, for Settings to say out loud. */
+  system = pickLocale(systemLanguages());
+  locale = $derived(resolveLocale(this.preference, systemLanguages()));
   messages = $derived(DICTIONARIES[this.locale]);
 }
 

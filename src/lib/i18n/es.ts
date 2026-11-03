@@ -104,9 +104,18 @@ export const es: Messages = {
 
     pages: {
       ambience: "Ambiente",
+      language: "Idioma",
       startup: "Arranque",
       keys: "Teclas",
     },
+    system: "Sistema",
+    /**
+     * Names of languages are not capitalised in a Spanish sentence, and the
+     * name arrives as it is written in a list: "Español".
+     */
+    followsSystem: (name: string) =>
+      `Sigue al sistema, que está en ${name.toLocaleLowerCase("es")}.`,
+    keepsLanguage: "Se mantiene, aunque el sistema esté en otro idioma.",
     back: "Volver a ajustes",
     on: "Activado",
     off: "Desactivado",

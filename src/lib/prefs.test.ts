@@ -62,6 +62,7 @@ describe("round trip", () => {
       ambience: "light",
       horizon: "skyline",
       config: { focusMinutes: 45, breakMinutes: 15, focusSessions: 4 },
+      language: "es",
       music: { folder: "D:/Music/Nocturnes", volume: 0.25, shuffle: true, crossfade: true },
       position: { x: 2400, y: 300 },
       seenIntro: true,
@@ -74,6 +75,7 @@ describe("round trip", () => {
       ambience: "calm",
       horizon: "ridge",
       config: { focusMinutes: 5, breakMinutes: 1, focusSessions: 1 },
+      language: "en",
       music: { folder: null, volume: 1, shuffle: false, crossfade: true },
       position: { x: -1200, y: -80 },
       seenIntro: false,
@@ -101,6 +103,8 @@ describe("nonsense in storage", () => {
     '{"compact":"yes","ambience":42,"sound":[],"horizon":{}}',
     '{"music":"D:/Music"}',
     '{"music":{"folder":42,"volume":"loud"}}',
+    '{"language":"tlh"}',
+    '{"language":42}',
   ];
 
   // The bar is not "recovers gracefully". It is "the widget opens", which
@@ -119,6 +123,7 @@ describe("nonsense in storage", () => {
     expect(["bowl", "bell", "felt"]).toContain(prefs.sound);
     expect(["full", "calm", "light"]).toContain(prefs.ambience);
     expect(["water", "skyline", "ridge"]).toContain(prefs.horizon);
+    expect(["system", "en", "es"]).toContain(prefs.language);
     expect(Number.isFinite(prefs.config.focusMinutes)).toBe(true);
     expect(prefs.music.volume).toBeGreaterThanOrEqual(0);
     expect(prefs.music.volume).toBeLessThanOrEqual(1);
@@ -315,6 +320,37 @@ describe("the window position", () => {
 
     expect(loadPrefs().position).toBeNull();
   });
+});
+
+describe("the language", () => {
+  it("follows the system for someone opening Gloam for the first time", () => {
+    expect(loadPrefs().language).toBe("system");
+  });
+
+  // 1.1 had no such field. Somebody updating keeps getting the language
+  // their system speaks, which is what they had before.
+  it("follows the system for a file written before it existed", () => {
+    write({ compact: true, volume: 0.3, horizon: "ridge" });
+
+    expect(loadPrefs().language).toBe("system");
+  });
+
+  it.each(["en", "es"])("keeps %s once it has been chosen", (language) => {
+    write({ language });
+
+    expect(loadPrefs().language).toBe(language);
+  });
+
+  // A language with no dictionary any more, or a value nobody could have
+  // chosen. The system is the better guess at what somebody can read.
+  it.each(["tlh", "ES", "es-MX", "", "constructor", 42, null])(
+    "follows the system rather than trusting %s",
+    (language) => {
+      write({ language });
+
+      expect(loadPrefs().language).toBe("system");
+    }
+  );
 });
 
 describe("the one-time hint", () => {

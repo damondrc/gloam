@@ -250,7 +250,8 @@ would break the one idea the backdrop carries.
 Three tabs, split by how often each is reached for. **Cycle** is opened before
 a session, so it holds the three durations and nothing else. **Music** is the
 other thing touched while working. **Settings** holds everything that is set
-once and lived with: the ambience, launching at login, and the keys.
+once and lived with: the ambience, the language, launching at login, and
+the keys.
 
 Until 1.2 there were four tabs — General, Ambience, Music and Keys — and
 General carried the startup switch under the durations. That put the least

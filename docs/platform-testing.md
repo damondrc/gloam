@@ -306,7 +306,8 @@ display language set in Settings. On Linux, WebKitGTK reads it from the
 environment — `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` or `LANG` — which is what
 a desktop sets from its region settings and what a terminal can override
 for one launch: `LANG=es_MX.UTF-8 gloam`. The automated tests cover what
-Gloam does with the list. These rows cover whether the list arrives at all.
+Gloam does with the list. J1–J4 cover whether the list arrives at all,
+and J5–J7 what happens once somebody chooses for themselves.
 
 | # | Check | Win 11 | Linux |
 | --- | --- | --- | --- |
@@ -314,6 +315,9 @@ Gloam does with the list. These rows cover whether the list arrives at all.
 | J2 | With the system in any other language, it opens in English | | |
 | J3 | The tray menu is in the same language as the widget the first time it is opened | | |
 | J4 | FOCUS, BREAK and DONE stay as they are in Spanish, and with music loaded the label does not run under the transport controls on hover | | |
+| J5 | Choosing a language in **Settings → Language** changes every word at once — the panel, the tooltips and the tray menu — without a restart | | |
+| J6 | A language chosen by hand survives Quit and relaunch, and is the **first frame** shown, even with the system in the other language | | |
+| J7 | Back on **System**, it follows the system again, and the line under it names the language the system is in | | |
 
 ### Notes
 

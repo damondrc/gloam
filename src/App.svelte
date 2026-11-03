@@ -127,6 +127,9 @@
   });
 
   const stored = loadPrefs();
+  // Before anything is drawn, so a chosen language is the first one on
+  // screen rather than the system's for a frame.
+  language.preference = stored.language;
   let compact = $state(stored.compact);
   let hovering = $state(false);
   let panelOpen = $state(false);
@@ -542,6 +545,7 @@
       ambience,
       horizon,
       config: timer.config,
+      language: language.preference,
       music: {
         folder: musicFolder,
         volume: musicVolume,
@@ -1073,6 +1077,9 @@
        {atLoginKnown}
        {tray}
        onAtLogin={setAtLogin}
+       languagePreference={language.preference}
+       systemLanguage={language.system}
+       onLanguage={(next) => (language.preference = next)}
        {musicFolder}
        musicCount={player.count}
        onPickFolder={chooseMusicFolder}
