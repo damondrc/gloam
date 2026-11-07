@@ -1011,8 +1011,8 @@
         <button
           class="disclose"
           onclick={togglePanel}
-          title={panelOpen ? t.widget.closeSettings : t.widget.openSettings}
-          aria-label={panelOpen ? t.widget.closeSettings : t.widget.openSettings}
+          title={panelOpen ? t.widget.closePanel : t.widget.openPanel}
+          aria-label={panelOpen ? t.widget.closePanel : t.widget.openPanel}
           aria-expanded={panelOpen}
         >
           <svg viewBox="0 0 16 16" aria-hidden="true">

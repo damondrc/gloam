@@ -111,7 +111,7 @@ reposo se ve como parte del paisaje.
 | --- | --- |
 | `Espacio` | Iniciar / pausar |
 | `C` | Modo compacto |
-| `S` | Abrir o cerrar el panel de ajustes |
+| `S` | Abrir o cerrar el panel |
 | `+` / `-` | Agrandar o achicar el widget |
 | `Ctrl+Alt+G` | Bloquear o desbloquear, desde cualquier lugar |
 

@@ -103,7 +103,7 @@ rest it reads as scenery.
 | --- | --- |
 | `Space` | Start / pause |
 | `C` | Toggle compact mode |
-| `S` | Open or close the settings panel |
+| `S` | Open or close the panel |
 | `+` / `-` | Scale the widget up or down |
 | `Ctrl+Alt+G` | Toggle lock, from anywhere |
 

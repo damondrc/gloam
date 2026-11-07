@@ -33,8 +33,8 @@ export const en = {
     hideTitle: "Hide — Gloam keeps running in the tray",
     quit: "Quit",
     quitTitle: "Quit Gloam",
-    openSettings: "Open settings",
-    closeSettings: "Close settings",
+    openPanel: "Open the panel",
+    closePanel: "Close the panel",
     /** Follows the keys themselves, which are drawn separately. */
     toUnlock: "to unlock",
     /** The dots under the readout, for a screen reader. */
@@ -85,7 +85,7 @@ export const en = {
         "the sun sinks while you focus, and the moon comes up while you rest.",
       handles:
         "There is no title bar: drag it from anywhere on its face. The corner " +
-        "resizes it, and the arrow below opens the settings.",
+        "resizes it, and the arrow below opens the panel.",
       compact:
         "Too big? A double-click folds it into a single row — the clock, play " +
         "and the padlock. Try it: double-click again to bring it back.",
@@ -193,7 +193,7 @@ export const en = {
   shortcuts: {
     toggleTimer: { keys: "Space", does: "Start or pause" },
     toggleCompact: { keys: "C", does: "Fold to compact" },
-    togglePanel: { keys: "S", does: "Open settings" },
+    togglePanel: { keys: "S", does: "Open the panel" },
     scale: { keys: "+ / −", does: "Resize" },
     lock: { keys: "Ctrl+Alt+G", does: "Lock, from anywhere" },
   },

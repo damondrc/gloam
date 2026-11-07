@@ -28,8 +28,8 @@ export const es: Messages = {
     hideTitle: "Ocultar — Gloam sigue funcionando en la bandeja",
     quit: "Salir",
     quitTitle: "Salir de Gloam",
-    openSettings: "Abrir ajustes",
-    closeSettings: "Cerrar ajustes",
+    openPanel: "Abrir el panel",
+    closePanel: "Cerrar el panel",
     toUnlock: "para desbloquear",
     sessionOf: (session: number, total: number) => `Sesión ${session} de ${total}`,
   },
@@ -80,7 +80,7 @@ export const es: Messages = {
         "reloj: el sol baja mientras te concentras y la luna sale mientras descansas.",
       handles:
         "No tiene barra de título: arrástralo desde cualquier parte. La esquina " +
-        "cambia su tamaño y la flecha de abajo abre los ajustes.",
+        "cambia su tamaño y la flecha de abajo abre el panel.",
       compact:
         "¿Muy grande? Un doble clic lo pliega en una sola fila: el reloj, el " +
         "botón de inicio y el candado. Pruébalo, y otro doble clic lo devuelve.",
@@ -183,7 +183,7 @@ export const es: Messages = {
   shortcuts: {
     toggleTimer: { keys: "Espacio", does: "Iniciar o pausar" },
     toggleCompact: { keys: "C", does: "Modo compacto" },
-    togglePanel: { keys: "S", does: "Abrir ajustes" },
+    togglePanel: { keys: "S", does: "Abrir el panel" },
     scale: { keys: "+ / −", does: "Cambiar tamaño" },
     lock: { keys: "Ctrl+Alt+G", does: "Bloquear, desde cualquier lugar" },
   },

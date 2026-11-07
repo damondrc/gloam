@@ -36,7 +36,8 @@ commit that made the change, and in the architecture notes.
   list of Ambience, Startup and Keys that opens a page per line and says on
   each line what it is set to. A page taller than the panel scrolls inside
   it, so the panel itself got shorter rather than taller, from 214 design
-  pixels to 189.
+  pixels to 189. The arrow and `S` now say they open the panel rather than
+  the settings, since Settings is one of its tabs and not where it opens.
 
 ## [1.1.0]  — 2026-10-15
 
