@@ -24,7 +24,9 @@ commit that made the change, and in the architecture notes.
   first frame, and English when it has none of them. Any Spanish counts,
   whatever the region. **Settings → Language** picks one by hand instead,
   and keeps it whatever the system says; each language is listed under its
-  own name, so the way back is readable from either one.
+  own name, so the way back is readable from either one. The README has a
+  Spanish version too, [README.es.md](README.es.md); the rest of the
+  documentation stays in English.
 
 ### Changed
 

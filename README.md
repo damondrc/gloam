@@ -3,6 +3,10 @@
 A floating, ambient focus timer that lives in the corner of your screen.
 
 <p align="center">
+  <strong>English</strong> · <a href="README.es.md">Español</a>
+</p>
+
+<p align="center">
   <img src="docs/media/portrait.gif" width="600"
        alt="The widget at rest over a dusk sky: clouds drifting across a mountain ridge, a flock crossing once, the readout holding at 30:00">
 </p>
@@ -83,6 +87,8 @@ distance between an ambient backdrop and a busy one.</em></p>
   steps aside when Gloam has something to say, and follows your headphones.
 - **Soft synthesised sound** for its own voice — no bundled audio files, and
   no jump scares.
+- **In English and Spanish.** It follows your system's language, or the one
+  you choose.
 - **Opens with your session** if you ask it to, into the tray rather than onto
   your screen.
 - **No accounts, no network, no statistics.** Gloam opens no connections at all.
