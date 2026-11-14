@@ -161,6 +161,12 @@ decisions that were deliberately deferred, and each says what would unblock it.
       ridge in three ranges. Generated from a seed rather than drawn, so
       nothing had to be licensed and both scale with everything else.
       `src/lib/horizon.ts`.
+- [x] **A Spanish translation** — landed in 1.2.0. Asked for while 1.0 was
+      being built and deferred until the app had stopped changing shape, since
+      the work was less the words than deciding which of them are labels and
+      which are part of the picture: FOCUS, BREAK and DONE stayed English for
+      that reason. The language follows the system and can be chosen in
+      Settings. `src/lib/i18n/`, and the reasoning in `architecture.md`.
 - [x] **Launch with the session** — landed in 1.0.0, into the tray. The state
       is read from the operating system rather than stored, because it is the
       operating system's. `src/lib/autostart.ts`.
@@ -180,16 +186,6 @@ decisions that were deliberately deferred, and each says what would unblock it.
       thread above rather than fixed by adding the target — publishing a
       package nobody has installed is the thing the AppImage taught this
       project not to do.
-
-## Documented instead
-
-- [x] **The Spanish translation.** Asked for while 1.0 was being built, and
-      deferred past 1.1 on purpose: an interface this small is mostly nouns, and the work is
-      not the words but deciding which of them are labels and which are part
-      of the picture. FOCUS and BREAK are set in the widget's own type at its
-      own size and read as marks rather than as text, so they would most
-      likely stay. Nothing is blocked; there is simply nothing to translate
-      until the app has stopped changing shape.
 
 ---
 

@@ -313,6 +313,91 @@ be hidden — on a desktop that could not create a tray the flag is ignored and
 the widget opens on screen, because starting hidden with nothing to bring it
 back is starting lost.
 
+## Language
+
+Gloam speaks English and Spanish, and the second was added by first moving
+every word of the first into one place: `src/lib/i18n/en.ts`, nested by where
+each line appears, so it reads top to bottom like the interface rather than
+like a list of keys. Spanish is `es.ts` beside it.
+
+There is no library. What one would provide is a dictionary per language, a
+way to choose between them, and a guarantee that every dictionary covers every
+line — and the third is what libraries do least well, because they look a key
+up at run time and find it missing when somebody reads the screen. Here the
+English dictionary is an ordinary object and the shape of every other language
+is derived from it, so a dictionary that leaves a line out, adds one, or takes
+different arguments does not compile. The tests cover what the compiler
+cannot see: a line that is present and says nothing.
+
+Anything with a number or a name inside it is a function rather than a
+template with a placeholder. A placeholder can be misspelt or dropped and
+nothing notices until it is on screen; a function's arguments are checked
+like any other code, and each language builds the sentence around the value
+however its grammar wants. Spanish shows why it matters. A control's arrows
+say *Sonido anterior* rather than *Anterior sonido*, because *anterior* does
+not change with gender and so is safe after any name, and the plural of
+*pista* is the language's own business rather than an `s` appended by the
+English rule.
+
+Translating was mostly deciding what is not a sentence. FOCUS, BREAK and DONE
+stay in English in every language: they are set in the widget's own type at
+the widget's own size, they read as marks on the sky rather than as words, and
+the Spanish for them — ENFOQUE, DESCANSO — runs into the music controls in the
+strip they share. Drawn side by side first, as everything visual is here, and
+decided by looking. The sound sets and the horizons are translated, because
+they are names on a control. Gloam, Ctrl+Alt+G and the formats a music folder
+may hold are the same in every language.
+
+### Which language
+
+What is stored is a preference, not a language: `system`, or a language picked
+by hand under Settings. Storing whichever language `system` happened to mean
+on the first launch would have been simpler and would have stranded somebody
+who never opens Settings in that language after they changed their system.
+Left on `system`, Gloam follows the system every time it starts.
+
+Following the system means the first entry in `navigator.languages` that there
+is a dictionary for. Only the language is read and never the region — Gloam
+has one Spanish, and it serves somebody in Madrid better than English would —
+and the first match wins rather than only the first entry, so a system set to
+German with Spanish second gets Spanish. Underscores count as separators as
+well as hyphens, because on Linux the list is built from a POSIX locale such
+as `es_MX.UTF-8` and is not always tidied. When nothing matches, English,
+because it is the language every line was written in first.
+
+The list is asked of the WebView rather than of Rust. On Windows it is the
+system's own; on Linux WebKitGTK is expected to build it from `LANG` and its
+relatives, which is expected rather than watched until the checklist's J
+section has been run there. If it turns out empty or always English, Rust can
+read the locale itself through the `sys-locale` crate and hand it over the way
+it already hands over the work area — the fallback is written down in
+[open.md](open.md) beside the check.
+
+The preference is set before the first frame is drawn, so somebody who chose
+Spanish never sees a flash of their system's language on the way to it, and
+`<html lang>` follows the language so a screen reader pronounces it as what
+it is. A preference read back from storage goes through the same validation
+as every other: anything that is not a current option falls back to `system`
+rather than to English, because the system is the better guess at what the
+person can read.
+
+The languages are listed under their own names, *English* and *Español*, in
+every language. Somebody who has ended up in one they cannot read has to be
+able to find theirs in the list, and the name of their language written in
+someone else's does not help. Only *System* is translated, as the one option
+that is a word rather than a language, and the line under it says which
+language the system turned out to be, since *System* alone does not.
+
+### The tray
+
+The tray menu is built in Rust before the interface has chosen a language, and
+Rust has no dictionary of its own — keeping one source of truth for the words
+is the point of all of this. So the menu starts in English, as it always did,
+and the frontend renames it once it knows what to call things and again
+whenever the language changes. The show and hide entry is renamed in whichever
+state the window is already in, so renaming it never also flips what it
+offers.
+
 ## Sound
 
 Everything Gloam says in its own voice is synthesised. No audio files of its

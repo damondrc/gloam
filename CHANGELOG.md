@@ -13,6 +13,8 @@ commit that made the change, and in the architecture notes.
 
 ## [Unreleased]
 
+## [1.2.0]
+
 ### Added
 
 - **Spanish.** Every line of the interface has a Spanish version — the
@@ -39,7 +41,7 @@ commit that made the change, and in the architecture notes.
   pixels to 189. The arrow and `S` now say they open the panel rather than
   the settings, since Settings is one of its tabs and not where it opens.
 
-## [1.1.0]  — 2026-10-15
+## [1.1.0] — 2026-10-15
 
 ### Added
 
@@ -407,7 +409,8 @@ commit that made the change, and in the architecture notes.
 - Fixed 30/10 focus and break cycles.
 - An ambient sky whose state encodes progress, and chimes on each transition.
 
-[Unreleased]: https://github.com/damondrc/gloam/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/damondrc/gloam/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/damondrc/gloam/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/damondrc/gloam/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/damondrc/gloam/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/damondrc/gloam/compare/v0.5.0...v0.6.0
