@@ -219,6 +219,26 @@ const css = (c: Rgb): string => `${c[0]} ${c[1]} ${c[2]}`;
  */
 const distant = (s: SkyState, far: number): Rgb => lerpRgb(s.ground, s.mid, far);
 
+/** How much of the air shows at the foot of the farthest plane. */
+const MIST = 0.3;
+
+/**
+ * The same plane at its foot, where the air between it and you is thickest.
+ *
+ * A distant range is not one colour from summit to valley: the valley has
+ * more air in front of it, and the air near a horizon is the colour of the
+ * sky's lowest band — orange under a setting sun, deep blue at midnight. So a
+ * far plane is filled from its own colour down to this one, and the line
+ * where a nearer plane crosses it is dark against pale rather than dark
+ * against nearly as dark.
+ *
+ * Still a colour and still opaque, for the reason given above. The target
+ * leans toward the bottom of the sky rather than its middle, because that is
+ * the air the foot of a mountain is actually standing in.
+ */
+const misted = (s: SkyState, far: number, strength: number): Rgb =>
+  lerpRgb(distant(s, far), lerpRgb(s.bottom, s.mid, 0.35), MIST * strength);
+
 /** Flattens a SkyState into the CSS custom properties the markup consumes. */
 export function skyVars(s: SkyState): string {
   return [
@@ -228,6 +248,10 @@ export function skyVars(s: SkyState): string {
     `--ground: ${css(s.ground)}`,
     `--ground-mid: ${css(distant(s, 0.26))}`,
     `--ground-far: ${css(distant(s, 0.52))}`,
+    // Each far plane again, at its foot. The middle one gets less: there is
+    // less air in front of it.
+    `--mist-far: ${css(misted(s, 0.52, 1))}`,
+    `--mist-mid: ${css(misted(s, 0.26, 0.7))}`,
     `--body: ${css(s.body)}`,
     `--body-y: ${(s.bodyY * 100).toFixed(2)}%`,
     // rem so the sun scales with the rest of the widget; see app.css.

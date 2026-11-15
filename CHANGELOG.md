@@ -32,6 +32,17 @@ commit that made the change, and in the architecture notes.
 
 ### Changed
 
+- **The city and the mountains were redrawn.** Both were made of the plainest
+  shapes that would do — rectangles for buildings, a zigzag for a range — and
+  looked it. The city is now a lived-in town: pitched roofs, chimneys, the odd
+  steeple and dome, aerials and stair hatches on the flat roofs, and trees in
+  the alleys, with facades glazed three different ways. The mountains have
+  sharp peaks far off, rounded hills in front of them, and stands of pines on
+  the nearest slope, with bare hillside between one stand and the next. The
+  far planes of both thin toward the colour of the sky at their feet. Nothing
+  moves, and each still takes exactly the bottom quarter of the widget. Which
+  city or range you get is still drawn from a short list at launch; the lists
+  were chosen again for the new shapes.
 - **The panel has three tabs: Cycle, Music and Settings.** Cycle holds the
   three durations and nothing else, since it is the tab opened before every
   session. Everything set once and lived with moved into Settings, a short

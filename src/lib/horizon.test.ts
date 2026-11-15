@@ -3,16 +3,18 @@ import {
   BOX,
   buildRidge,
   buildSkyline,
+  GLAZING,
+  HAZE,
   HORIZON_SHARE,
+  pinePath,
   RIDGE,
   RIDGE_SEED,
   RIDGE_SEEDS,
   SKYLINE,
   SKYLINE_SEED,
   SKYLINE_SEEDS,
-  WINDOW,
 } from "./horizon";
-import type { Building } from "./horizon";
+import type { Building, Detail, Pine } from "./horizon";
 import { NORMAL_SIZE } from "./layout";
 
 /**
@@ -91,6 +93,44 @@ describe("the cast", () => {
   });
 });
 
+/** Polygon points back into numbers, for the checks that are about geometry. */
+const parse = (list: string): { x: number; y: number }[] =>
+  list.split(" ").map((pair) => {
+    const [x, y] = pair.split(",").map(Number);
+    return { x, y };
+  });
+
+/** The box a detail takes up, whichever of the three shapes it is. */
+function extent(detail: Detail): { left: number; right: number; top: number; bottom: number } {
+  if (detail.shape === "rect") {
+    return {
+      left: detail.x,
+      right: detail.x + detail.width,
+      top: detail.y,
+      bottom: detail.y + detail.height,
+    };
+  }
+  if (detail.shape === "circle") {
+    return {
+      left: detail.cx - detail.r,
+      right: detail.cx + detail.r,
+      top: detail.cy - detail.r,
+      bottom: detail.cy + detail.r,
+    };
+  }
+  const pts = parse(detail.points);
+  return {
+    left: Math.min(...pts.map((p) => p.x)),
+    right: Math.max(...pts.map((p) => p.x)),
+    top: Math.min(...pts.map((p) => p.y)),
+    bottom: Math.max(...pts.map((p) => p.y)),
+  };
+}
+
+/** Which way a facade is glazed, read back off the size of its windows. */
+const glazingOf = (width: number) =>
+  Object.values(GLAZING).find((g) => g.width === width)!;
+
 describe("buildSkyline", () => {
   // Still the reason for a seeded generator rather than a random one: what a
   // seed names has to be one city, not a family of them.
@@ -107,8 +147,6 @@ describe("buildSkyline", () => {
     const planes = city.planes;
     const all: readonly Building[] = planes.flat();
 
-    // One silhouette is a shape; three at three distances is depth, and depth
-    // is the only thing that made this stop reading as a jagged border.
     it("is drawn in three planes", () => {
       expect(planes).toHaveLength(3);
     });
@@ -116,8 +154,6 @@ describe("buildSkyline", () => {
     describe.each(planes.map((p, i) => [i, p] as const))(
       "plane %i",
       (_, blocks) => {
-        // Cut off at both edges rather than ending on them: a skyline whose
-        // last building finishes flush with the frame reads as a diagram.
         it("runs past both edges of the frame", () => {
           expect(blocks[0].x).toBeLessThan(0);
           const last = blocks[blocks.length - 1];
@@ -132,8 +168,6 @@ describe("buildSkyline", () => {
           }
         });
 
-        // Which is a quarter of the widget and no more. The sky is the clock,
-        // so the sky is what has to dominate the frame.
         it("keeps every roof inside the box and above the street", () => {
           for (const b of blocks) {
             expect(b.y).toBeGreaterThanOrEqual(0);
@@ -142,31 +176,62 @@ describe("buildSkyline", () => {
           }
         });
 
-        // Not one height, and not a staircase. A row of equal roofs is a fence.
         it("varies in height", () => {
           const roofs = blocks.map((b) => b.y);
           expect(Math.max(...roofs) - Math.min(...roofs)).toBeGreaterThan(3);
         });
 
-        it("hangs every mast off the roof it belongs to", () => {
+        // A roof takes up the top of a building, never more than the top.
+        it("starts every facade under its roof and well above the ground", () => {
           for (const b of blocks) {
-            if (!b.mast) continue;
-            expect(b.mast.y).toBeLessThan(b.y);
-            expect(b.mast.x).toBeGreaterThan(b.x);
-            expect(b.mast.x + b.mast.width).toBeLessThan(b.x + b.width);
-            expect(b.mast.y).toBeGreaterThanOrEqual(0);
+            expect(b.eaves).toBeGreaterThanOrEqual(b.y);
+            expect(b.eaves).toBeLessThan(BOX.height - 4);
           }
         });
 
-        // Whole windows, not windows whose right-hand edge is on the sky. The
-        // size is not stored per window, so the check has to bring it along.
-        it("keeps every window inside the building it belongs to", () => {
+        // The outline is the building: whatever its roof does, it has to stay
+        // over its own plot and reach the bottom edge. It tops out where `y`
+        // says, or lower when the roof is drawn as a detail — a dome is — and
+        // never higher, because the culling hides things behind that line.
+        it("draws every silhouette over its own plot, down to the bottom edge", () => {
+          for (const b of blocks) {
+            const pts = parse(b.outline);
+            expect(pts[0].y).toBe(BOX.height);
+            expect(pts[pts.length - 1].y).toBe(BOX.height);
+            for (const p of pts) {
+              expect(p.x).toBeGreaterThanOrEqual(b.x - 0.01);
+              expect(p.x).toBeLessThanOrEqual(b.x + b.width + 0.01);
+              expect(p.y).toBeLessThanOrEqual(BOX.height);
+            }
+            const top = Math.min(...pts.map((p) => p.y));
+            expect(top).toBeGreaterThanOrEqual(b.y - 0.01);
+            expect(top).toBeLessThanOrEqual(b.eaves + 0.01);
+          }
+        });
+
+        // Half a pixel of grace, for a beam that overhangs its own posts.
+        it("stands everything on a roof over the building it belongs to", () => {
+          for (const b of blocks) {
+            for (const detail of b.details) {
+              const box = extent(detail);
+              expect(box.left).toBeGreaterThan(b.x - 0.5);
+              expect(box.right).toBeLessThan(b.x + b.width + 0.5);
+              expect(box.top).toBeGreaterThanOrEqual(0);
+              // On the roof, not on the wall: everything up there clears the
+              // eaves, and nothing reaches the ground.
+              expect(box.top).toBeLessThan(b.eaves);
+              expect(box.bottom).toBeLessThanOrEqual(BOX.height);
+            }
+          }
+        });
+
+        it("keeps every window inside the facade it belongs to", () => {
           for (const b of blocks) {
             for (const w of b.windows) {
               expect(w.x).toBeGreaterThan(b.x);
-              expect(w.x + WINDOW.width).toBeLessThan(b.x + b.width);
-              expect(w.y).toBeGreaterThan(b.y);
-              expect(w.y + WINDOW.height).toBeLessThan(BOX.height);
+              expect(w.x + w.width).toBeLessThan(b.x + b.width);
+              expect(w.y).toBeGreaterThan(b.eaves);
+              expect(w.y + w.height).toBeLessThan(BOX.height);
             }
           }
         });
@@ -179,6 +244,12 @@ describe("buildSkyline", () => {
               expect(seen.has(cell)).toBe(false);
               seen.add(cell);
             }
+          }
+        });
+
+        it("glazes one building one way", () => {
+          for (const b of blocks) {
+            expect(new Set(b.windows.map((w) => w.width)).size).toBeLessThanOrEqual(1);
           }
         });
       }
@@ -196,8 +267,6 @@ describe("buildSkyline", () => {
         expect(highest[1]).toBeLessThan(highest[2]);
       });
 
-      // Distance is not only colour: a far plane is narrower and more crowded
-      // per inch of frame, which is most of why it reads as far.
       it("makes the near blocks the wide ones", () => {
         const widest = planes.map(
           (p) => p.reduce((sum, b) => sum + b.width, 0) / p.length
@@ -206,9 +275,6 @@ describe("buildSkyline", () => {
         expect(widest[1]).toBeLessThan(widest[2]);
       });
 
-      // The two behind stand up rather than lying down; the near plane is
-      // exempt on purpose, because a block filling the bottom of the frame is
-      // the near side of the street rather than a shed.
       it("stands the distant blocks up rather than laying them out", () => {
         for (const blocks of planes.slice(0, 2)) {
           const upright = blocks.filter((b) => BOX.height - b.y > b.width);
@@ -216,11 +282,48 @@ describe("buildSkyline", () => {
         }
       });
 
-      // Whole-silhouette relief, which is what someone actually sees. Each
-      // plane on its own is allowed to be a narrow band of roofs.
       it("gives the silhouette real relief", () => {
         const heights = all.map((b) => BOX.height - b.y);
         expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(8);
+      });
+    });
+
+    /**
+     * What 1.2 changed, pinned from both sides. The city used to be a row of
+     * rectangles, so most roofs have to be something else; and the fix for
+     * that must not become the next thing wrong with it, so what stands on
+     * the roofs is counted too.
+     */
+    describe("the roofline", () => {
+      it("is not a row of boxes", () => {
+        const shaped = all.filter((b) => b.eaves > b.y);
+        expect(shaped.length).toBeGreaterThan(all.length * 0.4);
+      });
+
+      // An average, on purpose. One roof with a tank, an aerial and a pergola
+      // is a roof somebody lives under; every roof like that is a pattern,
+      // and a pattern is what the eye stops on.
+      it("keeps the rooftops quiet", () => {
+        const shapes = all.reduce((n, b) => n + b.details.length, 0);
+        expect(shapes / all.length).toBeLessThan(2.5);
+      });
+
+      it("glazes the city more than one way", () => {
+        const sizes = new Set(all.flatMap((b) => b.windows.map((w) => w.width)));
+        expect(sizes.size).toBeGreaterThan(1);
+      });
+
+      // A tree stands in an alley of the nearest plane: on the street, and
+      // not growing through anybody's wall.
+      it("stands every tree in a gap, on the street", () => {
+        const near = planes[planes.length - 1];
+        for (const tree of city.trees) {
+          expect(tree.cy + tree.r).toBeGreaterThanOrEqual(BOX.base);
+          expect(tree.cy - tree.r).toBeGreaterThan(0);
+          for (const b of near) {
+            expect(tree.cx > b.x && tree.cx < b.x + b.width).toBe(false);
+          }
+        }
       });
     });
 
@@ -234,7 +337,7 @@ describe("buildSkyline", () => {
         for (const blocks of planes.slice(0, -1)) {
           for (const b of blocks) {
             for (const w of b.windows) {
-              expect(w.y + WINDOW.height).toBeLessThanOrEqual(BOX.base);
+              expect(w.y + w.height).toBeLessThanOrEqual(BOX.base);
             }
           }
         }
@@ -247,8 +350,8 @@ describe("buildSkyline", () => {
             for (const w of b.windows) {
               for (const front of nearer) {
                 const overlapsX =
-                  w.x + WINDOW.width > front.x && w.x < front.x + front.width;
-                expect(overlapsX && w.y + WINDOW.height > front.y).toBe(false);
+                  w.x + w.width > front.x && w.x < front.x + front.width;
+                expect(overlapsX && w.y + w.height > front.y).toBe(false);
               }
             }
           }
@@ -256,16 +359,20 @@ describe("buildSkyline", () => {
       });
 
       /**
-       * The near plane is the one nothing stands in front of, so it is the one
-       * that has to be glazed roof to pavement: a lit block whose lights stop
-       * a third of the way up reads as a strip of light rather than a
-       * building.
+       * The near plane is the one nothing stands in front of, so its facades
+       * are glazed for as far down as a row still fits. It used to say "roof
+       * to pavement", which was true of a tower; a house under a gable has
+       * room for one row or two, and what matters is that no facade stops
+       * with a whole row's worth of wall left under it.
        */
-      it("glazes the near facades all the way down", () => {
+      it("glazes the near facades for as far down as a row fits", () => {
         const near = planes[planes.length - 1];
-        const tallest = [...near].sort((a, b) => a.y - b.y)[0];
-        const lowest = Math.max(...tallest.windows.map((w) => w.y));
-        expect(BOX.height - lowest).toBeLessThan(2 * WINDOW.pitchY);
+        for (const b of near) {
+          if (b.windows.length === 0) continue;
+          const g = glazingOf(b.windows[0].width);
+          const lowest = Math.max(...b.windows.map((w) => w.y)) + g.height;
+          expect(BOX.height - g.bottom - lowest).toBeLessThan(g.pitchY);
+        }
       });
     });
 
@@ -289,7 +396,6 @@ describe("buildSkyline", () => {
 
       /** Sunset, from the sun still up to the moment it has gone. */
       const dusk = (evening: number): number => lit(evening, 1);
-
       /** The break, from the top of the night to the end of it. */
       const night = (awake: number): number => lit(1, awake);
 
@@ -307,8 +413,6 @@ describe("buildSkyline", () => {
         expect(dusk(1)).toBeLessThan(windows.length);
       });
 
-      // The whole point of the change. Anything later than this is the city
-      // going to bed, and a peak anywhere else means it is running backwards.
       it("is at its fullest the moment the sun has set", () => {
         const peak = dusk(1);
         for (const e of [0, 0.25, 0.5, 0.75, 1]) expect(dusk(e)).toBeLessThanOrEqual(peak);
@@ -321,13 +425,11 @@ describe("buildSkyline", () => {
         expect(night(0.22)).toBeLessThan(night(0.35));
       });
 
-      // A break ends on a city that is asleep, not on one that was abandoned.
       it("leaves a handful burning at the end of a break", () => {
         expect(night(0.22)).toBeGreaterThan(windows.length / 12);
         expect(night(0.22)).toBeLessThan(night(1) / 2);
       });
 
-      // Nothing goes out. The last frame of a break is still a city.
       it("keeps some lit however far the night runs", () => {
         expect(night(0)).toBeGreaterThan(0);
       });
@@ -341,41 +443,28 @@ describe("buildSkyline", () => {
         const woke = windows.filter((w) => w.wakes > 0 && w.sleeps > 0);
         const mean = (xs: number[]): number =>
           xs.reduce((a, b) => a + b, 0) / xs.length;
-
         const ws = woke.map((w) => w.wakes);
         const ss = woke.map((w) => w.sleeps);
         const mw = mean(ws);
         const ms = mean(ss);
-
         const cov = mean(woke.map((_, i) => (ws[i] - mw) * (ss[i] - ms)));
         const sd = (xs: number[], m: number): number =>
           Math.sqrt(mean(xs.map((x) => (x - m) ** 2)));
-
         expect(Math.abs(cov / (sd(ws, mw) * sd(ss, ms)))).toBeLessThan(0.25);
       });
 
-      // Enough to read as a city rather than as a few dots, few enough that
-      // the frame is not carrying a thousand nodes it does not need. Three
-      // glazed planes generate roughly twice this; the rest are culled.
       it("is a sensible number of windows", () => {
         expect(windows.length).toBeGreaterThan(80);
         expect(windows.length).toBeLessThan(320);
       });
 
-      // A lit facade where every square is the same strength is a grid. The
-      // brightness is most of what stops it being one, so it has to actually
-      // vary — and never fall to something too faint to have been drawn.
       it("burns at a spread of brightnesses, none of them invisible", () => {
         const burn = windows.map((w) => w.burn);
-
         expect(Math.min(...burn)).toBeGreaterThan(0.2);
         expect(Math.max(...burn)).toBeLessThanOrEqual(1);
         expect(Math.max(...burn) - Math.min(...burn)).toBeGreaterThan(0.3);
       });
 
-      // Distance takes the lights with it, or the depth the colours bought is
-      // handed straight back: brightness reads as nearness more strongly than
-      // hue does.
       it("dims with distance", () => {
         const brightest = planes.map((p) =>
           Math.max(...p.flatMap((b) => b.windows.map((w) => w.burn)))
@@ -392,83 +481,190 @@ describe("buildRidge", () => {
     expect(buildRidge(seed)).toEqual(buildRidge(seed));
   });
 
-  // Depth is the point: one silhouette is a jagged border, three at different
-  // distances is a landscape.
   it("has three ranges", () => {
     expect(RIDGE.layers).toHaveLength(3);
   });
 
   describe.each(RIDGE_SEEDS)("seed %i", (seed) => {
     const layers = buildRidge(seed).layers;
+    const lines = layers.map((layer) => parse(layer.outline));
 
-    const parse = (points: string): { x: number; y: number }[] =>
-      points.split(" ").map((pair) => {
-        const [x, y] = pair.split(",").map(Number);
-        return { x, y };
-      });
+    /** How high a range stands at x, between the samples either side. */
+    const heightAt = (line: { x: number; y: number }[], x: number): number => {
+      const inner = line.slice(1, -1);
+      const i = inner.findIndex((p) => p.x >= x);
+      // Past either end, a tree stands on the last slope there is.
+      if (i === -1) return inner[inner.length - 1].y;
+      if (i === 0) return inner[0].y;
+      const a = inner[i - 1];
+      const b = inner[i];
+      return a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x);
+    };
 
-    // Against the bottom of the frame, not against a waterline. There is no
-    // band underneath any more: the ranges are the ground.
+    /**
+     * How much of the frame's width a range has trees along, counting two
+     * trees closer than a few pixels as the same stand.
+     */
+    const wooded = (trees: readonly Pine[]): number => {
+      const spans = trees
+        .map((t) => [Math.max(0, t.x - t.spread), Math.min(BOX.width, t.x + t.spread)])
+        .filter(([from, to]) => to > from)
+        .sort((a, b) => a[0] - b[0]);
+      let total = 0;
+      let end = -Infinity;
+      for (const [from, to] of spans) {
+        total += from - end < 4 ? Math.max(0, to - end) : to - from;
+        end = Math.max(end, to);
+      }
+      return total / BOX.width;
+    };
+
     it("closes each range against the bottom corners", () => {
-      for (const layer of layers) {
-        const points = parse(layer);
+      for (const points of lines) {
         expect(points[0].y).toBe(BOX.height);
         expect(points[points.length - 1].y).toBe(BOX.height);
       }
     });
 
     it("covers the frame and overshoots both edges", () => {
-      for (const layer of layers) {
-        const points = parse(layer);
+      for (const points of lines) {
         expect(points[0].x).toBeLessThan(0);
         expect(points[points.length - 1].x).toBeGreaterThan(BOX.width);
       }
     });
 
     it("keeps every summit inside the box", () => {
-      for (const layer of layers) {
-        for (const { y } of parse(layer)) {
+      for (const points of lines) {
+        for (const { y } of points) {
           expect(y).toBeGreaterThanOrEqual(0);
           expect(y).toBeLessThanOrEqual(BOX.height);
         }
       }
     });
 
-    // Every col above the street, or the range is buried in its own ground
-    // and there is nothing left to see of it.
     it("keeps every range clear of the ground it stands on", () => {
-      for (const layer of layers) {
-        const ys = parse(layer)
-          .slice(1, -1)
-          .map((p) => p.y);
-        expect(Math.max(...ys)).toBeLessThan(BOX.base + 8);
+      for (const points of lines) {
+        const ys = points.slice(1, -1).map((p) => p.y);
+        expect(Math.max(...ys)).toBeLessThanOrEqual(BOX.base + 8);
       }
     });
 
-    // Distance drawn the way it behaves: the far range is the tallest in the
-    // frame, and each nearer one sits lower. Without this the layers cross and
-    // the depth reads as noise.
     it("puts the far range above the near ones", () => {
-      const top = layers.map((layer) =>
-        Math.min(...parse(layer).map((p) => p.y))
-      );
+      const top = lines.map((points) => Math.min(...points.map((p) => p.y)));
       expect(top[0]).toBeLessThan(top[1]);
       expect(top[1]).toBeLessThan(top[2]);
     });
 
-    // The alternation is what makes a peak a peak rather than rolling ground.
-    it("alternates summits and cols", () => {
-      for (const layer of layers) {
-        // Drop the two closing corners, which are not part of the line.
-        const ys = parse(layer)
-          .slice(1, -1)
-          .map((p) => p.y);
-
-        for (let i = 1; i < ys.length - 1; i += 1) {
-          const isSummit = ys[i] < ys[i - 1];
-          expect(ys[i] < ys[i + 1]).toBe(isSummit);
+    /**
+     * This replaced a test that said summits and cols alternate, which was a
+     * description of the zigzag the ranges used to be: a point up, a point
+     * down, and a ruler between them. A range is a line now, and what can be
+     * said about a line is that it is sampled finely enough to look like one
+     * and never jumps.
+     */
+    it("is a line rather than a handful of corners", () => {
+      for (const points of lines) {
+        const ys = points.slice(1, -1).map((p) => p.y);
+        expect(ys.length).toBeGreaterThan(BOX.width / 2);
+        for (let i = 1; i < ys.length; i += 1) {
+          expect(Math.abs(ys[i] - ys[i - 1])).toBeLessThan(3.5);
         }
       }
     });
+
+    it("has more than one summit and more than one col", () => {
+      for (const points of lines) {
+        const ys = points.slice(1, -1).map((p) => p.y);
+        let turns = 0;
+        for (let i = 1; i < ys.length - 1; i += 1) {
+          if ((ys[i] - ys[i - 1]) * (ys[i + 1] - ys[i]) < 0) turns += 1;
+        }
+        expect(turns).toBeGreaterThan(6);
+      }
+    });
+
+    describe("the trees", () => {
+      it("leaves the far range bare", () => {
+        expect(layers[0].trees).toHaveLength(0);
+      });
+
+      it("grows some on the nearest range", () => {
+        expect(layers[2].trees.length).toBeGreaterThan(0);
+      });
+
+      /**
+       * The reason trees come in stands. Planted from end to end they were
+       * the busiest thing in the widget, and two members of the cast were
+       * dropped for coming out that way. Every seed the app can show has to
+       * leave a good part of its nearest slope alone.
+       */
+      it("leaves a good part of every range bare", () => {
+        for (const layer of layers) {
+          expect(wooded(layer.trees)).toBeLessThan(0.6);
+        }
+      });
+
+      it("keeps the distant trees smaller than the near ones", () => {
+        const tallest = (trees: readonly Pine[]): number =>
+          Math.max(0, ...trees.map((t) => t.height));
+        if (layers[1].trees.length > 0) {
+          expect(tallest(layers[1].trees)).toBeLessThan(tallest(layers[2].trees));
+        }
+      });
+
+      // A tree whose foot is above the slope is a tree in the air, and on a
+      // steep slope the downhill corner is the one that gets there first.
+      it("sinks every foot into the slope it stands on", () => {
+        layers.forEach((layer, i) => {
+          for (const tree of layer.trees) {
+            expect(tree.base).toBeGreaterThanOrEqual(heightAt(lines[i], tree.x - tree.spread) - 0.05);
+            expect(tree.base).toBeGreaterThanOrEqual(heightAt(lines[i], tree.x + tree.spread) - 0.05);
+            expect(tree.base - tree.height).toBeGreaterThan(0);
+            expect(tree.height).toBeGreaterThan(0);
+            expect(tree.spread).toBeLessThan(tree.height);
+          }
+        });
+      });
+    });
+  });
+});
+
+describe("pinePath", () => {
+  it("draws nothing for a bare range", () => {
+    expect(pinePath([])).toBe("");
+  });
+
+  it("draws one closed shape to a tree", () => {
+    const trees: Pine[] = [
+      { x: 10, base: 20, height: 4, spread: 1.2 },
+      { x: 14, base: 21, height: 3, spread: 1 },
+    ];
+    const path = pinePath(trees);
+
+    expect(path.match(/M/g)).toHaveLength(2);
+    expect(path.match(/Z/g)).toHaveLength(2);
+    // The tip of the first: directly over its trunk, its whole height up.
+    expect(path.startsWith("M10.00,16.00")).toBe(true);
+  });
+});
+
+/**
+ * Where the mist starts and ends has to describe the planes it is laid over:
+ * a gradient that ran out above the summits, or began below the street, would
+ * be a flat colour with a comment saying otherwise.
+ */
+describe("the haze", () => {
+  it.each(Object.entries(HAZE))("fades each %s plane downward, inside the box", (_, planes) => {
+    for (const [from, to] of Object.values(planes)) {
+      expect(from).toBeGreaterThanOrEqual(0);
+      expect(to).toBeGreaterThan(from);
+      expect(to).toBeLessThanOrEqual(BOX.height);
+    }
+  });
+
+  it("starts the nearer plane's lower than the farther one's", () => {
+    for (const planes of Object.values(HAZE)) {
+      expect(planes.mid[0]).toBeGreaterThan(planes.far[0]);
+    }
   });
 });

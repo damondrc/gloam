@@ -679,6 +679,59 @@ than a transparency. Fading a far ridge instead is cheaper and looks
 plausible until the moon rises behind it — a mountain you can see the moon
 through is not a mountain.
 
+Mist follows the same rule. The two far planes of either horizon are filled
+from their own colour at the top to that colour with air in it at the foot,
+and the air is the colour of the sky's lowest band: orange under a setting
+sun, deep blue at midnight. Both ends are opaque. What it buys is the line
+where a nearer plane crosses a farther one, which is dark against pale rather
+than dark against nearly as dark, and that line is most of what depth is in
+thirty-three pixels.
+
+### What the shapes are
+
+Until 1.2 a building was a rectangle and a range was a zigzag. Both read as
+what they were meant to be, and both looked like the output of a loop: the
+city a bar chart with windows, the range a row of teeth. Nothing was wrong
+with either except that it was square.
+
+A building is now an outline. It has one of seven roofs — flat, stepped back,
+stepped to one side, pitched, pitched one way, a steeple, and rarely a dome —
+and a level roof may carry something: a plant room, a stair hatch, an aerial,
+a pergola, a shrub in a pot, now and then a water tank. A pitched roof may
+have a chimney or a dormer through it. Facades are glazed one of three ways
+rather than all alike, and an alley wide enough gets a tree. The detail lives
+in the silhouette, because at this size the silhouette is all there is.
+
+Which city it is was chosen by drawing three side by side. A business
+district — slender towers with stepped crowns and spires, a crane — is the
+more striking skyline, and that was the case against it. The one that was
+kept is lower, mixed and a little crowded, with about the same amount of
+everything all the way across, so the eye has nowhere in particular to land.
+For something that sits under a clock all day that evenness is the quality
+wanted. The roofs still change with distance: flat blocks and the odd steeple
+far off, pitched roofs in the middle, and houses nearest.
+
+A range is the envelope of its summits. Each summit has a height and two
+slopes of its own, the range at any point is whichever stands highest there,
+and a little noise on top means nothing that looks like a straight line is
+one. The far range is sharp, the middle one rounded, and the nearest is a low
+hill with pines on it.
+
+Both took one round of restraint after the first drawing, and the two
+corrections were the same correction. The first city had a water tank on most
+roofs and the first forest ran the length of the nearest slope, and each was
+the busiest thing in the widget: one recognisable shape repeated is a pattern,
+and a pattern is what the eye stops on. So tanks are now the rarest thing on a
+roof, and trees come in stands — taller in the middle, dwindling to the
+edges, with bare slope between one and the next. The bare slope is what lets a
+stand be noticed and what lets it be ignored. Two seeds were dropped from the
+cast after being measured rather than looked at, for coming out wooded almost
+end to end, and a test now holds every seed the app can show to leaving a
+good part of each range bare.
+
+None of it costs a frame. It is more shapes than before — a couple of hundred
+for the city, a path of pines for the range — and every one is static.
+
 The city is the one that does something. It fills in through the sunset, is at
 its fullest the moment the sun has gone, and empties again through the break as
 the place turns in for the night. The same clock the sky is already keeping,
@@ -699,8 +752,8 @@ it at once. About a quarter never light at all, one in eight is already on
 before the sun is down, and one in six is still burning when the break ends,
 because a grid that fills in completely stops being a city and becomes a
 spreadsheet, and a city with every light off at dusk is one nobody lives in.
-The whole facade is glazed, roof to pavement: lights gathered near the roofs
-read as a strip rather than as buildings.
+A facade is glazed from its eaves for as far down as a row still fits, so no
+building stops with a whole row's worth of dark wall under its lights.
 
 Neither shape is drawn. Both are generated, and each launch draws one from a
 short cast of seeds that were rendered and looked at first — so "picked at

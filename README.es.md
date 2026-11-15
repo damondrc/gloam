@@ -221,8 +221,8 @@ de lo mismo.
 | | |
 | --- | --- |
 | **Agua** | Una franja plana. Como Gloam se vio siempre. |
-| **Ciudad** | Una ciudad que se enciende a medida que oscurece y se apaga durante el descanso. |
-| **Cordillera** | Tres cadenas de montañas a tres distancias. |
+| **Ciudad** | Un pueblo de tejados y chimeneas que se enciende a medida que oscurece y se apaga durante el descanso. |
+| **Cordillera** | Tres cadenas de montañas a tres distancias, con arboledas de pinos en la más cercana. |
 
 **Música.** Dale a Gloam una carpeta y reproduce lo que haya en ella (FLAC,
 MP3, Vorbis, WAV o AAC), con anterior, reproducir y siguiente en el frente del

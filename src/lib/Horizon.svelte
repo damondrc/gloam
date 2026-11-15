@@ -24,7 +24,7 @@
    * and in compact: Light exists to stop per-frame work and blurred surfaces,
    * and static geometry is neither.
    */
-  import { BOX, RIDGE, SKYLINE, WINDOW } from "./horizon";
+  import { BOX, HAZE, pinePath, RIDGE, SKYLINE } from "./horizon";
   import type { Horizon } from "./horizon";
 
   interface Props {
@@ -35,6 +35,21 @@
 
   const planes = SKYLINE.planes;
   const nearest = planes.length - 1;
+
+  /**
+   * How a plane is filled: the two far ones with their mist, and the nearest
+   * left to the stylesheet. A gradient is referenced by attribute rather than
+   * from a rule, because `url(#…)` in a stylesheet is resolved against the
+   * stylesheet in some engines and against the document in others, and an
+   * attribute means the same thing in both.
+   */
+  const FILLS = ["url(#gloam-mist-far)", "url(#gloam-mist-mid)", undefined] as const;
+
+  /** Where the mist starts and ends for whichever horizon is showing. */
+  const haze = $derived(kind === "ridge" ? HAZE.ridge : HAZE.skyline);
+
+  // Built once: the range is rolled at import and held, and so are its trees.
+  const woods = RIDGE.layers.map((layer) => pinePath(layer.trees));
 </script>
 
 <!-- Water draws nothing at all: the band stays as it was, and the option
@@ -46,6 +61,34 @@
     preserveAspectRatio="none"
     aria-hidden="true"
   >
+    <!-- One gradient per far plane, from its own colour at the top to the
+         same colour with air in it at the foot. Both ends are opaque: this is
+         mist as a colour, the same way distance is. -->
+    <defs>
+      <linearGradient
+        id="gloam-mist-far"
+        gradientUnits="userSpaceOnUse"
+        x1="0"
+        y1={haze.far[0]}
+        x2="0"
+        y2={haze.far[1]}
+      >
+        <stop offset="0" class="far" />
+        <stop offset="1" class="far-foot" />
+      </linearGradient>
+      <linearGradient
+        id="gloam-mist-mid"
+        gradientUnits="userSpaceOnUse"
+        x1="0"
+        y1={haze.mid[0]}
+        x2="0"
+        y2={haze.mid[1]}
+      >
+        <stop offset="0" class="mid" />
+        <stop offset="1" class="mid-foot" />
+      </linearGradient>
+    </defs>
+
     {#if kind === "skyline"}
       {#each planes as blocks, plane (plane)}
         <!-- The street between the blocks, painted *between* the distant
@@ -62,30 +105,40 @@
             width={BOX.width}
             height={BOX.height - BOX.base}
           />
+          <!-- The trees in the alleys stand on it, in its colour. -->
+          {#each SKYLINE.trees as tree, i (i)}
+            <circle class="plane-{plane}" cx={tree.cx} cy={tree.cy} r={tree.r} />
+          {/each}
         {/if}
 
-        <!-- Every silhouette in this plane, then every window in it. Drawn
-             building by building, a mast would fall behind the neighbour it
-             leans past. Each block runs the full way down to the bottom edge
-             of the frame: they are the same mass as the ground, not something
-             resting on top of it. -->
+        <!-- Every silhouette in this plane with whatever stands on its roof,
+             then every window in it. Drawn in that order so a detail that
+             leans over a neighbour is never painted across the neighbour's
+             lit window. -->
         {#each blocks as building, i (i)}
-          <rect
-            class="block plane-{plane}"
-            x={building.x}
-            y={building.y}
-            width={building.width}
-            height={BOX.height - building.y}
-          />
-          {#if building.mast}
-            <rect
-              class="block plane-{plane}"
-              x={building.mast.x}
-              y={building.mast.y}
-              width={building.mast.width}
-              height={building.y - building.mast.y}
-            />
-          {/if}
+          <polygon class="plane-{plane}" fill={FILLS[plane]} points={building.outline} />
+          {#each building.details as detail, j (j)}
+            {#if detail.shape === "rect"}
+              <rect
+                class="plane-{plane}"
+                fill={FILLS[plane]}
+                x={detail.x}
+                y={detail.y}
+                width={detail.width}
+                height={detail.height}
+              />
+            {:else if detail.shape === "polygon"}
+              <polygon class="plane-{plane}" fill={FILLS[plane]} points={detail.points} />
+            {:else}
+              <circle
+                class="plane-{plane}"
+                fill={FILLS[plane]}
+                cx={detail.cx}
+                cy={detail.cy}
+                r={detail.r}
+              />
+            {/if}
+          {/each}
         {/each}
 
         {#each blocks as building, i (i)}
@@ -94,16 +147,22 @@
               class="lit"
               x={light.x}
               y={light.y}
-              width={WINDOW.width}
-              height={WINDOW.height}
+              width={light.width}
+              height={light.height}
               style="--wakes: {light.wakes}; --sleeps: {light.sleeps}; --burn: {light.burn}"
             />
           {/each}
         {/each}
       {/each}
     {:else}
-      {#each RIDGE.layers as points, i (i)}
-        <polygon {points} class="range plane-{i}" />
+      <!-- A range's trees go down before the range itself. They are the same
+           colour, so the order cannot be seen; it only means the slope covers
+           each foot rather than each foot sitting on the slope. -->
+      {#each RIDGE.layers as layer, i (i)}
+        {#if woods[i]}
+          <path class="plane-{i}" fill={FILLS[i]} d={woods[i]} />
+        {/if}
+        <polygon class="plane-{i}" fill={FILLS[i]} points={layer.outline} />
       {/each}
     {/if}
   </svg>
@@ -139,18 +198,32 @@
    * Three distances, three opaque colours the sky mixes as it goes, shared by
    * the city and the range so that switching between them is a change of
    * subject rather than a change of palette.
+   *
+   * Only the nearest has a rule. The two far planes are filled by a gradient
+   * named in a `fill` attribute, and an attribute loses to any rule at all —
+   * so giving them a colour here, even as a fallback, would be giving them
+   * that colour instead of their mist.
    */
-  .plane-0 {
-    fill: rgb(var(--ground-far));
-  }
-
-  .plane-1 {
-    fill: rgb(var(--ground-mid));
-  }
-
   .plane-2,
   .street {
     fill: rgb(var(--ground));
+  }
+
+  /* The stops: each far plane's own colour, and the same with air in it. */
+  .far {
+    stop-color: rgb(var(--ground-far));
+  }
+
+  .far-foot {
+    stop-color: rgb(var(--mist-far));
+  }
+
+  .mid {
+    stop-color: rgb(var(--ground-mid));
+  }
+
+  .mid-foot {
+    stop-color: rgb(var(--mist-mid));
   }
 
   /*

@@ -111,7 +111,7 @@ reading A7.
 | D6 | The bottom corners stay rounded with the panel open and closed | OK | OK |
 | D7 | Locking with the panel open closes the panel, leaving only the dimmed backdrop | OK | OK |
 | D8 | Cycle and Music fit the panel without clipping at the bottom, in English and in Spanish — at 80% and at 180%. A Settings page that runs longer scrolls with the wheel, and its bottom edge fades while there is more below | | |
-| D9 | Each of the three horizons draws: Water, Skyline, Ridge | OK | OK |
+| D9 | Each of the three horizons draws: Water, Skyline, Ridge. On Skyline and Ridge the two far planes are there and filled — neither missing nor black — and paler at the foot than at the top | | |
 | D10 | The choice survives a restart, and the same city or range comes back while the window stays open | OK | OK |
 | D11 | Compact keeps whichever horizon was picked, as a low profile rather than dropping it | OK | OK |
 | D12 | Nothing beside or below the widget catches clicks — at 80%, at 180%, in compact, and again after locking and unlocking. See below | | |
@@ -227,6 +227,16 @@ Which means glibc is not what decides the floor. The `.deb` also depends on
 12 — so those remain the oldest supported releases, for a different reason than
 the one this check was written to test. Worth knowing before anyone tries to
 widen the range by building somewhere older still.
+
+**D9 was passed for 1.0.0 and is blank again on purpose.** The far planes of
+the city and the range used to be flat colours from the stylesheet. Since 1.2
+each is filled by a gradient named in a `fill` attribute, whose two stops take
+their colours from custom properties — and if an engine fails to resolve
+either half of that, the plane is not the wrong colour, it is not drawn. It
+was checked in Chromium while it was being built. WebKitGTK is the one that
+has to be watched doing it, so the Linux column of this row is the one that
+matters: a city with only its nearest row of houses, or a range with only its
+nearest hill, is a NO.
 
 **D12, tested by clicking rather than looking.** The band this row exists for
 is invisible by nature, and on Linux it is still there — GTK will not make the

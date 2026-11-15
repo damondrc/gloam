@@ -213,8 +213,8 @@ standing on it.
 | | |
 | --- | --- |
 | **Water** | A flat band. What Gloam has always looked like. |
-| **Skyline** | A city, lighting up as the sky goes dark and out again through the break. |
-| **Ridge** | Three ranges at three distances. |
+| **Skyline** | A lived-in town of roofs and chimneys, lighting up as the sky goes dark and out again through the break. |
+| **Ridge** | Three ranges at three distances, with stands of pines on the nearest. |
 
 **Music.** Point Gloam at a folder and it plays what is in it — FLAC, MP3,
 Vorbis, WAV or AAC — with previous, play and next on the widget's face and the
